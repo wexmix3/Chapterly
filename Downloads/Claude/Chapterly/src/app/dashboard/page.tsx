@@ -1,0 +1,141 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuth, useShelf } from '@/hooks';
+import Navigation from '@/components/layout/Navigation';
+import StatsOverview from '@/components/dashboard/StatsOverview';
+import BookSearch from '@/components/books/BookSearch';
+import BookShelf from '@/components/books/BookShelf';
+import QuickLog from '@/components/sessions/QuickLog';
+import ShareCardPreview from '@/components/share/ShareCardPreview';
+import GoodreadsImport from '@/components/books/GoodreadsImport';
+import { BookOpen, Search, Share2, Upload, BarChart3, Loader2, X } from 'lucide-react';
+
+type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
+
+export default function DashboardPage() {
+  const { user, loading } = useAuth();
+  const [tab, setTab] = useState<Tab>('overview');
+  const [logModal, setLogModal] = useState<any>(null);
+  const { books: currentlyReading } = useShelf('reading');
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get('tab') as Tab;
+    if (t) setTab(t);
+  }, []);
+
+  if (!loading && !user) { window.location.href = '/'; return null; }
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
+
+  return (
+    <div className="min-h-screen bg-paper-50">
+      <Navigation />
+      <main className="md:ml-64 pb-24 md:pb-8">
+        <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6 md:pt-10 page-enter">
+          <div className="mb-8">
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-ink-900">
+              {tab === 'overview' && `Hey, ${user?.user_metadata?.full_name?.split(' ')[0] || 'Reader'} 👋`}
+              {tab === 'reading' && 'My Books'}
+              {tab === 'search' && 'Find a Book'}
+              {tab === 'streak' && 'Your Streak'}
+              {tab === 'share' && 'Share Cards'}
+              {tab === 'import' && 'Import Library'}
+            </h1>
+          </div>
+
+          {tab === 'overview' && (
+            <div className="space-y-8">
+              {currentlyReading.length > 0 && (
+                <section>
+                  <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Continue Reading</h2>
+                  <div className="space-y-3">
+                    {currentlyReading.slice(0, 3).map((ub) => (
+                      <div key={ub.id} onClick={() => setLogModal(ub)}
+                        className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-ink-100 hover:border-brand-200 transition-colors cursor-pointer">
+                        <div className="w-12 h-18 bg-paper-200 rounded-lg overflow-hidden flex-shrink-0">
+                          {ub.book?.cover_url ? <img src={ub.book.cover_url} alt="" className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center"><BookOpen className="w-4 h-4 text-ink-300" /></div>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-display font-semibold text-ink-900 truncate">{ub.book?.title}</p>
+                          <p className="text-xs text-ink-400 truncate">{ub.book?.authors[0]}</p>
+                          {ub.current_page && ub.book?.page_count && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-ink-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-brand-400 rounded-full progress-fill" style={{ width: `${Math.round((ub.current_page / ub.book.page_count) * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] text-ink-400 flex-shrink-0">{Math.round((ub.current_page / ub.book.page_count) * 100)}%</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0 px-3 py-2 bg-brand-50 text-brand-600 rounded-xl text-xs font-medium">Log</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section>
+                <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Your Stats</h2>
+                <StatsOverview />
+              </section>
+
+              <section>
+                <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <QA icon={<Search className="w-5 h-5" />} label="Search Books" onClick={() => setTab('search')} />
+                  <QA icon={<Share2 className="w-5 h-5" />} label="Share Card" onClick={() => setTab('share')} />
+                  <QA icon={<Upload className="w-5 h-5" />} label="Import Goodreads" onClick={() => setTab('import')} />
+                  <QA icon={<BarChart3 className="w-5 h-5" />} label="Full Stats" onClick={() => setTab('streak')} />
+                </div>
+              </section>
+            </div>
+          )}
+
+          {tab === 'reading' && <BookShelf />}
+          {tab === 'search' && <BookSearch />}
+          {tab === 'streak' && (
+            <div className="space-y-8">
+              <StatsOverview />
+              {currentlyReading.length > 0 && (
+                <section>
+                  <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Log a Session</h2>
+                  <div className="bg-white rounded-2xl border border-ink-100 p-6"><QuickLog userBook={currentlyReading[0]} /></div>
+                </section>
+              )}
+            </div>
+          )}
+          {tab === 'share' && (
+            <div className="bg-white rounded-2xl border border-ink-100 p-6">
+              <ShareCardPreview bookTitle={currentlyReading[0]?.book?.title} bookAuthor={currentlyReading[0]?.book?.authors[0]}
+                coverUrl={currentlyReading[0]?.book?.cover_url} currentPage={currentlyReading[0]?.current_page ?? 0}
+                totalPages={currentlyReading[0]?.book?.page_count ?? 0} />
+            </div>
+          )}
+          {tab === 'import' && <div className="bg-white rounded-2xl border border-ink-100 p-6"><GoodreadsImport /></div>}
+        </div>
+      </main>
+
+      {logModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end md:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-lg font-bold">Log Reading</h3>
+              <button onClick={() => setLogModal(null)} className="p-2 rounded-xl hover:bg-ink-50 text-ink-400"><X className="w-5 h-5" /></button>
+            </div>
+            <QuickLog userBook={logModal} onComplete={() => setLogModal(null)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QA({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-ink-100 hover:border-brand-200 hover:bg-brand-50/30 transition-all text-left">
+      <span className="text-ink-400">{icon}</span><span className="text-sm font-medium text-ink-700">{label}</span>
+    </button>
+  );
+}
