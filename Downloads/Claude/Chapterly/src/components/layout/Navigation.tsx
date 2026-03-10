@@ -1,28 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Search, BarChart3, Share2, Upload, LogOut, Plus, Flame } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { BookOpen, Search, BarChart3, Share2, Upload, LogOut, Plus, Flame, LayoutDashboard, BookMarked, Compass, Users, Trophy, Rss } from 'lucide-react';
 import { useAuth } from '@/hooks';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 const NAV_ITEMS = [
-  { href: '/dashboard?tab=overview', label: 'Overview', icon: BookOpen, tab: 'overview' },
-  { href: '/dashboard?tab=reading', label: 'My Books', icon: BookOpen, tab: 'reading' },
+  { href: '/dashboard?tab=overview', label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
+  { href: '/dashboard?tab=reading', label: 'My Books', icon: BookMarked, tab: 'reading' },
   { href: '/dashboard?tab=search', label: 'Search', icon: Search, tab: 'search' },
-  { href: '/dashboard?tab=streak', label: 'Streak', icon: Flame, tab: 'streak' },
-  { href: '/dashboard?tab=share', label: 'Share', icon: Share2, tab: 'share' },
+  { href: '/dashboard?tab=streak', label: 'Stats & Streak', icon: Flame, tab: 'streak' },
+  { href: '/dashboard?tab=share', label: 'Share Cards', icon: Share2, tab: 'share' },
   { href: '/dashboard?tab=import', label: 'Import', icon: Upload, tab: 'import' },
 ];
 
+const DISCOVER_NAV = [
+  { href: '/discover', label: 'Discover', icon: Compass },
+  { href: '/creators', label: 'Creator Hub 🔥', icon: Users },
+  { href: '/challenge', label: 'My Challenge', icon: Trophy },
+  { href: '/feed', label: 'Friends', icon: Rss },
+];
+
 const MOBILE_NAV = [
-  { href: '/dashboard?tab=overview', label: 'Home', icon: BookOpen },
-  { href: '/dashboard?tab=reading', label: 'Shelf', icon: BarChart3 },
+  { href: '/dashboard?tab=overview', label: 'Home', icon: LayoutDashboard },
+  { href: '/dashboard?tab=reading', label: 'Books', icon: BookMarked },
   { href: '/dashboard?tab=search', label: 'Search', icon: Search },
   { href: '/dashboard?tab=share', label: 'Share', icon: Share2 },
 ];
 
 export default function Navigation() {
-  const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
@@ -32,6 +39,11 @@ export default function Navigation() {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') === tab || (!params.get('tab') && tab === 'overview');
+  };
+
+  const isPathActive = (href: string) => {
+    if (typeof window === 'undefined') return false;
+    return window.location.pathname === href;
   };
 
   return (
@@ -45,21 +57,48 @@ export default function Navigation() {
           </Link>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, tab }) => {
-            const active = isActive(tab);
-            return (
-              <Link key={tab} href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-brand-50 text-brand-700 border border-brand-100'
-                    : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'
-                }`}>
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+          {/* Library section */}
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-ink-400 font-semibold px-3 mb-1">Library</p>
+            <div className="space-y-0.5">
+              {NAV_ITEMS.map(({ href, label, icon: Icon, tab }) => {
+                const active = isActive(tab);
+                return (
+                  <Link key={tab} href={href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-brand-50 text-brand-700 border border-brand-100'
+                        : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'
+                    }`}>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Discover section */}
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-ink-400 font-semibold px-3 mb-1">Discover</p>
+            <div className="space-y-0.5">
+              {DISCOVER_NAV.map(({ href, label, icon: Icon }) => {
+                const active = isPathActive(href);
+                return (
+                  <Link key={href} href={href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-brand-50 text-brand-700 border border-brand-100'
+                        : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'
+                    }`}>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </nav>
 
         <div className="p-4 border-t border-ink-100">
@@ -74,6 +113,7 @@ export default function Navigation() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-ink-900 truncate">{name}</p>
             </div>
+            <ThemeToggle />
           </div>
           <button onClick={signOut}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-ink-500 hover:text-ink-900 hover:bg-ink-50 rounded-xl transition-all">

@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, BookOpen, Plus, Check, Loader2 } from 'lucide-react';
+import { Search, BookOpen, Plus, Check, Loader2, Camera } from 'lucide-react';
 import { useBookSearch, useShelf } from '@/hooks';
 import type { BookSearchResult, ShelfStatus } from '@/types';
+import dynamic from 'next/dynamic';
+
+const ISBNScanner = dynamic(() => import('./ISBNScanner'), { ssr: false });
 
 const SHELF_OPTIONS: { value: ShelfStatus; label: string; emoji: string }[] = [
   { value: 'to_read', label: 'Want to Read', emoji: '📚' },
@@ -18,6 +21,7 @@ export default function BookSearch() {
   const [expanding, setExpanding] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const handleAdd = async (result: BookSearchResult, status: ShelfStatus) => {
     const key = result.source_id;
@@ -32,6 +36,12 @@ export default function BookSearch() {
 
   return (
     <div className="space-y-4">
+      {scannerOpen && (
+        <ISBNScanner
+          onDetected={(isbn) => { setQuery(isbn); setScannerOpen(false); }}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
         <input
@@ -39,10 +49,19 @@ export default function BookSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by title, author, or ISBN…"
-          className="w-full pl-11 pr-4 py-3 bg-white border border-ink-200 rounded-2xl text-sm placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
+          className="w-full pl-11 pr-12 py-3 bg-white border border-ink-200 rounded-2xl text-sm placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
           autoFocus
         />
-        {loading && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 animate-spin" />}
+        {loading
+          ? <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 animate-spin" />
+          : (
+            <button onClick={() => setScannerOpen(true)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-ink-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+              title="Scan ISBN barcode">
+              <Camera className="w-4 h-4" />
+            </button>
+          )
+        }
       </div>
 
       {results.length === 0 && query.length >= 2 && !loading && (
