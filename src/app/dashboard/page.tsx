@@ -9,6 +9,7 @@ import BookShelf from '@/components/books/BookShelf';
 import QuickLog from '@/components/sessions/QuickLog';
 import ShareCardPreview from '@/components/share/ShareCardPreview';
 import GoodreadsImport from '@/components/books/GoodreadsImport';
+import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import { BookOpen, Search, Share2, Upload, BarChart3, Loader2, X } from 'lucide-react';
 
 type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
@@ -98,6 +99,10 @@ export default function DashboardPage() {
           {tab === 'streak' && (
             <div className="space-y-8">
               <StatsOverview />
+              <section>
+                <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Reading Calendar</h2>
+                <ReadingCalendar />
+              </section>
               {currentlyReading.length > 0 && (
                 <section>
                   <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Log a Session</h2>

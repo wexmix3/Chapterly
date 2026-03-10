@@ -9,27 +9,62 @@ import type { User } from '@supabase/supabase-js';
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
-    supabase.auth.getSession().then((result) => {
-      setUser(result.data.session?.user ?? null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      supabase.auth.getSession().then((result) => {
+        setUser(result.data.session?.user ?? null);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+      return () => listener.subscription.unsubscribe();
+    } catch {
       setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => listener.subscription.unsubscribe();
+    }
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const supabase = createBrowserSupabaseClient();
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
-    });
+    try {
+      const supabase = createBrowserSupabaseClient();
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+      });
+    } catch {
+      setAuthError('Google sign-in failed. Please try email/password below.');
+    }
+  }, []);
+
+  const signInWithEmail = useCallback(async (email: string, password: string): Promise<string> => {
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return error.message;
+      return '';
+    } catch {
+      return 'Sign in failed. Please try again.';
+    }
+  }, []);
+
+  const signUpWithEmail = useCallback(async (email: string, password: string): Promise<string> => {
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+      });
+      if (error) return error.message;
+      return '';
+    } catch {
+      return 'Sign up failed. Please try again.';
+    }
   }, []);
 
   const signOut = useCallback(async () => {
@@ -38,7 +73,7 @@ export function useAuth() {
     window.location.href = '/';
   }, []);
 
-  return { user, loading, signInWithGoogle, signOut };
+  return { user, loading, authError, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut };
 }
 
 // ─── useShelf ────────────────────────────────────────────────

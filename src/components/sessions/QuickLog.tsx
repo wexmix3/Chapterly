@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Minus, Plus, CheckCircle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, Minus, Plus, CheckCircle, Loader2, ChevronDown, ChevronUp, Quote } from 'lucide-react';
 import { useLogSession } from '@/hooks';
 import type { UserBook } from '@/types';
 
@@ -18,6 +18,9 @@ export default function QuickLog({ userBook, onComplete }: Props) {
   const [value, setValue] = useState(mode === 'pages' ? 10 : 15);
   const [notes, setNotes] = useState('');
   const [notesOpen, setNotesOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const [quoteText, setQuoteText] = useState('');
+  const [quotePage, setQuotePage] = useState('');
   const [done, setDone] = useState(false);
   const { logSession, loading } = useLogSession();
   const { book } = userBook;
@@ -40,6 +43,20 @@ export default function QuickLog({ userBook, onComplete }: Props) {
     });
 
     if (res.ok) {
+      // Save quote if provided
+      if (quoteText.trim()) {
+        await fetch('/api/quotes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            book_id: userBook.book_id,
+            text: quoteText.trim(),
+            page_number: quotePage ? parseInt(quotePage) : null,
+            is_public: true,
+          }),
+        });
+      }
+
       setDone(true);
       setTimeout(() => {
         setDone(false);
@@ -53,6 +70,7 @@ export default function QuickLog({ userBook, onComplete }: Props) {
       <div className="flex flex-col items-center justify-center py-8 gap-3">
         <CheckCircle className="w-12 h-12 text-emerald-500" />
         <p className="font-display font-semibold text-ink-900">Keep that streak going 🔥</p>
+        {quoteText && <p className="text-xs text-ink-500 text-center italic">Quote saved ✓</p>}
       </div>
     );
   }
@@ -90,14 +108,14 @@ export default function QuickLog({ userBook, onComplete }: Props) {
 
       {/* Stepper */}
       <div className="flex items-center justify-center gap-4">
-        <button onClick={() => setValue(Math.max(1, value - (mode === 'pages' ? 1 : 1)))}
+        <button onClick={() => setValue(Math.max(1, value - 1))}
           className="w-11 h-11 rounded-xl bg-ink-50 hover:bg-ink-100 flex items-center justify-center text-ink-700 transition-colors active:scale-95">
           <Minus className="w-4 h-4" />
         </button>
         <input type="number" value={value} min={1}
           onChange={(e) => setValue(Math.max(1, parseInt(e.target.value, 10) || 1))}
           className="w-20 text-center font-display text-3xl font-bold text-ink-950 bg-transparent border-none outline-none" />
-        <button onClick={() => setValue(value + (mode === 'pages' ? 1 : 1))}
+        <button onClick={() => setValue(value + 1)}
           className="w-11 h-11 rounded-xl bg-ink-50 hover:bg-ink-100 flex items-center justify-center text-ink-700 transition-colors active:scale-95">
           <Plus className="w-4 h-4" />
         </button>
@@ -127,6 +145,34 @@ export default function QuickLog({ userBook, onComplete }: Props) {
             placeholder="How was this reading session?"
             rows={2}
             className="mt-2 w-full px-3 py-2 bg-ink-50 border border-ink-100 rounded-xl text-sm placeholder:text-ink-300 focus:outline-none focus:border-brand-300 resize-none transition-colors" />
+        )}
+      </div>
+
+      {/* Quote capture */}
+      <div>
+        <button onClick={() => setQuoteOpen(!quoteOpen)}
+          className="flex items-center gap-1 text-xs text-ink-400 hover:text-ink-600 transition-colors">
+          <Quote className="w-3 h-3" />
+          {quoteOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          Save a quote (optional)
+        </button>
+        {quoteOpen && (
+          <div className="mt-2 space-y-2">
+            <textarea
+              value={quoteText}
+              onChange={e => setQuoteText(e.target.value)}
+              placeholder="Type a memorable quote from this book…"
+              rows={3}
+              className="w-full px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm placeholder:text-ink-300 focus:outline-none focus:border-brand-300 resize-none transition-colors italic"
+            />
+            <input
+              type="number"
+              value={quotePage}
+              onChange={e => setQuotePage(e.target.value)}
+              placeholder="Page number (optional)"
+              className="w-full px-3 py-2 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:border-brand-300"
+            />
+          </div>
         )}
       </div>
 
