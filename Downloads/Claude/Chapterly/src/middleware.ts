@@ -1,4 +1,4 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -6,18 +6,34 @@ const PROTECTED = ['/dashboard', '/onboarding', '/profile'];
 const AUTH_ONLY = ['/login'];
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
-  const { data: { session } } = await supabase.auth.getSession();
+  let res = NextResponse.next({ request: { headers: req.headers } });
 
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          res = NextResponse.next({ request: req });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options),
+          );
+        },
+      },
+    },
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
   const pathname = req.nextUrl.pathname;
 
-  // Redirect unauthenticated users away from protected routes
   if (PROTECTED.some((p) => pathname.startsWith(p)) && !session) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // Redirect authenticated users away from login
   if (AUTH_ONLY.some((p) => pathname.startsWith(p)) && session) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
