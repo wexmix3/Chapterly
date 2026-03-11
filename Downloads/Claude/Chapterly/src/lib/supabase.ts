@@ -5,6 +5,6 @@ export function createBrowserSupabaseClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: true, storageKey: 'chapterly-auth' } }
+    { auth: { persistSession: true, storageKey: 'chapterly-auth', flowType: 'pkce' } }
   );
 }
