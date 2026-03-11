@@ -9,7 +9,7 @@ import type { User } from '@supabase/supabase-js';
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -29,41 +29,113 @@ export function useAuth() {
     }
   }, []);
 
+  const getRedirectUrl = useCallback(() => {
+    if (process.env.NEXT_PUBLIC_APP_URL) {
+      return `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
+    }
+    return `${window.location.origin}/api/auth/callback`;
+  }, []);
+
   const signInWithGoogle = useCallback(async () => {
+    setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
-      await supabase.auth.signInWithOAuth({
+      const { error: err } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+        options: { redirectTo: getRedirectUrl() },
       });
+      if (err) setError(err.message);
     } catch {
-      setAuthError('Google sign-in failed. Please try email/password below.');
+      setError('Google sign-in failed. Please try again.');
+    }
+  }, [getRedirectUrl]);
+
+  const signInWithApple = useCallback(async () => {
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: { redirectTo: getRedirectUrl() },
+      });
+      if (err) setError(err.message);
+    } catch {
+      setError('Apple sign-in failed. Please try again.');
+    }
+  }, [getRedirectUrl]);
+
+  const signInWithEmail = useCallback(async (email: string, password: string): Promise<boolean> => {
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+      if (err) { setError(err.message); return false; }
+      return true;
+    } catch {
+      setError('Sign in failed. Please try again.');
+      return false;
     }
   }, []);
 
-  const signInWithEmail = useCallback(async (email: string, password: string): Promise<string> => {
+  const signUpWithEmail = useCallback(async (
+    email: string,
+    password: string,
+    displayName: string,
+  ): Promise<{ success: boolean; needsVerification: boolean }> => {
+    setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return error.message;
-      return '';
-    } catch {
-      return 'Sign in failed. Please try again.';
-    }
-  }, []);
-
-  const signUpWithEmail = useCallback(async (email: string, password: string): Promise<string> => {
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signUp({
+      const { data, error: err } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+        options: { data: { full_name: displayName, display_name: displayName } },
       });
-      if (error) return error.message;
-      return '';
+      if (err) { setError(err.message); return { success: false, needsVerification: false }; }
+      const needsVerification = !data.session && !!data.user;
+      return { success: true, needsVerification };
     } catch {
-      return 'Sign up failed. Please try again.';
+      setError('Sign up failed. Please try again.');
+      return { success: false, needsVerification: false };
+    }
+  }, []);
+
+  const verifyOtp = useCallback(async (email: string, token: string): Promise<boolean> => {
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: err } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
+      if (err) { setError(err.message); return false; }
+      return true;
+    } catch {
+      setError('Verification failed. Please try again.');
+      return false;
+    }
+  }, []);
+
+  const resendOtp = useCallback(async (email: string): Promise<void> => {
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: err } = await supabase.auth.resend({ type: 'signup', email });
+      if (err) setError(err.message);
+    } catch {
+      setError('Failed to resend code.');
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string): Promise<boolean> => {
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${appUrl}/login?mode=reset`,
+      });
+      if (err) { setError(err.message); return false; }
+      return true;
+    } catch {
+      setError('Failed to send reset email.');
+      return false;
     }
   }, []);
 
@@ -73,7 +145,13 @@ export function useAuth() {
     window.location.href = '/';
   }, []);
 
-  return { user, loading, authError, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut };
+  return {
+    user, loading, error, setError,
+    signInWithGoogle, signInWithApple,
+    signInWithEmail, signUpWithEmail,
+    verifyOtp, resendOtp, resetPassword,
+    signOut,
+  };
 }
 
 // ─── useShelf ────────────────────────────────────────────────
