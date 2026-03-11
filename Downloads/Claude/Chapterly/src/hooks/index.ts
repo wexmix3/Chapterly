@@ -30,10 +30,8 @@ export function useAuth() {
   }, []);
 
   const getRedirectUrl = useCallback(() => {
-    if (process.env.NEXT_PUBLIC_APP_URL) {
-      return `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
-    }
-    return `${window.location.origin}/api/auth/callback`;
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
+    return `${base}/auth/callback`;
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
