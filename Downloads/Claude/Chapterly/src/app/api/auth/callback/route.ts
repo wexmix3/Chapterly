@@ -6,6 +6,10 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const { searchParams, origin } = url;
 
+  // DEBUG — visible in Vercel Function Logs (remove after fixing)
+  console.log('[auth/callback] full URL:', request.url);
+  console.log('[auth/callback] params:', Object.fromEntries(searchParams.entries()));
+
   const code = searchParams.get('code');
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type');
