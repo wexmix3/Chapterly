@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { BookOpen, Star, Loader2 } from 'lucide-react';
 import { useShelf } from '@/hooks';
 import type { ShelfStatus, UserBook } from '@/types';
@@ -67,7 +68,7 @@ function BookCard({ userBook }: { userBook: UserBook }) {
       : null;
 
   return (
-    <div className="group relative">
+    <Link href={`/book/${userBook.id}`} className="group relative block">
       {/* Cover */}
       <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all">
         {book?.cover_url ? (
@@ -100,6 +101,6 @@ function BookCard({ userBook }: { userBook: UserBook }) {
 
       {/* Title */}
       <p className="mt-1.5 text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight">{book?.title}</p>
-    </div>
+    </Link>
   );
 }
