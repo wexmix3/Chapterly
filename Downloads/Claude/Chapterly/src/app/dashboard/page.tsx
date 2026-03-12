@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth, useShelf } from '@/hooks';
 import Navigation from '@/components/layout/Navigation';
 import StatsOverview from '@/components/dashboard/StatsOverview';
@@ -14,17 +15,15 @@ import { BookOpen, Search, Share2, Upload, BarChart3, Loader2, X } from 'lucide-
 
 type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, loading } = useAuth();
-  const [tab, setTab] = useState<Tab>('overview');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tab = (searchParams.get('tab') as Tab) || 'overview';
   const [logModal, setLogModal] = useState<any>(null);
   const { books: currentlyReading } = useShelf('reading');
 
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    const t = p.get('tab') as Tab;
-    if (t) setTab(t);
-  }, []);
+  const setTab = (t: Tab) => router.push(`/dashboard?tab=${t}`);
 
   if (!loading && !user) { window.location.href = '/'; return null; }
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
@@ -134,6 +133,14 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
 
