@@ -21,7 +21,7 @@ function DashboardContent() {
   const router = useRouter();
   const tab = (searchParams.get('tab') as Tab) || 'overview';
   const [logModal, setLogModal] = useState<any>(null);
-  const { books: currentlyReading } = useShelf('reading');
+  const { books: currentlyReading, fetchBooks: refetchShelf } = useShelf('reading');
 
   const setTab = (t: Tab) => router.push(`/dashboard?tab=${t}`);
 
@@ -105,7 +105,7 @@ function DashboardContent() {
               {currentlyReading.length > 0 && (
                 <section>
                   <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Log a Session</h2>
-                  <div className="bg-white rounded-2xl border border-ink-100 p-6"><QuickLog userBook={currentlyReading[0]} /></div>
+                  <div className="bg-white rounded-2xl border border-ink-100 p-6"><QuickLog userBook={currentlyReading[0]} onLogged={refetchShelf} /></div>
                 </section>
               )}
             </div>
@@ -128,7 +128,7 @@ function DashboardContent() {
               <h3 className="font-display text-lg font-bold">Log Reading</h3>
               <button onClick={() => setLogModal(null)} className="p-2 rounded-xl hover:bg-ink-50 text-ink-400"><X className="w-5 h-5" /></button>
             </div>
-            <QuickLog userBook={logModal} onComplete={() => setLogModal(null)} />
+            <QuickLog userBook={logModal} onLogged={refetchShelf} onComplete={() => setLogModal(null)} />
           </div>
         </div>
       )}
