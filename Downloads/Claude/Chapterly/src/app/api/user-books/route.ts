@@ -4,6 +4,21 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { getOrCreateBook } from '@/lib/books';
 import type { BookSearchResult, ShelfStatus } from '@/types';
 
+// Ensure a public.users profile exists — creates one if the OAuth callback missed it
+async function ensureProfile(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, email: string, metadata: Record<string, unknown>) {
+  const { data: profile } = await supabase.from('users').select('id').eq('id', userId).maybeSingle();
+  if (!profile) {
+    const handle = (email.split('@')[0] || `reader_${Date.now()}`).replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+    await supabase.from('users').insert({
+      id: userId,
+      handle,
+      display_name: (metadata?.full_name as string) ?? (metadata?.display_name as string) ?? email.split('@')[0] ?? 'Reader',
+      avatar_url: (metadata?.avatar_url as string) ?? null,
+      onboarding_complete: true,
+    });
+  }
+}
+
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
@@ -49,7 +64,16 @@ export async function POST(request: NextRequest) {
     review_text?: string;
   };
 
-  const book = await getOrCreateBook(supabase, body.searchResult);
+  // Ensure profile exists (defensive — handles case where OAuth callback didn't finish)
+  await ensureProfile(supabase, user.id, user.email ?? '', user.user_metadata ?? {});
+
+  let book;
+  try {
+    book = await getOrCreateBook(supabase, body.searchResult);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Failed to create book record';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   // Check duplicate
   const { data: existing } = await supabase
