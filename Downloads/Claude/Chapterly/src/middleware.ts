@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PROTECTED = ['/dashboard', '/onboarding', '/profile'];
+const PROTECTED = ['/dashboard', '/onboarding', '/profile', '/book'];
 const AUTH_ONLY = ['/login'];
 
 export async function middleware(req: NextRequest) {
@@ -42,5 +42,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/profile/:path*', '/login'],
+  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/profile/:path*', '/book/:path*', '/login'],
 };
