@@ -11,9 +11,10 @@ const MIN_PRESETS = [5, 15, 30, 60];
 interface Props {
   userBook: UserBook;
   onComplete?: () => void;
+  onLogged?: (newPage: number) => void;
 }
 
-export default function QuickLog({ userBook, onComplete }: Props) {
+export default function QuickLog({ userBook, onComplete, onLogged }: Props) {
   const [mode, setMode] = useState<'pages' | 'minutes'>('pages');
   const [value, setValue] = useState(mode === 'pages' ? 10 : 15);
   const [notes, setNotes] = useState('');
@@ -25,25 +26,33 @@ export default function QuickLog({ userBook, onComplete }: Props) {
   const { logSession, loading } = useLogSession();
   const { book } = userBook;
 
+  const currentPage = userBook.current_page ?? 0;
+  const totalPages = book?.page_count ?? null;
+  const projectedPage = totalPages
+    ? Math.min(currentPage + value, totalPages)
+    : currentPage + value;
+  const currentPct = totalPages ? Math.round((currentPage / totalPages) * 100) : null;
+  const projectedPct = totalPages ? Math.round((projectedPage / totalPages) * 100) : null;
+  const willFinish = totalPages !== null && projectedPage >= totalPages;
+
   const handleModeChange = (newMode: 'pages' | 'minutes') => {
     setMode(newMode);
     setValue(newMode === 'pages' ? 10 : 15);
   };
 
   const handleSubmit = async () => {
-    const newPage = mode === 'pages' ? (userBook.current_page ?? 0) + value : undefined;
+    const newPage = mode === 'pages' ? projectedPage : undefined;
     const res = await logSession({
       user_book_id: userBook.id,
       book_id: userBook.book_id,
       mode,
       value,
-      pages_start: mode === 'pages' ? (userBook.current_page ?? 0) : undefined,
+      pages_start: mode === 'pages' ? currentPage : undefined,
       pages_end: newPage,
       notes: notes || undefined,
     });
 
     if (res.ok) {
-      // Save quote if provided
       if (quoteText.trim()) {
         await fetch('/api/quotes', {
           method: 'POST',
@@ -57,6 +66,7 @@ export default function QuickLog({ userBook, onComplete }: Props) {
         });
       }
 
+      if (onLogged && newPage !== undefined) onLogged(newPage);
       setDone(true);
       setTimeout(() => {
         setDone(false);
@@ -69,8 +79,15 @@ export default function QuickLog({ userBook, onComplete }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-8 gap-3">
         <CheckCircle className="w-12 h-12 text-emerald-500" />
-        <p className="font-display font-semibold text-ink-900">Keep that streak going 🔥</p>
-        {quoteText && <p className="text-xs text-ink-500 text-center italic">Quote saved ✓</p>}
+        <p className="font-display font-semibold text-ink-900">
+          {willFinish ? 'You finished the book! 🎉' : 'Keep that streak going 🔥'}
+        </p>
+        {totalPages && (
+          <p className="text-sm text-ink-500">
+            Page {projectedPage} of {totalPages} · {projectedPct}% complete
+          </p>
+        )}
+        {quoteText && <p className="text-xs text-ink-500 italic">Quote saved ✓</p>}
       </div>
     );
   }
@@ -88,11 +105,50 @@ export default function QuickLog({ userBook, onComplete }: Props) {
             </div>
           )}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-display font-semibold text-ink-900 text-sm truncate">{book?.title}</p>
           <p className="text-xs text-ink-500 truncate">{book?.authors[0]}</p>
         </div>
       </div>
+
+      {/* Progress bar — pages mode only */}
+      {mode === 'pages' && totalPages !== null && (
+        <div className="bg-ink-50 rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-ink-500">
+              Page <span className="font-semibold text-ink-800">{currentPage}</span> of{' '}
+              <span className="font-semibold text-ink-800">{totalPages}</span>
+            </span>
+            <span className={`font-semibold ${currentPct === 100 ? 'text-emerald-600' : 'text-brand-600'}`}>
+              {currentPct}% complete
+            </span>
+          </div>
+
+          {/* Progress bar with projected overlay */}
+          <div className="relative h-2.5 bg-ink-200 rounded-full overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-brand-200 rounded-full transition-all duration-200"
+              style={{ width: `${projectedPct}%` }}
+            />
+            <div
+              className="absolute inset-y-0 left-0 bg-brand-500 rounded-full"
+              style={{ width: `${currentPct}%` }}
+            />
+          </div>
+
+          {/* After-session projection */}
+          {value > 0 && projectedPage > currentPage && (
+            <div className="flex items-center justify-between text-xs text-ink-400">
+              <span>After this session:</span>
+              <span className={`font-medium ${willFinish ? 'text-emerald-600' : 'text-brand-500'}`}>
+                {willFinish
+                  ? `Page ${totalPages} · Finished! 🎉`
+                  : `Page ${projectedPage} · ${projectedPct}%`}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Mode toggle */}
       <div className="flex bg-ink-50 rounded-xl p-1 gap-1">
@@ -178,9 +234,13 @@ export default function QuickLog({ userBook, onComplete }: Props) {
 
       {/* Submit */}
       <button onClick={handleSubmit} disabled={loading}
-        className="w-full py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white rounded-2xl font-medium transition-colors flex items-center justify-center gap-2">
+        className={`w-full py-3 disabled:opacity-60 text-white rounded-2xl font-medium transition-colors flex items-center justify-center gap-2 ${
+          willFinish ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-brand-500 hover:bg-brand-600'
+        }`}>
         {loading ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> Logging…</>
+        ) : willFinish ? (
+          `Finish book · ${totalPages} pages 🎉`
         ) : (
           `Log ${value} ${mode === 'pages' ? 'pages' : 'min'}`
         )}
