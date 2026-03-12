@@ -5,7 +5,8 @@ import { format } from 'date-fns';
 
 export async function POST(request: NextRequest) {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: authSession } } = await supabase.auth.getSession();
+  const user = authSession?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json() as {
@@ -89,7 +90,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: authSession } } = await supabase.auth.getSession();
+  const user = authSession?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const bookId = request.nextUrl.searchParams.get('book_id');

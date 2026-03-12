@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { BookOpen, Search, BarChart3, Share2, Upload, LogOut, Plus, Flame, LayoutDashboard, BookMarked, Compass, Users, Trophy, Rss } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -31,20 +31,15 @@ const MOBILE_NAV = [
 
 export default function Navigation() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { user, signOut } = useAuth();
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const name = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ?? 'Reader';
 
-  const isActive = (tab: string) => {
-    if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    return params.get('tab') === tab || (!params.get('tab') && tab === 'overview');
-  };
-
-  const isPathActive = (href: string) => {
-    if (typeof window === 'undefined') return false;
-    return window.location.pathname === href;
-  };
+  const currentTab = searchParams.get('tab') || 'overview';
+  const isActive = (tab: string) => currentTab === tab;
+  const isPathActive = (href: string) => pathname === href;
 
   return (
     <>

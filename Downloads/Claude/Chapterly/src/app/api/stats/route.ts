@@ -5,7 +5,8 @@ import { computeUserStats } from '@/lib/stats';
 
 export async function GET() {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const stats = await computeUserStats(supabase, user.id);

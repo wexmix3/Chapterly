@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, BookOpen, Plus, Check, Loader2, Camera } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, BookOpen, Plus, Check, Loader2, Camera, AlertCircle } from 'lucide-react';
 import { useBookSearch, useShelf } from '@/hooks';
 import type { BookSearchResult, ShelfStatus } from '@/types';
 import dynamic from 'next/dynamic';
@@ -18,19 +19,25 @@ const SHELF_OPTIONS: { value: ShelfStatus; label: string; emoji: string }[] = [
 export default function BookSearch() {
   const { query, setQuery, results, loading } = useBookSearch();
   const { addBook } = useShelf();
+  const router = useRouter();
   const [expanding, setExpanding] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const [addErrors, setAddErrors] = useState<Record<string, string>>({});
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const handleAdd = async (result: BookSearchResult, status: ShelfStatus) => {
     const key = result.source_id;
     setAdding(key);
+    setAddErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
     const res = await addBook(result, status);
     setAdding(null);
     setExpanding(null);
     if (res.ok || res.status === 409) {
       setAdded((prev) => new Set([...prev, key]));
+    } else {
+      const json = await res.json().catch(() => null);
+      setAddErrors((prev) => ({ ...prev, [key]: json?.error ?? 'Failed to add book' }));
     }
   };
 
@@ -117,8 +124,14 @@ export default function BookSearch() {
                 {/* Action */}
                 <div className="flex-shrink-0">
                   {isAdded ? (
-                    <div className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-medium">
+                    <button
+                      onClick={() => router.push('/dashboard?tab=reading')}
+                      className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-colors">
                       <Check className="w-3 h-3" /> Added
+                    </button>
+                  ) : addErrors[key] ? (
+                    <div className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-medium" title={addErrors[key]}>
+                      <AlertCircle className="w-3 h-3" /> Error
                     </div>
                   ) : (
                     <button
