@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DailyStats, UserStats, StreakInfo } from '@/types';
-import { format, subDays, parseISO, startOfYear, startOfMonth, subMonths } from 'date-fns';
+import { format, subDays, parseISO, startOfYear, startOfMonth, subMonths, getDay, getHours } from 'date-fns';
 
 export function computeStreak(dailyStats: DailyStats[]): StreakInfo {
   if (!dailyStats.length) {
@@ -60,7 +60,7 @@ export async function computeUserStats(
       .eq('user_id', userId),
     supabase
       .from('sessions')
-      .select('pages_delta, minutes_delta, created_at')
+      .select('pages_delta, minutes_delta, created_at, started_at')
       .eq('user_id', userId),
     supabase
       .from('stats_daily')
@@ -131,6 +131,39 @@ export async function computeUserStats(
     return { month, books: booksByMonth[month] ?? 0, pages: pagesByMonth[month] ?? 0 };
   });
 
+  // ── Session insights ─────────────────────────────────────────
+  const sessionCount = sessions.length;
+  const avg_pages_per_session = sessionCount > 0 ? Math.round(totalPages / sessionCount) : 0;
+  const avg_minutes_per_session = sessionCount > 0 ? Math.round(totalMinutes / sessionCount) : 0;
+  const longest_session_pages = sessionCount > 0 ? Math.max(...sessions.map((s) => s.pages_delta ?? 0)) : 0;
+
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayCounts: number[] = Array(7).fill(0);
+  const timeBuckets: Record<string, number> = { Morning: 0, Afternoon: 0, Evening: 0, Night: 0 };
+  for (const s of sessions) {
+    const ts = (s as any).started_at ?? s.created_at;
+    if (!ts) continue;
+    const dt = parseISO(ts);
+    dayCounts[getDay(dt)]++;
+    const h = getHours(dt);
+    if (h >= 5 && h < 12) timeBuckets['Morning']++;
+    else if (h >= 12 && h < 17) timeBuckets['Afternoon']++;
+    else if (h >= 17 && h < 22) timeBuckets['Evening']++;
+    else timeBuckets['Night']++;
+  }
+  const maxDayCount = Math.max(...dayCounts);
+  const best_day_of_week = maxDayCount > 0 ? DAY_NAMES[dayCounts.indexOf(maxDayCount)] : null;
+  const maxBucketCount = Math.max(...Object.values(timeBuckets));
+  const best_time_of_day = maxBucketCount > 0
+    ? (Object.entries(timeBuckets).find(([, v]) => v === maxBucketCount)?.[0] ?? null)
+    : null;
+
+  const thirtyDaysAgo = format(subDays(now, 30), 'yyyy-MM-dd');
+  const sessions30d = sessions.filter((s) => s.created_at >= thirtyDaysAgo);
+  const pages30d = sessions30d.reduce((sum, s) => sum + (s.pages_delta ?? 0), 0);
+  const distinctDays30d = new Set(sessions30d.map((s) => s.created_at.substring(0, 10))).size;
+  const pages_per_day_30d = distinctDays30d > 0 ? Math.round(pages30d / distinctDays30d) : 0;
+
   return {
     total_books_read: totalBooksRead,
     total_pages: totalPages,
@@ -142,5 +175,13 @@ export async function computeUserStats(
     avg_rating: avgRating,
     top_genres,
     reading_by_month,
+    session_insights: {
+      avg_pages_per_session,
+      avg_minutes_per_session,
+      best_day_of_week,
+      best_time_of_day,
+      longest_session_pages,
+      pages_per_day_30d,
+    },
   };
 }

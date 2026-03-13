@@ -10,7 +10,7 @@ import {
   CheckCircle, Clock, ExternalLink
 } from 'lucide-react';
 import type { UserBook, ReadingSession } from '@/types';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 
 type ShelfStatus = 'to_read' | 'reading' | 'read' | 'dnf';
 
@@ -227,7 +227,7 @@ function BookDetailContent({ id }: { id: string }) {
               </div>
 
               {/* Stats row */}
-              <div className="flex gap-4 text-xs text-ink-500 mb-4">
+              <div className="flex gap-4 text-xs text-ink-500 mb-3 flex-wrap">
                 <span><span className="font-semibold text-ink-700">{totalPagesRead}</span> pages logged</span>
                 <span><span className="font-semibold text-ink-700">{sessions.length}</span> sessions</span>
                 {totalMinRead > 0 && <span><span className="font-semibold text-ink-700">{Math.round(totalMinRead / 60 * 10) / 10}h</span> reading time</span>}
@@ -235,6 +235,23 @@ function BookDetailContent({ id }: { id: string }) {
                   <span><span className="font-semibold text-ink-700">{totalPages - currentPage}</span> pages left</span>
                 )}
               </div>
+
+              {/* Pace estimate */}
+              {(() => {
+                if (userBook.status !== 'reading' || sessions.length === 0 || !totalPages || currentPage >= totalPages) return null;
+                const readingDays = new Set(sessions.map(s => s.created_at.substring(0, 10))).size;
+                const avgPagesPerDay = readingDays > 0 ? totalPagesRead / readingDays : 0;
+                if (avgPagesPerDay <= 0) return null;
+                const pagesLeft = totalPages - currentPage;
+                const daysLeft = Math.ceil(pagesLeft / avgPagesPerDay);
+                const finishDate = format(addDays(new Date(), daysLeft), 'MMM d');
+                return (
+                  <p className="text-xs text-ink-400 mb-3">
+                    At your pace (~<span className="font-semibold text-ink-600">{Math.round(avgPagesPerDay)}</span> pages/day),
+                    finish by <span className="font-semibold text-brand-600">{finishDate}</span>
+                  </p>
+                );
+              })()}
 
               {/* Log session */}
               {userBook.status === 'reading' && (

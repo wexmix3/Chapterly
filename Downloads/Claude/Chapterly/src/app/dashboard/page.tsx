@@ -10,6 +10,7 @@ import BookShelf from '@/components/books/BookShelf';
 import QuickLog from '@/components/sessions/QuickLog';
 import ShareCardPreview from '@/components/share/ShareCardPreview';
 import GoodreadsImport from '@/components/books/GoodreadsImport';
+import ReadNext from '@/components/books/ReadNext';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import { BookOpen, Search, Share2, Upload, BarChart3, Loader2, X } from 'lucide-react';
 
@@ -75,6 +76,11 @@ function DashboardContent() {
                   </div>
                 </section>
               )}
+
+              <section>
+                <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Read Next</h2>
+                <ReadNext />
+              </section>
 
               <section>
                 <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Your Stats</h2>

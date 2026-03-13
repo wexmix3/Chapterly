@@ -81,6 +81,15 @@ export interface DailyStats {
   is_streak_day: boolean;
 }
 
+export interface SessionInsights {
+  avg_pages_per_session: number;
+  avg_minutes_per_session: number;
+  best_day_of_week: string | null;
+  best_time_of_day: string | null;
+  longest_session_pages: number;
+  pages_per_day_30d: number;
+}
+
 export interface UserStats {
   total_books_read: number;
   total_pages: number;
@@ -92,6 +101,7 @@ export interface UserStats {
   avg_rating: number | null;
   top_genres: Array<{ name: string; count: number }>;
   reading_by_month: Array<{ month: string; books: number; pages: number }>;
+  session_insights: SessionInsights;
 }
 
 export interface StreakInfo {
