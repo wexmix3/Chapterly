@@ -59,17 +59,25 @@ function CallbackHandler() {
 
       if (!profile) {
         const email = session.user.email ?? '';
-        const userHandle = (email.split('@')[0] || `reader_${Date.now()}`)
+        // Apple may give a private relay email like abc123@privaterelay.appleid.com
+        // Use the user_metadata name if available, otherwise fall back gracefully
+        const displayName =
+          session.user.user_metadata?.full_name ??
+          session.user.user_metadata?.name ??
+          session.user.user_metadata?.display_name ??
+          (email && !email.includes('privaterelay') ? email.split('@')[0] : null) ??
+          'Reader';
+        const rawHandle = displayName !== 'Reader'
+          ? displayName
+          : email.split('@')[0] || `reader_${Date.now()}`;
+        const userHandle = rawHandle
           .replace(/[^a-z0-9_]/gi, '_')
-          .toLowerCase();
+          .toLowerCase()
+          .slice(0, 30) || `reader_${Date.now()}`;
         await supabase.from('users').insert({
           id: session.user.id,
           handle: userHandle,
-          display_name:
-            session.user.user_metadata?.full_name ??
-            session.user.user_metadata?.display_name ??
-            email.split('@')[0] ??
-            'Reader',
+          display_name: displayName,
           avatar_url: session.user.user_metadata?.avatar_url ?? null,
           onboarding_complete: false,
         });
