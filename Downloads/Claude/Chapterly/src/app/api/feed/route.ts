@@ -22,11 +22,12 @@ export async function GET() {
     return NextResponse.json({ data: [], following: 0 });
   }
 
-  // Get recent shelf updates from followed users
+  // Get recent shelf updates from followed users (only public or followers-visible entries)
   const { data: shelfUpdates } = await supabase
     .from('user_books')
     .select('id, user_id, status, rating, updated_at, books(title, cover_url), users(display_name, avatar_url)')
     .in('user_id', followeeIds)
+    .in('visibility', ['public', 'followers'])
     .order('updated_at', { ascending: false })
     .limit(30);
 
