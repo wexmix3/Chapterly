@@ -88,23 +88,79 @@ export default function StatsOverview() {
     },
   ];
 
+  const maxBooks = Math.max(...stats.reading_by_month.map((m) => m.books), 1);
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {cards.map((card) => (
-        <div key={card.label}
-          className={`bg-white rounded-2xl border border-ink-100 p-4 hover:-translate-y-0.5 hover:shadow-sm transition-all ${
-            card.glow ? 'animate-streak-glow border-brand-200' : ''
-          }`}>
-          <div className={`w-9 h-9 ${card.iconBg} ${card.iconColor} rounded-xl flex items-center justify-center mb-3`}>
-            {card.icon}
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {cards.map((card) => (
+          <div key={card.label}
+            className={`bg-white rounded-2xl border border-ink-100 p-4 hover:-translate-y-0.5 hover:shadow-sm transition-all ${
+              card.glow ? 'animate-streak-glow border-brand-200' : ''
+            }`}>
+            <div className={`w-9 h-9 ${card.iconBg} ${card.iconColor} rounded-xl flex items-center justify-center mb-3`}>
+              {card.icon}
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-2xl font-bold text-ink-950">{card.value}</span>
+              {card.suffix && <span className="text-xs text-ink-400">{card.suffix}</span>}
+            </div>
+            <p className="text-xs text-ink-400 mt-0.5">{card.label}</p>
           </div>
-          <div className="flex items-baseline gap-1">
-            <span className="font-display text-2xl font-bold text-ink-950">{card.value}</span>
-            {card.suffix && <span className="text-xs text-ink-400">{card.suffix}</span>}
+        ))}
+      </div>
+
+      {stats.reading_by_month.some((m) => m.books > 0 || m.pages > 0) && (
+        <div className="bg-white rounded-2xl border border-ink-100 p-4">
+          <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-4">Books per Month</p>
+          <div className="flex items-end gap-1.5 h-20">
+            {stats.reading_by_month.map((m) => {
+              const pct = Math.round((m.books / maxBooks) * 100);
+              const label = m.month.substring(5); // MM
+              return (
+                <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group relative">
+                  <div
+                    className="w-full bg-brand-400 rounded-t-md transition-all hover:bg-brand-500"
+                    style={{ height: `${Math.max(pct, m.books > 0 ? 8 : 0)}%` }}
+                  />
+                  <span className="text-[9px] text-ink-400">{label}</span>
+                  {m.books > 0 && (
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-ink-900 text-white text-[9px] rounded px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                      {m.books} book{m.books !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <p className="text-xs text-ink-400 mt-0.5">{card.label}</p>
         </div>
-      ))}
+      )}
+
+      {stats.top_genres.length > 0 && (
+        <div className="bg-white rounded-2xl border border-ink-100 p-4">
+          <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Top Genres</p>
+          <div className="flex flex-wrap gap-2">
+            {stats.top_genres.map((g, i) => {
+              const colors = [
+                'bg-brand-50 text-brand-700 border-brand-100',
+                'bg-emerald-50 text-emerald-700 border-emerald-100',
+                'bg-purple-50 text-purple-700 border-purple-100',
+                'bg-blue-50 text-blue-700 border-blue-100',
+                'bg-yellow-50 text-yellow-700 border-yellow-100',
+                'bg-rose-50 text-rose-700 border-rose-100',
+                'bg-cyan-50 text-cyan-700 border-cyan-100',
+                'bg-orange-50 text-orange-700 border-orange-100',
+              ];
+              return (
+                <span key={g.name} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors[i % colors.length]}`}>
+                  {g.name}
+                  <span className="opacity-60 text-[10px]">{g.count}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

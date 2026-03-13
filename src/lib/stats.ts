@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DailyStats, UserStats, StreakInfo } from '@/types';
-import { format, subDays, isToday, isYesterday, parseISO, startOfYear, startOfMonth } from 'date-fns';
+import { format, subDays, parseISO, startOfYear, startOfMonth, subMonths } from 'date-fns';
 
 export function computeStreak(dailyStats: DailyStats[]): StreakInfo {
   if (!dailyStats.length) {
@@ -99,6 +99,38 @@ export async function computeUserStats(
 
   const streakInfo = computeStreak(dailyStats);
 
+  // Compute top genres from subjects across all shelved books
+  const genreCounts: Record<string, number> = {};
+  for (const ub of userBooks) {
+    const subjects: string[] = (ub.book as any)?.subjects ?? [];
+    for (const s of subjects) {
+      genreCounts[s] = (genreCounts[s] ?? 0) + 1;
+    }
+  }
+  const top_genres = Object.entries(genreCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([name, count]) => ({ name, count }));
+
+  // Compute reading activity by month (last 12 months)
+  const booksByMonth: Record<string, number> = {};
+  for (const ub of userBooks) {
+    if (ub.status === 'read' && ub.finished_at) {
+      const month = ub.finished_at.substring(0, 7);
+      booksByMonth[month] = (booksByMonth[month] ?? 0) + 1;
+    }
+  }
+  const pagesByMonth: Record<string, number> = {};
+  for (const s of sessions) {
+    const month = s.created_at.substring(0, 7);
+    pagesByMonth[month] = (pagesByMonth[month] ?? 0) + (s.pages_delta ?? 0);
+  }
+  const reading_by_month = Array.from({ length: 12 }, (_, i) => {
+    const d = subMonths(now, 11 - i);
+    const month = format(d, 'yyyy-MM');
+    return { month, books: booksByMonth[month] ?? 0, pages: pagesByMonth[month] ?? 0 };
+  });
+
   return {
     total_books_read: totalBooksRead,
     total_pages: totalPages,
@@ -108,7 +140,7 @@ export async function computeUserStats(
     books_this_year: booksThisYear,
     pages_this_month: pagesThisMonth,
     avg_rating: avgRating,
-    top_genres: [],
-    reading_by_month: [],
+    top_genres,
+    reading_by_month,
   };
 }

@@ -17,10 +17,16 @@ export default function GoodreadsImport({ onComplete }: { onComplete?: () => voi
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [howOpen, setHowOpen] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+  const MAX_ROWS = 5000;
+
   const handleFile = (f: File) => {
-    if (!f.name.endsWith('.csv')) return;
+    setFileError(null);
+    if (!f.name.endsWith('.csv')) { setFileError('Please upload a .csv file.'); return; }
+    if (f.size > MAX_FILE_BYTES) { setFileError('File is too large (max 5 MB).'); return; }
     setFile(f);
     setResult(null);
   };
@@ -31,7 +37,7 @@ export default function GoodreadsImport({ onComplete }: { onComplete?: () => voi
     setProgress(0);
 
     const text = await file.text();
-    const rows = parseGoodreadsCSV(text);
+    const rows = parseGoodreadsCSV(text).slice(0, MAX_ROWS);
     const totals: ImportResult = { imported: 0, already_on_shelf: 0, errors: 0 };
 
     for (let i = 0; i < rows.length; i++) {
@@ -89,7 +95,7 @@ export default function GoodreadsImport({ onComplete }: { onComplete?: () => voi
           <div className="flex flex-col items-center gap-2">
             <FileText className="w-8 h-8 text-emerald-500" />
             <p className="font-medium text-emerald-700 text-sm">{file.name}</p>
-            <p className="text-xs text-emerald-500">Ready to import</p>
+            <p className="text-xs text-emerald-500">Ready to import · {(file.size / 1024).toFixed(0)} KB</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
@@ -116,6 +122,13 @@ export default function GoodreadsImport({ onComplete }: { onComplete?: () => voi
           </div>
         )}
       </div>
+
+      {fileError && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          {fileError}
+        </div>
+      )}
 
       {/* Progress bar */}
       {importing && (
