@@ -161,6 +161,61 @@ export default function StatsOverview() {
           </div>
         </div>
       )}
+
+      {(stats.session_insights.avg_pages_per_session > 0 || stats.session_insights.best_day_of_week) && (
+        <div className="bg-white rounded-2xl border border-ink-100 p-4">
+          <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Reading Habits</p>
+          <div className="grid grid-cols-2 gap-4">
+            {stats.session_insights.avg_pages_per_session > 0 && (
+              <div>
+                <p className="text-xs text-ink-400 mb-0.5">Avg per session</p>
+                <p className="font-display text-xl font-bold text-ink-900">
+                  {stats.session_insights.avg_pages_per_session}
+                  <span className="text-xs font-normal text-ink-400 ml-1">pages</span>
+                </p>
+              </div>
+            )}
+            {stats.session_insights.avg_minutes_per_session > 0 && (
+              <div>
+                <p className="text-xs text-ink-400 mb-0.5">Avg session length</p>
+                <p className="font-display text-xl font-bold text-ink-900">
+                  {stats.session_insights.avg_minutes_per_session}
+                  <span className="text-xs font-normal text-ink-400 ml-1">min</span>
+                </p>
+              </div>
+            )}
+            {stats.session_insights.pages_per_day_30d > 0 && (
+              <div>
+                <p className="text-xs text-ink-400 mb-0.5">Pages/day (30d)</p>
+                <p className="font-display text-xl font-bold text-ink-900">
+                  {stats.session_insights.pages_per_day_30d}
+                </p>
+              </div>
+            )}
+            {stats.session_insights.longest_session_pages > 0 && (
+              <div>
+                <p className="text-xs text-ink-400 mb-0.5">Longest session</p>
+                <p className="font-display text-xl font-bold text-ink-900">
+                  {stats.session_insights.longest_session_pages}
+                  <span className="text-xs font-normal text-ink-400 ml-1">pages</span>
+                </p>
+              </div>
+            )}
+            {stats.session_insights.best_day_of_week && (
+              <div>
+                <p className="text-xs text-ink-400 mb-0.5">Best reading day</p>
+                <p className="text-sm font-semibold text-ink-800">{stats.session_insights.best_day_of_week}</p>
+              </div>
+            )}
+            {stats.session_insights.best_time_of_day && (
+              <div>
+                <p className="text-xs text-ink-400 mb-0.5">Best time of day</p>
+                <p className="text-sm font-semibold text-ink-800">{stats.session_insights.best_time_of_day}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
