@@ -21,23 +21,23 @@ const GENRES = [
 ];
 
 const TRENDING_BOOKS = [
-  { title: 'Fourth Wing', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/id/14395680-M.jpg', label: '🔥 #BookTok', creator: '@cassiesbooktok' },
-  { title: 'Iron Flame', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/id/14622285-M.jpg', label: '🔥 Sequel hype', creator: '@readingwithray' },
-  { title: 'A Court of Thorns and Roses', author: 'Sarah J. Maas', cover: 'https://covers.openlibrary.org/b/id/10521943-M.jpg', label: '👑 Classic pick', creator: '@pagebypageclub' },
-  { title: 'Happy Place', author: 'Emily Henry', cover: 'https://covers.openlibrary.org/b/id/13357091-M.jpg', label: '💕 Romance fave', creator: '@booknerdvibes' },
-  { title: 'Lessons in Chemistry', author: 'Bonnie Garmus', cover: 'https://covers.openlibrary.org/b/id/12514019-M.jpg', label: '✨ Must-read', creator: '@morgannbook' },
-  { title: 'The Housemaid', author: 'Freida McFadden', cover: 'https://covers.openlibrary.org/b/id/12716530-M.jpg', label: '🔪 Thriller of the year', creator: '@jack_edwards' },
-  { title: 'Daisy Jones & The Six', author: 'Taylor Jenkins Reid', cover: 'https://covers.openlibrary.org/b/id/8736389-M.jpg', label: '🎵 Summer read', creator: '@aaborak' },
-  { title: 'Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', cover: 'https://covers.openlibrary.org/b/id/12854803-M.jpg', label: '🕹️ Mind-bending', creator: '@itsemmajohnson' },
+  { title: 'Fourth Wing', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374042-M.jpg', label: '🔥 #BookTok', creator: '@cassiesbooktok' },
+  { title: 'Iron Flame', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374172-M.jpg', label: '🔥 Sequel hype', creator: '@morgannbook' },
+  { title: 'A Court of Thorns and Roses', author: 'Sarah J. Maas', cover: 'https://covers.openlibrary.org/b/isbn/9781619635180-M.jpg', label: '👑 Classic pick', creator: '@cassiesbooktok' },
+  { title: 'Happy Place', author: 'Emily Henry', cover: 'https://covers.openlibrary.org/b/isbn/9780593334867-M.jpg', label: '💕 Romance fave', creator: '@amyjordanj' },
+  { title: 'Lessons in Chemistry', author: 'Bonnie Garmus', cover: 'https://covers.openlibrary.org/b/isbn/9780385547345-M.jpg', label: '✨ Must-read', creator: '@morgannbook' },
+  { title: 'The Housemaid', author: 'Freida McFadden', cover: 'https://covers.openlibrary.org/b/isbn/9781538742549-M.jpg', label: '🔪 Thriller of the year', creator: '@stressinabox' },
+  { title: 'Daisy Jones & The Six', author: 'Taylor Jenkins Reid', cover: 'https://covers.openlibrary.org/b/isbn/9781524798659-M.jpg', label: '🎵 Summer read', creator: '@abbysbooks' },
+  { title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', cover: 'https://covers.openlibrary.org/b/isbn/9780593321201-M.jpg', label: '🕹️ Mind-bending', creator: '@booksandquills' },
 ];
 
 const MUST_READS_2026 = [
-  { title: 'The Women', author: 'Kristin Hannah', cover: 'https://covers.openlibrary.org/b/id/14623890-M.jpg' },
-  { title: 'James', author: 'Percival Everett', cover: 'https://covers.openlibrary.org/b/id/14812345-M.jpg' },
-  { title: 'The God of the Woods', author: 'Liz Moore', cover: 'https://covers.openlibrary.org/b/id/14723456-M.jpg' },
-  { title: 'Intermezzo', author: 'Sally Rooney', cover: 'https://covers.openlibrary.org/b/id/14934567-M.jpg' },
-  { title: 'All Fours', author: 'Miranda July', cover: 'https://covers.openlibrary.org/b/id/14845678-M.jpg' },
-  { title: 'The Familiar', author: 'Leigh Bardugo', cover: 'https://covers.openlibrary.org/b/id/14756789-M.jpg' },
+  { title: 'The Women', author: 'Kristin Hannah', cover: 'https://covers.openlibrary.org/b/isbn/9781250178602-M.jpg' },
+  { title: 'James', author: 'Percival Everett', cover: 'https://covers.openlibrary.org/b/isbn/9780385550369-M.jpg' },
+  { title: 'The God of the Woods', author: 'Liz Moore', cover: 'https://covers.openlibrary.org/b/isbn/9780593473412-M.jpg' },
+  { title: 'Intermezzo', author: 'Sally Rooney', cover: 'https://covers.openlibrary.org/b/isbn/9780374611712-M.jpg' },
+  { title: 'All Fours', author: 'Miranda July', cover: 'https://covers.openlibrary.org/b/isbn/9781954118263-M.jpg' },
+  { title: 'The Familiar', author: 'Leigh Bardugo', cover: 'https://covers.openlibrary.org/b/isbn/9781250885739-M.jpg' },
 ];
 
 export default function DiscoverClient() {
