@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
 import QuickLog from '@/components/sessions/QuickLog';
+import ReadingTimer from '@/components/sessions/ReadingTimer';
 import {
   ArrowLeft, BookOpen, Star, Calendar, Hash, Loader2,
-  CheckCircle, Clock, ExternalLink
+  CheckCircle, Clock, ExternalLink, Timer
 } from 'lucide-react';
 import type { UserBook, ReadingSession } from '@/types';
 import { format, parseISO, addDays } from 'date-fns';
@@ -53,6 +54,8 @@ function BookDetailContent({ id }: { id: string }) {
   const [reviewSaved, setReviewSaved] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [logMode, setLogMode] = useState<'quick' | 'timer'>('quick');
+  const [moodTags, setMoodTags] = useState<string[]>([]);
 
   const fetchUserBook = async () => {
     const res = await fetch(`/api/user-books/${id}`);
@@ -80,8 +83,11 @@ function BookDetailContent({ id }: { id: string }) {
       .then(json => setSessions(json.data ?? []));
     // Fetch community reviews (graceful — table may not exist)
     fetch(`/api/reviews?book_id=${userBook.book_id}`)
-      .then(r => r.ok ? r.json() : { data: [] })
-      .then(json => setCommunityReviews(json.data ?? []))
+      .then(r => r.ok ? r.json() : { data: [], my_review: null })
+      .then(json => {
+        setCommunityReviews(json.data ?? []);
+        if (json.my_review?.mood_tags?.length) setMoodTags(json.my_review.mood_tags);
+      })
       .catch(() => {});
   }, [userBook?.book_id]);
 
@@ -98,7 +104,7 @@ function BookDetailContent({ id }: { id: string }) {
       await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ book_id: userBook.book_id, user_book_id: userBook.id, rating, text: reviewText || null }),
+        body: JSON.stringify({ book_id: userBook.book_id, user_book_id: userBook.id, rating, text: reviewText || null, mood_tags: moodTags }),
       }).catch(() => {});
     }
     setReviewSaving(false);
@@ -257,7 +263,19 @@ function BookDetailContent({ id }: { id: string }) {
               {userBook.status === 'reading' && (
                 showLog
                   ? <div className="border-t border-ink-100 pt-4 mt-1">
-                      <QuickLog userBook={userBook} onLogged={() => { void fetchUserBook(); }} onComplete={() => setShowLog(false)} />
+                      <div className="flex bg-ink-50 rounded-xl p-1 gap-1 mb-4">
+                        <button onClick={() => setLogMode('quick')}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${logMode === 'quick' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-700'}`}>
+                          📄 Quick Log
+                        </button>
+                        <button onClick={() => setLogMode('timer')}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${logMode === 'timer' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-700'}`}>
+                          <Timer className="w-3 h-3" /> Timer
+                        </button>
+                      </div>
+                      {logMode === 'quick'
+                        ? <QuickLog userBook={userBook} onLogged={() => { void fetchUserBook(); }} onComplete={() => setShowLog(false)} />
+                        : <ReadingTimer userBook={userBook} onLogged={() => { void fetchUserBook(); }} onComplete={() => setShowLog(false)} />}
                     </div>
                   : <button onClick={() => setShowLog(true)}
                       className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-medium transition-colors">
@@ -272,7 +290,21 @@ function BookDetailContent({ id }: { id: string }) {
             <section className="bg-white rounded-2xl border border-ink-100 p-5 mb-5">
               <h2 className="font-display font-semibold text-ink-800 text-sm mb-3">Log Reading</h2>
               {showLog
-                ? <QuickLog userBook={userBook} onLogged={() => { void fetchUserBook(); }} onComplete={() => setShowLog(false)} />
+                ? <>
+                    <div className="flex bg-ink-50 rounded-xl p-1 gap-1 mb-4">
+                      <button onClick={() => setLogMode('quick')}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${logMode === 'quick' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-700'}`}>
+                        📄 Quick Log
+                      </button>
+                      <button onClick={() => setLogMode('timer')}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${logMode === 'timer' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-700'}`}>
+                        <Timer className="w-3 h-3" /> Timer
+                      </button>
+                    </div>
+                    {logMode === 'quick'
+                      ? <QuickLog userBook={userBook} onLogged={() => { void fetchUserBook(); }} onComplete={() => setShowLog(false)} />
+                      : <ReadingTimer userBook={userBook} onLogged={() => { void fetchUserBook(); }} onComplete={() => setShowLog(false)} />}
+                  </>
                 : <button onClick={() => setShowLog(true)}
                     className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-medium transition-colors">
                     Log Reading Session
@@ -286,6 +318,30 @@ function BookDetailContent({ id }: { id: string }) {
             <h2 className="font-display font-semibold text-ink-800 text-sm mb-4">My Rating & Review</h2>
             <div className="space-y-3">
               <StarRating value={rating} onChange={setRating} />
+              {/* Mood tags */}
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: '🌟 Loved it', value: 'loved_it' },
+                  { label: '😢 Emotional', value: 'emotional' },
+                  { label: '😂 Funny', value: 'funny' },
+                  { label: '🤯 Mind-bending', value: 'mind_bending' },
+                  { label: '💕 Romantic', value: 'romantic' },
+                  { label: '🔥 Addictive', value: 'addictive' },
+                  { label: '🧠 Educational', value: 'educational' },
+                  { label: '😴 Slow start', value: 'slow_start' },
+                ].map(tag => {
+                  const active = moodTags.includes(tag.value);
+                  return (
+                    <button key={tag.value} type="button"
+                      onClick={() => setMoodTags(active ? moodTags.filter(t => t !== tag.value) : [...moodTags, tag.value])}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                        active ? 'bg-brand-100 text-brand-700 border-brand-300' : 'bg-ink-50 text-ink-500 border-ink-100 hover:border-brand-200 hover:bg-brand-50'
+                      }`}>
+                      {tag.label}
+                    </button>
+                  );
+                })}
+              </div>
               <textarea
                 value={reviewText}
                 onChange={e => setReviewText(e.target.value)}
@@ -356,6 +412,15 @@ function BookDetailContent({ id }: { id: string }) {
                       <span className="text-xs font-medium text-ink-700">{r.users?.display_name ?? 'Reader'}</span>
                       <StarRating value={r.rating} readonly />
                     </div>
+                    {((r as unknown as { mood_tags?: string[] }).mood_tags ?? []).length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mb-1.5">
+                        {((r as unknown as { mood_tags: string[] }).mood_tags).map(t => (
+                          <span key={t} className="px-2 py-0.5 bg-brand-50 text-brand-600 border border-brand-100 rounded-full text-[10px] font-medium">
+                            {t.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                     {r.text && <p className="text-sm text-ink-600 leading-relaxed">{r.text}</p>}
                   </div>
                 ))}

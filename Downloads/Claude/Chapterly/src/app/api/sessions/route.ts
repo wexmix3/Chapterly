@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
     pages_start?: number;
     pages_end?: number;
     notes?: string;
+    source?: 'manual' | 'timer';
+    started_at?: string;
+    ended_at?: string;
   };
 
   const now = new Date();
@@ -31,14 +34,14 @@ export async function POST(request: NextRequest) {
       user_book_id: body.user_book_id,
       book_id: body.book_id,
       mode: body.mode,
-      source: 'manual',
+      source: body.source ?? 'manual',
       pages_delta,
       minutes_delta,
       pages_start: body.pages_start ?? null,
       pages_end: body.pages_end ?? null,
       notes: body.notes ?? null,
-      started_at: now.toISOString(),
-      ended_at: now.toISOString(),
+      started_at: body.started_at ?? now.toISOString(),
+      ended_at: body.ended_at ?? now.toISOString(),
     })
     .select()
     .single();

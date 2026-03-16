@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
     .limit(50);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data });
+  const my_review = (data ?? []).find((r: { user_id: string }) => r.user_id === user.id) ?? null;
+  return NextResponse.json({ data, my_review });
 }
 
 export async function POST(req: NextRequest) {

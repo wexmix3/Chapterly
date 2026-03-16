@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { UserPlus, Loader2, BookOpen, Search } from 'lucide-react';
+import { UserPlus, Loader2, BookOpen, Search, X, UserCheck } from 'lucide-react';
 
 interface FeedEvent {
   id: string;
@@ -16,10 +16,23 @@ interface FeedEvent {
   created_at: string;
 }
 
+interface UserResult {
+  id: string;
+  handle: string;
+  display_name: string;
+  avatar_url?: string;
+  is_following: boolean;
+}
+
 export default function FeedClient() {
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(0);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [toggling, setToggling] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/feed')
@@ -30,6 +43,44 @@ export default function FeedClient() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  }, []);
+
+  // Debounced user search
+  useEffect(() => {
+    if (searchQuery.length < 2) { setSearchResults([]); return; }
+    const t = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await fetch(`/api/users?q=${encodeURIComponent(searchQuery)}`);
+        if (res.ok) {
+          const json = await res.json();
+          setSearchResults(json.data ?? []);
+        }
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const toggleFollow = useCallback(async (u: UserResult) => {
+    setToggling(u.id);
+    try {
+      const method = u.is_following ? 'DELETE' : 'POST';
+      const res = await fetch('/api/social', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followee_id: u.id }),
+      });
+      if (res.ok || res.status === 409) {
+        setSearchResults(prev => prev.map(r =>
+          r.id === u.id ? { ...r, is_following: !u.is_following } : r
+        ));
+        setFollowing(f => u.is_following ? f - 1 : f + 1);
+      }
+    } finally {
+      setToggling(null);
+    }
   }, []);
 
   const actionLabel = (type: FeedEvent['event_type']) => {
@@ -65,11 +116,78 @@ export default function FeedClient() {
                 {following > 0 ? `Following ${following} reader${following !== 1 ? 's' : ''}` : 'Follow readers to see their activity here'}
               </p>
             </div>
-            <button className="flex items-center gap-2 px-3 py-2 bg-brand-50 text-brand-600 rounded-xl text-sm font-medium hover:bg-brand-100 transition-colors">
-              <UserPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Find readers</span>
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="flex items-center gap-2 px-3 py-2 bg-brand-50 text-brand-600 rounded-xl text-sm font-medium hover:bg-brand-100 transition-colors">
+              {showSearch ? <X className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+              <span className="hidden sm:inline">{showSearch ? 'Close' : 'Find readers'}</span>
             </button>
           </div>
+
+          {/* User search panel */}
+          {showSearch && (
+            <div className="bg-white rounded-2xl border border-ink-100 p-4 space-y-3">
+              <h2 className="font-display font-semibold text-ink-800 text-sm">Find Readers</h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
+                <input
+                  autoFocus
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search by name or @handle…"
+                  className="w-full pl-9 pr-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:border-brand-300 transition-colors"
+                />
+              </div>
+
+              {searchLoading && (
+                <div className="flex items-center gap-2 text-sm text-ink-400 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Searching…
+                </div>
+              )}
+
+              {!searchLoading && searchQuery.length >= 2 && searchResults.length === 0 && (
+                <p className="text-sm text-ink-400 py-2">No readers found for &ldquo;{searchQuery}&rdquo;</p>
+              )}
+
+              {searchResults.length > 0 && (
+                <div className="space-y-2">
+                  {searchResults.map(u => (
+                    <div key={u.id} className="flex items-center gap-3 py-2 border-b border-ink-50 last:border-0">
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-sm font-bold flex-shrink-0">
+                          {u.display_name[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-ink-900 truncate">{u.display_name}</p>
+                        <p className="text-xs text-ink-400 truncate">@{u.handle}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleFollow(u)}
+                        disabled={toggling === u.id}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all disabled:opacity-60 ${
+                          u.is_following
+                            ? 'bg-ink-100 text-ink-600 hover:bg-red-50 hover:text-red-600'
+                            : 'bg-brand-500 text-white hover:bg-brand-600'
+                        }`}>
+                        {toggling === u.id
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : u.is_following
+                            ? <><UserCheck className="w-3 h-3" /> Following</>
+                            : <><UserPlus className="w-3 h-3" /> Follow</>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {searchQuery.length < 2 && (
+                <p className="text-xs text-ink-400">Type at least 2 characters to search</p>
+              )}
+            </div>
+          )}
 
           {loading && (
             <div className="flex justify-center py-12">
@@ -78,7 +196,7 @@ export default function FeedClient() {
           )}
 
           {!loading && events.length === 0 && (
-            <EmptyFeed />
+            <EmptyFeed onFindReaders={() => setShowSearch(true)} />
           )}
 
           {!loading && events.length > 0 && (
@@ -136,7 +254,7 @@ function FeedCard({ event, actionLabel, timeAgo }: {
   );
 }
 
-function EmptyFeed() {
+function EmptyFeed({ onFindReaders }: { onFindReaders: () => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl border border-ink-100 p-8 text-center">
@@ -145,12 +263,12 @@ function EmptyFeed() {
         <p className="text-sm text-ink-500 mb-6">
           Follow other readers to see what they&apos;re reading, ratings they&apos;ve given, and reading cards they&apos;ve shared.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 transition-colors">
-            <Search className="w-4 h-4" />
-            Find readers to follow
-          </button>
-        </div>
+        <button
+          onClick={onFindReaders}
+          className="flex items-center gap-2 px-5 py-2.5 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 transition-colors mx-auto">
+          <Search className="w-4 h-4" />
+          Find readers to follow
+        </button>
       </div>
 
       {/* What the feed will look like */}
