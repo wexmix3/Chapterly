@@ -24,14 +24,6 @@ function GoogleIcon() {
   );
 }
 
-// Apple logo SVG
-function AppleIcon() {
-  return (
-    <svg width="16" height="18" viewBox="0 0 814 1000" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-      <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46 790.6 0 663.1 0 541c0-207.5 134.4-317.4 266.5-317.4 69.4 0 127.1 45.7 170.1 45.7 40.9 0 108.2-48.1 185.5-48.1 14.2 0 117.7 2 188.1 92.4zm-56.3-241.2c33.7-40.3 57.5-96.2 57.5-152.1 0-7.8-.6-15.7-1.9-22.2-54.7 2-118.7 36.7-157.6 85-33.7 40.3-63.2 96.2-63.2 152.8 0 8.4 1.3 16.8 1.9 19.4 3.2.6 8.4 1.3 13.6 1.3 49.4 0 109.5-33.1 149.7-84.2z" />
-    </svg>
-  );
-}
 
 function PasswordStrength({ password }: { password: string }) {
   const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(password)).length;
@@ -58,7 +50,7 @@ export default function LoginPage() {
 
   const {
     user, loading, error, setError,
-    signInWithGoogle, signInWithApple,
+    signInWithGoogle,
     signInWithEmail, signUpWithEmail,
     verifyOtp, resendOtp, resetPassword,
   } = useAuth();
@@ -345,16 +337,11 @@ export default function LoginPage() {
             )}
 
             {/* OAuth buttons */}
-            <div className="space-y-2.5 mb-5">
+            <div className="mb-5">
               <button onClick={() => { setError(null); signInWithGoogle(); }}
                 className="w-full flex items-center justify-center gap-3 py-3 bg-white dark:bg-ink-800 border border-ink-200 dark:border-ink-700 hover:border-ink-300 hover:bg-ink-50 dark:hover:bg-ink-750 rounded-xl text-sm font-medium text-ink-700 dark:text-ink-300 transition-all shadow-sm">
                 <GoogleIcon />
                 Continue with Google
-              </button>
-              <button onClick={() => { setError(null); signInWithApple(); }}
-                className="w-full flex items-center justify-center gap-3 py-3 bg-ink-950 dark:bg-white border border-ink-900 dark:border-ink-200 hover:bg-ink-800 dark:hover:bg-ink-100 rounded-xl text-sm font-medium text-white dark:text-ink-900 transition-all shadow-sm">
-                <AppleIcon />
-                Continue with Apple
               </button>
             </div>
 
