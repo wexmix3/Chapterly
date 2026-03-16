@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { CARD_THEMES, type CardThemeName } from '@/lib/shareCards';
-import { Share2, Download, Palette, BookOpen, Flame, BarChart3 } from 'lucide-react';
+import { Share2, Download, Palette, BookOpen, Flame, BarChart3, Check, Loader2 } from 'lucide-react';
 
 type CardType = 'now_reading' | 'streak' | 'recap';
 
@@ -18,8 +18,46 @@ export default function ShareCardPreview({
 }: Props) {
   const [theme, setTheme] = useState<CardThemeName>('warm');
   const [cardType, setCardType] = useState<CardType>('now_reading');
+  const [sharing, setSharing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const t = CARD_THEMES[theme];
   const progress = totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0;
+
+  const handleShare = async () => {
+    setSharing(true);
+    const text = cardType === 'now_reading'
+      ? `I'm reading "${bookTitle}" by ${bookAuthor} — ${progress}% done! 📚 Track your reading on Chapterly`
+      : cardType === 'streak'
+      ? `${streak}-day reading streak and counting! 🔥 Track your reading on Chapterly`
+      : `I've read ${booksRead} books and ${pagesRead.toLocaleString()} pages recently 📚 Track yours on Chapterly`;
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title: 'My Reading Update', text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch { /* user cancelled */ }
+    setSharing(false);
+  };
+
+  const handleDownload = async () => {
+    if (!cardRef.current) return;
+    setDownloading(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(cardRef.current, { scale: 2, useCORS: true, backgroundColor: null });
+      const link = document.createElement('a');
+      link.download = `chapterly-${cardType}-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -38,7 +76,7 @@ export default function ShareCardPreview({
       </div>
 
       {/* Card preview (9:16) */}
-      <div className="share-card aspect-[9/16] max-w-[280px] mx-auto p-6 flex flex-col justify-between relative overflow-hidden" style={{ background: t.bgGradient }}>
+      <div ref={cardRef} className="share-card aspect-[9/16] max-w-[280px] mx-auto p-6 flex flex-col justify-between relative overflow-hidden" style={{ background: t.bgGradient }}>
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")' }} />
 
         <p className="relative text-xs tracking-[3px] uppercase" style={{ color: t.textSecondary }}>📖 Chapterly</p>
@@ -99,11 +137,13 @@ export default function ShareCardPreview({
 
       {/* Action buttons */}
       <div className="flex gap-2">
-        <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-medium transition-colors">
-          <Share2 className="w-4 h-4" /> Share
+        <button onClick={handleShare} disabled={sharing}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white rounded-xl font-medium transition-colors">
+          {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Share2 className="w-4 h-4" /> Share</>}
         </button>
-        <button className="flex items-center justify-center gap-2 px-4 py-3 bg-ink-50 hover:bg-ink-100 text-ink-600 rounded-xl font-medium transition-colors">
-          <Download className="w-4 h-4" />
+        <button onClick={handleDownload} disabled={downloading}
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-ink-50 hover:bg-ink-100 disabled:opacity-60 text-ink-600 rounded-xl font-medium transition-colors">
+          {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
         </button>
       </div>
     </div>
