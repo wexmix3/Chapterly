@@ -48,21 +48,7 @@ export function useAuth() {
     }
   }, [getRedirectUrl]);
 
-  const signInWithApple = useCallback(async () => {
-    setError(null);
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const { error: err } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: { redirectTo: getRedirectUrl() },
-      });
-      if (err) setError(err.message);
-    } catch {
-      setError('Apple sign-in failed. Please try again.');
-    }
-  }, [getRedirectUrl]);
-
-  const signInWithEmail = useCallback(async (email: string, password: string): Promise<boolean> => {
+const signInWithEmail = useCallback(async (email: string, password: string): Promise<boolean> => {
     setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
@@ -145,7 +131,7 @@ export function useAuth() {
 
   return {
     user, loading, error, setError,
-    signInWithGoogle, signInWithApple,
+    signInWithGoogle,
     signInWithEmail, signUpWithEmail,
     verifyOtp, resendOtp, resetPassword,
     signOut,
