@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { Search, TrendingUp, BookOpen } from 'lucide-react';
+import { Search, TrendingUp, BookOpen, Plus, Loader2 } from 'lucide-react';
+import type { BookSearchResult } from '@/types';
 
 const GENRES = [
   { name: 'Fantasy', emoji: '🧙', color: 'from-purple-100 to-purple-200' },
@@ -41,7 +42,48 @@ const MUST_READS_2026 = [
 
 export default function DiscoverClient() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [genreResults, setGenreResults] = useState<BookSearchResult[]>([]);
+  const [genreLoading, setGenreLoading] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [added, setAdded] = useState<Set<string>>(new Set());
+  const [recs, setRecs] = useState<Array<BookSearchResult & { genre: string }>>([]);
+
+  // Fetch personalized recommendations
+  useEffect(() => {
+    fetch('/api/recommendations')
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => setRecs(j.data ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Fetch genre results when genre is selected
+  useEffect(() => {
+    if (!selectedGenre) { setGenreResults([]); return; }
+    setGenreLoading(true);
+    fetch(`/api/books/search?q=subject:${encodeURIComponent(selectedGenre)}`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => setGenreResults((j.data ?? []).slice(0, 12)))
+      .catch(() => setGenreResults([]))
+      .finally(() => setGenreLoading(false));
+  }, [selectedGenre]);
+
+  const handleAdd = async (book: BookSearchResult) => {
+    const key = book.source_id;
+    if (adding || added.has(key)) return;
+    setAdding(key);
+    try {
+      const res = await fetch('/api/user-books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ searchResult: book, status: 'to_read' }),
+      });
+      if (res.ok || res.status === 409) setAdded(prev => new Set(prev).add(key));
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  const topGenre = recs[0]?.genre ?? null;
 
   return (
     <div className="min-h-screen bg-paper-50">
@@ -52,17 +94,6 @@ export default function DiscoverClient() {
           <div>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-ink-900 mb-2">Discover</h1>
             <p className="text-ink-500 text-sm">Trending books, curated lists, and what BookTok is loving right now.</p>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
-            <input
-              placeholder="Search by title or author…"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3.5 bg-white border border-ink-200 rounded-2xl text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
-            />
           </div>
 
           {/* Trending on BookTok */}
@@ -97,14 +128,23 @@ export default function DiscoverClient() {
                 </button>
               ))}
             </div>
+
             {selectedGenre && (
-              <div className="mt-6 p-6 bg-white rounded-2xl border border-ink-100 text-center">
-                <p className="text-ink-500 text-sm mb-3">
-                  Browsing <strong className="text-ink-800">{selectedGenre}</strong> — search coming soon
-                </p>
-                <a href="/dashboard?tab=search" className="text-sm text-brand-600 hover:underline font-medium">
-                  Search books instead →
-                </a>
+              <div className="mt-5">
+                {genreLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-ink-500 py-4">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading {selectedGenre} books…
+                  </div>
+                ) : genreResults.length > 0 ? (
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {genreResults.map(book => (
+                      <ShelfableBook key={book.source_id} book={book} onAdd={handleAdd}
+                        isAdded={added.has(book.source_id)} isAdding={adding === book.source_id} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-400 py-4">No results found for {selectedGenre}.</p>
+                )}
               </div>
             )}
           </section>
@@ -127,17 +167,20 @@ export default function DiscoverClient() {
             </div>
           </section>
 
-          {/* Because you read */}
-          <section>
-            <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">💡 Because you read Fantasy</h2>
-            <div className="bg-white rounded-2xl border border-ink-100 p-6 text-center">
-              <BookOpen className="w-8 h-8 text-ink-300 mx-auto mb-3" />
-              <p className="text-sm text-ink-500 mb-3">Add and rate books on your shelf to get personalized recommendations.</p>
-              <a href="/dashboard?tab=search" className="inline-flex px-4 py-2 bg-brand-500 text-white rounded-xl text-sm font-medium hover:bg-brand-600 transition-colors">
-                Add books to your shelf
-              </a>
-            </div>
-          </section>
+          {/* Personalized — Because you read X */}
+          {recs.length > 0 && topGenre && (
+            <section>
+              <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">
+                💡 Because you read {topGenre}
+              </h2>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {recs.slice(0, 10).map(book => (
+                  <ShelfableBook key={book.source_id} book={book} onAdd={handleAdd}
+                    isAdded={added.has(book.source_id)} isAdding={adding === book.source_id} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </main>
     </div>
@@ -160,6 +203,47 @@ function BookCard({ title, author, cover, label, creator }: {
       <p className="text-xs font-medium text-ink-800 truncate">{title}</p>
       <p className="text-[9px] text-ink-400 truncate">{author}</p>
       <p className="text-[9px] text-brand-600 truncate mt-0.5">{creator}</p>
+    </div>
+  );
+}
+
+function ShelfableBook({ book, onAdd, isAdded, isAdding }: {
+  book: BookSearchResult;
+  onAdd: (b: BookSearchResult) => void;
+  isAdded: boolean;
+  isAdding: boolean;
+}) {
+  return (
+    <div className="flex-shrink-0 w-28">
+      <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm mb-2">
+        {book.cover_url ? (
+          <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+            <BookOpen className="w-6 h-6 text-ink-300 mb-1" />
+            <span className="text-[9px] text-ink-400 leading-tight line-clamp-3">{book.title}</span>
+          </div>
+        )}
+      </div>
+      <p className="text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight mb-0.5">{book.title}</p>
+      <p className="text-[9px] text-ink-400 mb-1.5 line-clamp-1 italic">{book.authors[0]}</p>
+      <button
+        onClick={() => onAdd(book)}
+        disabled={isAdded || isAdding}
+        className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+          isAdded
+            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+            : 'bg-brand-50 text-brand-600 border border-brand-100 hover:bg-brand-100'
+        }`}
+      >
+        {isAdding ? (
+          <Loader2 className="w-2.5 h-2.5 animate-spin" />
+        ) : isAdded ? (
+          '✓ Added'
+        ) : (
+          <><Plus className="w-2.5 h-2.5" /> Want to Read</>
+        )}
+      </button>
     </div>
   );
 }

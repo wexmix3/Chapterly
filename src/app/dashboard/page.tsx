@@ -12,7 +12,9 @@ import ShareCardPreview from '@/components/share/ShareCardPreview';
 import GoodreadsImport from '@/components/books/GoodreadsImport';
 import ReadNext from '@/components/books/ReadNext';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
+import DailyGoal from '@/components/dashboard/DailyGoal';
 import { BookOpen, Search, Share2, Upload, BarChart3, Loader2, X } from 'lucide-react';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
 
@@ -46,6 +48,7 @@ function DashboardContent() {
           </div>
 
           {tab === 'overview' && (
+            <ErrorBoundary>
             <div className="space-y-8">
               {currentlyReading.length > 0 && (
                 <section>
@@ -78,6 +81,10 @@ function DashboardContent() {
               )}
 
               <section>
+                <DailyGoal />
+              </section>
+
+              <section>
                 <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Read Next</h2>
                 <ReadNext />
               </section>
@@ -97,9 +104,10 @@ function DashboardContent() {
                 </div>
               </section>
             </div>
+            </ErrorBoundary>
           )}
 
-          {tab === 'reading' && <BookShelf />}
+          {tab === 'reading' && <ErrorBoundary><BookShelf /></ErrorBoundary>}
           {tab === 'search' && <BookSearch />}
           {tab === 'streak' && (
             <div className="space-y-8">
