@@ -32,7 +32,7 @@ export async function GET() {
     .select('*')
     .eq('user_id', user.id)
     .eq('year', year)
-    .single();
+    .maybeSingle();
 
   return NextResponse.json({ data: data ?? null });
 }

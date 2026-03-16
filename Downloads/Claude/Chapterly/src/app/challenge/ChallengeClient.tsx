@@ -30,18 +30,20 @@ export default function ChallengeClient() {
   const [editGoal, setEditGoal] = useState(false);
   const [newGoal, setNewGoal] = useState(24);
   const [saving, setSaving] = useState(false);
+  const [monthlyBooks, setMonthlyBooks] = useState<number[]>(new Array(12).fill(0));
 
   useEffect(() => {
-    fetch('/api/challenges')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.data) {
-          setChallenge(data.data);
-          setNewGoal(data.data.goal_books);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch('/api/challenges').then(r => r.ok ? r.json() : null),
+      fetch('/api/challenges/monthly').then(r => r.ok ? r.json() : null),
+    ]).then(([challengeData, monthlyData]) => {
+      if (challengeData?.data) {
+        setChallenge(challengeData.data);
+        setNewGoal(challengeData.data.goal_books);
+      }
+      if (monthlyData?.data) setMonthlyBooks(monthlyData.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   const saveGoal = async () => {
@@ -85,8 +87,6 @@ export default function ChallengeClient() {
     ? `${pace} book${pace !== 1 ? 's' : ''} ahead of schedule`
     : `${Math.abs(pace)} book${Math.abs(pace) !== 1 ? 's' : ''} behind schedule`;
 
-  // Monthly breakdown (mock — would be from stats_daily in production)
-  const monthlyBooks = [3, 4, 2, 3, 1, 2, 4, 3, 2, 3, 4, 0].slice(0, now.getMonth() + 1);
   const maxMonth = Math.max(...monthlyBooks, 1);
 
   const earnedMilestones = MILESTONES.filter(m => current >= m.books);

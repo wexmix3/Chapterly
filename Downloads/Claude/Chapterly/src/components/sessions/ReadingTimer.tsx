@@ -24,6 +24,7 @@ export default function ReadingTimer({ userBook, onLogged, onComplete }: Props) 
   const [pagesInput, setPagesInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const startTimeRef = useRef<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -70,6 +71,7 @@ export default function ReadingTimer({ userBook, onLogged, onComplete }: Props) 
       : undefined;
 
     setLoading(true);
+    setSaveError(false);
     const res = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -94,6 +96,8 @@ export default function ReadingTimer({ userBook, onLogged, onComplete }: Props) 
         setDone(false);
         if (onComplete) onComplete();
       }, 1800);
+    } else {
+      setSaveError(true);
     }
   };
 
@@ -173,6 +177,9 @@ export default function ReadingTimer({ userBook, onLogged, onComplete }: Props) 
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Logging&hellip;</>
               : `Log ${Math.round(seconds / 60)} min session`}
           </button>
+          {saveError && (
+            <p className="text-xs text-red-500 text-center">Failed to save session — please try again.</p>
+          )}
           <button onClick={reset}
             className="w-full py-2 text-xs text-ink-400 hover:text-ink-600 transition-colors">
             Reset timer
