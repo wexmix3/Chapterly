@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
 import { Search, TrendingUp, BookOpen, Plus, Loader2 } from 'lucide-react';
 import type { BookSearchResult } from '@/types';
@@ -41,6 +42,7 @@ const MUST_READS_2026 = [
 ];
 
 export default function DiscoverClient() {
+  const router = useRouter();
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [genreResults, setGenreResults] = useState<BookSearchResult[]>([]);
   const [genreLoading, setGenreLoading] = useState(false);
@@ -85,6 +87,19 @@ export default function DiscoverClient() {
 
   const topGenre = recs[0]?.genre ?? null;
 
+  const toPreview = (title: string, author: string, cover: string) => {
+    const isbnMatch = cover.match(/\/isbn\/(\d+)-/);
+    const q = new URLSearchParams({ title, author });
+    if (isbnMatch) q.set('isbn', isbnMatch[1]);
+    router.push(`/book/preview?${q}`);
+  };
+
+  const toPreviewBook = (book: BookSearchResult) => {
+    const q = new URLSearchParams({ source: book.source, id: book.source_id, title: book.title, author: book.authors[0] ?? '' });
+    if (book.isbn13) q.set('isbn', book.isbn13);
+    router.push(`/book/preview?${q}`);
+  };
+
   return (
     <div className="min-h-screen bg-paper-50">
       <Navigation />
@@ -104,7 +119,7 @@ export default function DiscoverClient() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {TRENDING_BOOKS.map(book => (
-                <BookCard key={book.title} {...book} />
+                <BookCard key={book.title} {...book} onClick={() => toPreview(book.title, book.author, book.cover)} />
               ))}
             </div>
           </section>
@@ -139,7 +154,8 @@ export default function DiscoverClient() {
                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                     {genreResults.map(book => (
                       <ShelfableBook key={book.source_id} book={book} onAdd={handleAdd}
-                        isAdded={added.has(book.source_id)} isAdding={adding === book.source_id} />
+                        isAdded={added.has(book.source_id)} isAdding={adding === book.source_id}
+                        onNavigate={() => toPreviewBook(book)} />
                     ))}
                   </div>
                 ) : (
@@ -154,7 +170,8 @@ export default function DiscoverClient() {
             <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">📚 2026 Must-Reads</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {MUST_READS_2026.map(book => (
-                <div key={book.title} className="group">
+                <button key={book.title} onClick={() => toPreview(book.title, book.author, book.cover)}
+                  className="group text-left">
                   <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow">
                     <img src={book.cover} alt={book.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
@@ -162,7 +179,7 @@ export default function DiscoverClient() {
                   </div>
                   <p className="text-[10px] font-medium text-ink-800 truncate">{book.title}</p>
                   <p className="text-[9px] text-ink-400 truncate">{book.author}</p>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -176,7 +193,8 @@ export default function DiscoverClient() {
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {recs.slice(0, 10).map(book => (
                   <ShelfableBook key={book.source_id} book={book} onAdd={handleAdd}
-                    isAdded={added.has(book.source_id)} isAdding={adding === book.source_id} />
+                    isAdded={added.has(book.source_id)} isAdding={adding === book.source_id}
+                    onNavigate={() => toPreviewBook(book)} />
                 ))}
               </div>
             </section>
@@ -187,11 +205,11 @@ export default function DiscoverClient() {
   );
 }
 
-function BookCard({ title, author, cover, label, creator }: {
-  title: string; author: string; cover: string; label: string; creator: string;
+function BookCard({ title, author, cover, label, creator, onClick }: {
+  title: string; author: string; cover: string; label: string; creator: string; onClick: () => void;
 }) {
   return (
-    <div className="group cursor-pointer">
+    <button onClick={onClick} className="group text-left w-full">
       <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow relative">
         <img src={cover} alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
@@ -203,28 +221,30 @@ function BookCard({ title, author, cover, label, creator }: {
       <p className="text-xs font-medium text-ink-800 truncate">{title}</p>
       <p className="text-[9px] text-ink-400 truncate">{author}</p>
       <p className="text-[9px] text-brand-600 truncate mt-0.5">{creator}</p>
-    </div>
+    </button>
   );
 }
 
-function ShelfableBook({ book, onAdd, isAdded, isAdding }: {
+function ShelfableBook({ book, onAdd, isAdded, isAdding, onNavigate }: {
   book: BookSearchResult;
   onAdd: (b: BookSearchResult) => void;
   isAdded: boolean;
   isAdding: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <div className="flex-shrink-0 w-28">
-      <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm mb-2">
+      <button onClick={onNavigate}
+        className="w-full aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm mb-2 hover:shadow-md transition-shadow block">
         {book.cover_url ? (
-          <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+          <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
             <BookOpen className="w-6 h-6 text-ink-300 mb-1" />
             <span className="text-[9px] text-ink-400 leading-tight line-clamp-3">{book.title}</span>
           </div>
         )}
-      </div>
+      </button>
       <p className="text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight mb-0.5">{book.title}</p>
       <p className="text-[9px] text-ink-400 mb-1.5 line-clamp-1 italic">{book.authors[0]}</p>
       <button
