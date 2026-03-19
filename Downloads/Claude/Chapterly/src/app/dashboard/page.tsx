@@ -14,6 +14,7 @@ import ReadNext from '@/components/books/ReadNext';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import DailyGoal from '@/components/dashboard/DailyGoal';
 import { BookOpen, Search, Share2, Upload, BarChart3, Loader2, X } from 'lucide-react';
+import AIInsights from '@/components/dashboard/AIInsights';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
@@ -92,6 +93,10 @@ function DashboardContent() {
               <section>
                 <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Your Stats</h2>
                 <StatsOverview />
+              </section>
+
+              <section>
+                <AIInsights />
               </section>
 
               <section>

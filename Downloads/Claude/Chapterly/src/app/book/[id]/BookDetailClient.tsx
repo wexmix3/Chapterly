@@ -2,8 +2,16 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle } from 'lucide-react';
+import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle, ShoppingBag, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+
+function buildAffiliateLinks(title: string, authors: string[]) {
+  const q = encodeURIComponent(`${title} ${authors[0] ?? ''}`.trim());
+  const amazonTag = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_TAG ?? 'chapterly-20';
+  const amazon = `https://www.amazon.com/s?k=${q}&tag=${amazonTag}`;
+  const bookshop = `https://bookshop.org/search?keywords=${encodeURIComponent(title)}`;
+  return { amazon, bookshop };
+}
 
 const SHELF_OPTIONS = [
   { value: 'to_read', label: 'Want to Read' },
@@ -219,6 +227,38 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
                   <AlertCircle className="w-3 h-3" /> {error}
                 </p>
               )}
+
+              {/* Affiliate buy links */}
+              {(() => {
+                const { amazon, bookshop } = buildAffiliateLinks(book.title, book.authors ?? []);
+                return (
+                  <div className="mt-4 pt-4 border-t border-paper-100">
+                    <p className="text-[10px] text-ink-400 mb-2 uppercase tracking-wide font-medium">Buy this book</p>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={amazon}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors"
+                      >
+                        <ShoppingBag className="w-3 h-3" />
+                        Amazon
+                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                      </a>
+                      <a
+                        href={bookshop}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors"
+                      >
+                        <ShoppingBag className="w-3 h-3" />
+                        Bookshop.org
+                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                      </a>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

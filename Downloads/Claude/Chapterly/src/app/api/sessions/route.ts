@@ -88,6 +88,49 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // Check and award streak milestones
+  const MILESTONES = [3, 7, 14, 30, 50, 100, 200, 365];
+  try {
+    // Fetch recent streak days ordered newest first
+    const { data: streakDays } = await supabase
+      .from('stats_daily')
+      .select('date, is_streak_day')
+      .eq('user_id', user.id)
+      .eq('is_streak_day', true)
+      .order('date', { ascending: false })
+      .limit(400);
+
+    if (streakDays && streakDays.length > 0) {
+      // Count consecutive streak days from today
+      let streak = 0;
+      let expected = today;
+      for (const row of streakDays) {
+        if (row.date === expected) {
+          streak++;
+          // decrement expected date
+          const d = new Date(expected + 'T00:00:00Z');
+          d.setUTCDate(d.getUTCDate() - 1);
+          expected = d.toISOString().slice(0, 10);
+        } else {
+          break;
+        }
+      }
+
+      // Award any milestones we've just hit or crossed
+      const hitMilestones = MILESTONES.filter(m => streak >= m);
+      if (hitMilestones.length > 0) {
+        await supabase
+          .from('streak_milestones')
+          .upsert(
+            hitMilestones.map(m => ({ user_id: user.id, milestone_days: m })),
+            { onConflict: 'user_id,milestone_days', ignoreDuplicates: true }
+          );
+      }
+    }
+  } catch {
+    // Non-critical — don't fail the session save
+  }
+
   return NextResponse.json({ data: session }, { status: 201 });
 }
 

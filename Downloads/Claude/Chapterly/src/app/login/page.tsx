@@ -220,12 +220,12 @@ export default function LoginPage() {
                   <span className="text-4xl block mb-3">📬</span>
                   <h2 className="font-display text-xl font-semibold text-ink-900 dark:text-paper-100 mb-1">Check your email</h2>
                   <p className="text-sm text-ink-500 dark:text-ink-400">
-                    We sent a 6-digit code to<br />
+                    We sent an 8-digit code to<br />
                     <strong className="text-ink-700 dark:text-ink-300">{email}</strong>
                   </p>
                 </div>
 
-                <OtpInput onComplete={handleOtpComplete} error={otpError} disabled={otpVerifying} />
+                <OtpInput length={8} onComplete={handleOtpComplete} error={otpError} disabled={otpVerifying} />
 
                 {displayError && (
                   <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">

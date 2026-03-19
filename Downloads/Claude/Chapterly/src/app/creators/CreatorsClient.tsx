@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, CheckCircle, Loader2, BadgeCheck } from 'lucide-react';
 
 type Platform = 'all' | 'tiktok' | 'instagram' | 'youtube';
 
@@ -129,9 +129,41 @@ const PLATFORM_ICONS: Record<string, string> = {
   blog: '✍️',
 };
 
+interface ApplicationStatus { status: string }
+
 export default function CreatorsClient() {
   const [platform, setPlatform] = useState<Platform>('all');
   const [genre, setGenre] = useState<string>('all');
+  const [showApply, setShowApply] = useState(false);
+  const [appStatus, setAppStatus] = useState<ApplicationStatus | null>(null);
+  const [applyForm, setApplyForm] = useState({ platform: 'tiktok', social_handle: '', profile_url: '', follower_count: '', notes: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/creators/apply')
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j?.data) setAppStatus(j.data); })
+      .catch(() => {});
+  }, []);
+
+  const submitApplication = async () => {
+    if (!applyForm.social_handle || !applyForm.profile_url) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/creators/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...applyForm,
+          follower_count: applyForm.follower_count ? parseInt(applyForm.follower_count) : null,
+        }),
+      });
+      if (res.ok) { setSubmitted(true); setAppStatus({ status: 'pending' }); }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const allGenres = Array.from(new Set(CREATORS.flatMap(c => c.genres)));
   const filtered = CREATORS.filter(c =>
@@ -207,14 +239,74 @@ export default function CreatorsClient() {
             )}
           </div>
 
-          {/* Submit creator */}
-          <div className="bg-brand-50 border border-brand-100 rounded-2xl p-6 text-center">
-            <p className="text-sm text-ink-700 mb-2 font-medium">Are you a book creator?</p>
-            <p className="text-xs text-ink-500 mb-4">Claim your profile and share your reading lists directly with your audience.</p>
-            <a href="mailto:hello@chapterly.app?subject=Creator%20Profile%20Request"
-              className="inline-flex px-5 py-2 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 transition-colors">
-              Apply for a creator profile →
-            </a>
+          {/* Creator application CTA */}
+          <div className="bg-gradient-to-br from-brand-50 to-amber-50 border border-brand-100 rounded-2xl p-6">
+            {appStatus?.status === 'approved' ? (
+              <div className="text-center">
+                <BadgeCheck className="w-8 h-8 text-brand-500 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-ink-800">You&apos;re a verified creator!</p>
+                <p className="text-xs text-ink-500 mt-1">Your badge is showing on your profile.</p>
+              </div>
+            ) : appStatus?.status === 'pending' || submitted ? (
+              <div className="text-center">
+                <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-ink-800">Application submitted!</p>
+                <p className="text-xs text-ink-500 mt-1">We&apos;ll review it and get back to you within 48 hours.</p>
+              </div>
+            ) : !showApply ? (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-ink-800 mb-1">Are you a book creator?</p>
+                <p className="text-xs text-ink-500 mb-4">Apply for a verified badge and get featured on the Creator Hub.</p>
+                <button onClick={() => setShowApply(true)}
+                  className="px-5 py-2 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 transition-colors">
+                  Apply for verification →
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-ink-800">Apply for Creator Verification</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-ink-500 block mb-1">Platform</label>
+                    <select value={applyForm.platform} onChange={e => setApplyForm(p => ({ ...p, platform: e.target.value }))}
+                      className="w-full px-3 py-2 border border-paper-200 rounded-xl text-xs bg-white text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-300">
+                      <option value="tiktok">TikTok</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="twitter">Twitter/X</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-ink-500 block mb-1">Your handle</label>
+                    <input value={applyForm.social_handle} onChange={e => setApplyForm(p => ({ ...p, social_handle: e.target.value }))}
+                      placeholder="@yourbooktok"
+                      className="w-full px-3 py-2 border border-paper-200 rounded-xl text-xs text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-300" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-ink-500 block mb-1">Profile URL</label>
+                  <input value={applyForm.profile_url} onChange={e => setApplyForm(p => ({ ...p, profile_url: e.target.value }))}
+                    placeholder="https://tiktok.com/@yourbooktok"
+                    className="w-full px-3 py-2 border border-paper-200 rounded-xl text-xs text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-300" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-ink-500 block mb-1">Approx. followers</label>
+                  <input value={applyForm.follower_count} onChange={e => setApplyForm(p => ({ ...p, follower_count: e.target.value }))}
+                    type="number" placeholder="e.g. 50000"
+                    className="w-full px-3 py-2 border border-paper-200 rounded-xl text-xs text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-300" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowApply(false)} className="flex-1 py-2 rounded-xl text-xs text-ink-500 bg-paper-100 border border-paper-200">
+                    Cancel
+                  </button>
+                  <button onClick={submitApplication} disabled={submitting || !applyForm.social_handle || !applyForm.profile_url}
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
+                    {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                    Submit Application
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

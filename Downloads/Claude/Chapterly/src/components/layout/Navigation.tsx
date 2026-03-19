@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { BookOpen, Search, BarChart3, Share2, Upload, LogOut, Plus, Flame, LayoutDashboard, BookMarked, Compass, Users, Trophy, Rss } from 'lucide-react';
+import { Search, Share2, Upload, LogOut, Plus, Flame, LayoutDashboard, BookMarked, Compass, Users, Trophy, Rss, BookOpen, Crown, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
@@ -17,9 +17,14 @@ const NAV_ITEMS = [
 
 const DISCOVER_NAV = [
   { href: '/discover', label: 'Discover', icon: Compass },
+  { href: '/clubs', label: 'Book Clubs', icon: BookOpen },
+  { href: '/people', label: 'People', icon: Users },
   { href: '/creators', label: 'Creator Hub 🔥', icon: Users },
   { href: '/challenge', label: 'My Challenge', icon: Trophy },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/wrapped', label: 'Year in Books', icon: CalendarDays },
   { href: '/feed', label: 'Friends', icon: Rss },
+  { href: '/premium', label: 'Go Premium ✨', icon: Crown },
 ];
 
 const MOBILE_NAV = [
