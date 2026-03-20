@@ -10,7 +10,7 @@ export function getResend(): Resend {
   return _resend;
 }
 
-export const FROM_EMAIL = 'Chapterly <hello@chapterly.app>';
+export const FROM_EMAIL = 'Chapterly <hello@getchapterly.com>';
 
 // ─── Weekly Digest Email ────────────────────────────────────────
 export interface DigestData {
@@ -109,7 +109,7 @@ export function buildDigestHtml(d: DigestData): string {
 
     <!-- CTA -->
     <div style="text-align:center;margin-top:24px;">
-      <a href="https://chapterly.app/dashboard" style="display:inline-block;background:#ee7a1e;color:white;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:600;font-size:14px;">
+      <a href="https://getchapterly.com/dashboard" style="display:inline-block;background:#ee7a1e;color:white;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:600;font-size:14px;">
         Open Chapterly →
       </a>
     </div>
@@ -118,8 +118,8 @@ export function buildDigestHtml(d: DigestData): string {
   <!-- Footer -->
   <div style="text-align:center;margin-top:24px;">
     <p style="font-size:11px;color:#d1d5db;margin:0;">
-      You're receiving this because you have an account at chapterly.app &nbsp;·&nbsp;
-      <a href="https://chapterly.app/u/${d.handle}" style="color:#d1d5db;">View profile</a>
+      You're receiving this because you have an account at getchapterly.com &nbsp;·&nbsp;
+      <a href="https://getchapterly.com/u/${d.handle}" style="color:#d1d5db;">View profile</a>
     </p>
   </div>
 
@@ -143,12 +143,12 @@ export function buildStreakReminderHtml(display_name: string, streak: number): s
     <p style="font-size:14px;color:#6b7280;margin:0 0 24px;">
       Hey ${display_name}, you haven't logged any reading today. Log even one page to keep your streak alive.
     </p>
-    <a href="https://chapterly.app/dashboard?tab=streak"
+    <a href="https://getchapterly.com/dashboard?tab=streak"
        style="display:inline-block;background:#ee7a1e;color:white;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:15px;">
       Log reading now →
     </a>
     <p style="font-size:11px;color:#d1d5db;margin-top:24px;">
-      <a href="https://chapterly.app/dashboard" style="color:#d1d5db;">Manage notifications</a>
+      <a href="https://getchapterly.com/dashboard" style="color:#d1d5db;">Manage notifications</a>
     </p>
   </div>
 </div>
