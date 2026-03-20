@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /widget/[handle]
  * Returns an SVG badge showing what @handle is currently reading.
- * Embeddable in any website/README: <img src="https://chapterly.app/widget/maxwexley" />
+ * Embeddable in any website/README: <img src="https://getchapterly.com/widget/maxwexley" />
  * Also supports ?theme=dark
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -86,7 +86,7 @@ function readingSvg(
   <text x="12" y="54" font-family="-apple-system,sans-serif" font-size="10" fill="${sub}">${author}</text>
   ${progress !== null ? `<rect x="12" y="62" width="276" height="4" rx="2" fill="${border}"/>` : ''}
   ${progressBar}
-  <text x="288" y="76" font-family="-apple-system,sans-serif" font-size="8" fill="${sub}" text-anchor="end" opacity="0.5">chapterly.app</text>
+  <text x="288" y="76" font-family="-apple-system,sans-serif" font-size="8" fill="${sub}" text-anchor="end" opacity="0.5">getchapterly.com</text>
 </svg>`;
 }
 
@@ -95,7 +95,7 @@ function nothingSvg(name: string, bg: string, border: string, text: string, sub:
   <rect width="300" height="60" rx="12" fill="${bg}" stroke="${border}" stroke-width="1"/>
   <text x="12" y="24" font-family="-apple-system,sans-serif" font-size="12" font-weight="600" fill="${text}">${truncate(name, 24)}</text>
   <text x="12" y="42" font-family="-apple-system,sans-serif" font-size="10" fill="${sub}">Not reading anything right now</text>
-  <text x="288" y="56" font-family="-apple-system,sans-serif" font-size="8" fill="${accent}" text-anchor="end" opacity="0.6">chapterly.app</text>
+  <text x="288" y="56" font-family="-apple-system,sans-serif" font-size="8" fill="${accent}" text-anchor="end" opacity="0.6">getchapterly.com</text>
 </svg>`;
 }
 
@@ -103,7 +103,7 @@ function notFoundSvg(bg: string, border: string, text: string, sub: string): str
   return `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="50" viewBox="0 0 300 50">
   <rect width="300" height="50" rx="12" fill="${bg}" stroke="${border}" stroke-width="1"/>
   <text x="12" y="22" font-family="-apple-system,sans-serif" font-size="11" fill="${text}">Reader not found</text>
-  <text x="12" y="38" font-family="-apple-system,sans-serif" font-size="9" fill="${sub}">chapterly.app</text>
+  <text x="12" y="38" font-family="-apple-system,sans-serif" font-size="9" fill="${sub}">getchapterly.com</text>
 </svg>`;
 }
 
