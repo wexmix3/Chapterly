@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Loader2, BookOpen, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, BookOpen, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface Insight {
   emoji: string;
@@ -31,15 +31,18 @@ export default function AIInsights() {
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
   const [message, setMessage] = useState('');
 
   const load = async () => {
     setLoading(true);
+    setError(false);
     try {
       const [insightsRes, recsRes] = await Promise.all([
         fetch('/api/ai/insights', { method: 'POST' }),
         fetch('/api/ai/recommend', { method: 'POST' }),
       ]);
+      if (!insightsRes.ok || !recsRes.ok) throw new Error('API error');
       const [insightsData, recsData] = await Promise.all([
         insightsRes.json(),
         recsRes.json(),
@@ -48,6 +51,8 @@ export default function AIInsights() {
       setRecs(recsData.recommendations ?? []);
       if (recsData.message) setMessage(recsData.message);
       setLoaded(true);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -66,7 +71,7 @@ export default function AIInsights() {
           <h2 className="font-display text-base font-semibold text-ink-800">AI Insights</h2>
           <span className="text-[10px] bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full font-medium">Beta</span>
         </div>
-        {loaded && (
+        {(loaded || error) && (
           <button onClick={load} disabled={loading} className="text-ink-400 hover:text-ink-700 transition-colors">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -96,6 +101,19 @@ export default function AIInsights() {
               <Loader2 className="w-8 h-8 animate-spin text-brand-200 absolute -top-1 -left-1" />
             </div>
             <p className="text-xs text-ink-400">Claude is reading your reading history...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-3">
+            <AlertCircle className="w-8 h-8 text-ink-200" />
+            <p className="text-xs text-ink-400 text-center">Couldn&apos;t load insights right now.</p>
+            <button
+              onClick={load}
+              disabled={loading}
+              className="text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors flex items-center gap-1.5"
+            >
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+              Try again
+            </button>
           </div>
         ) : activeTab === 'insights' ? (
           <div className="space-y-2">

@@ -15,8 +15,20 @@ export default function DailyGoal() {
   const [draft, setDraft] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem(GOAL_KEY);
-    if (stored) setGoal(parseInt(stored));
+    // Load goal: DB is source of truth, localStorage is fast cache
+    const cached = localStorage.getItem(GOAL_KEY);
+    if (cached) setGoal(parseInt(cached));
+
+    fetch('/api/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const dbGoal = d?.data?.goal_pages;
+        if (dbGoal && dbGoal > 0) {
+          setGoal(dbGoal);
+          localStorage.setItem(GOAL_KEY, String(dbGoal));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -35,6 +47,12 @@ export default function DailyGoal() {
     if (v > 0) {
       setGoal(v);
       localStorage.setItem(GOAL_KEY, String(v));
+      // Persist to DB
+      fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal_pages: v }),
+      }).catch(() => {});
     }
     setEditing(false);
   };
