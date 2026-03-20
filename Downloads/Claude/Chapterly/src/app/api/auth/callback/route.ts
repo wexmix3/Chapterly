@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server';
+import { createServerClient } from '@supabase/ssr';
+import { createAdminSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -13,14 +14,41 @@ export async function GET(request: NextRequest) {
   const oauthError = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
-  // Surface OAuth provider errors back to the login page
   if (oauthError) {
     const loginUrl = new URL('/login', origin);
     loginUrl.searchParams.set('error', errorDescription ?? oauthError);
     return NextResponse.redirect(loginUrl);
   }
 
-  const supabase = createServerSupabaseClient();
+  if (!code && !token_hash) {
+    return NextResponse.redirect(`${origin}/login?error=no_code`);
+  }
+
+  // Collect all cookies that Supabase wants to set so we can attach them to
+  // whichever redirect response we ultimately return.
+  const cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          // Read PKCE verifier + existing session cookies from the incoming request
+          return request.cookies.getAll();
+        },
+        setAll(items) {
+          items.forEach((item) => cookiesToSet.push(item as typeof cookiesToSet[0]));
+        },
+      },
+    },
+  );
+
+  function redirect(destination: string) {
+    const res = NextResponse.redirect(destination);
+    cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]));
+    return res;
+  }
 
   // Handle email confirmation via token_hash (magic-link / confirm-email flow)
   if (token_hash && type) {
@@ -35,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Handle OAuth / magic-link code exchange
+  // Handle OAuth PKCE code exchange
   if (code) {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
@@ -45,17 +73,14 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (!code && !token_hash) {
-    return NextResponse.redirect(`${origin}/login?error=no_code`);
-  }
-
-  // Resolve session and create user profile if this is a new account
+  // Resolve session
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
+  // Create user profile if this is a new account
   const admin = createAdminSupabaseClient();
   const { data: existingUser } = await admin
     .from('users')
@@ -80,12 +105,12 @@ export async function GET(request: NextRequest) {
       onboarding_complete: false,
     });
 
-    return NextResponse.redirect(`${origin}/onboarding`);
+    return redirect(`${origin}/onboarding`);
   }
 
   if (!existingUser.onboarding_complete) {
-    return NextResponse.redirect(`${origin}/onboarding`);
+    return redirect(`${origin}/onboarding`);
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  return redirect(`${origin}${next}`);
 }
