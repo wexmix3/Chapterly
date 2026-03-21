@@ -57,60 +57,92 @@ export default async function LandingPage() {
           </div>
 
           {/* App preview card */}
-          <div className="relative hidden md:block">
-            <div className="bg-white rounded-3xl border border-ink-100 shadow-2xl shadow-ink-900/10 p-5 max-w-sm ml-auto">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-base">📖</span>
-                <span className="font-display text-sm font-bold text-ink-950">Chapterly</span>
-                <span className="ml-auto text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium border border-amber-100">🔥 23-day streak</span>
+          <div className="relative hidden md:block pt-6 pr-6">
+            <div className="bg-white rounded-3xl border border-ink-100 shadow-2xl shadow-ink-900/8 overflow-hidden max-w-sm ml-auto">
+
+              {/* Mock top bar */}
+              <div className="flex items-center gap-2 px-4 py-3 bg-paper-50 border-b border-ink-100">
+                <span className="text-sm">📖</span>
+                <span className="font-display text-xs font-bold text-ink-950">Chapterly</span>
+                <span className="ml-auto flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-semibold border border-amber-100">
+                  🔥 23-day streak
+                </span>
               </div>
-              <div className="space-y-2.5 mb-4">
-                <p className="text-xs font-semibold text-ink-400 uppercase tracking-wide">Continue Reading</p>
-                {[
-                  { title: 'Fourth Wing', author: 'Rebecca Yarros', pct: 59, cover: 'https://covers.openlibrary.org/b/id/14395680-M.jpg' },
-                  { title: 'Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', pct: 18, cover: 'https://covers.openlibrary.org/b/id/12854803-M.jpg' },
-                ].map(b => (
-                  <div key={b.title} className="flex items-center gap-3 p-2.5 bg-paper-50 rounded-xl">
-                    <div className="w-8 h-11 rounded-md overflow-hidden flex-shrink-0 bg-paper-200">
-                      <img src={b.cover} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold text-ink-800 truncate">{b.title}</p>
-                      <p className="text-[9px] text-ink-400 truncate">{b.author}</p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <div className="flex-1 h-1 bg-ink-100 rounded-full">
-                          <div className="h-full bg-brand-400 rounded-full" style={{ width: `${b.pct}%` }} />
+
+              <div className="p-4 space-y-3">
+                {/* Continue reading */}
+                <div>
+                  <p className="text-[9px] font-bold text-ink-400 uppercase tracking-widest mb-2">Continue Reading</p>
+                  <div className="space-y-2">
+                    {[
+                      { title: 'Fourth Wing', author: 'Rebecca Yarros', pct: 59, grad: 'from-red-400 to-orange-500' },
+                      { title: 'Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', pct: 18, grad: 'from-blue-400 to-indigo-500' },
+                    ].map(b => (
+                      <div key={b.title} className="flex items-center gap-3 p-2.5 bg-paper-50 rounded-xl">
+                        <div className={`w-8 h-11 rounded-md flex-shrink-0 bg-gradient-to-br ${b.grad} flex items-end justify-end p-1`}>
+                          <span className="text-[8px] text-white/80 font-bold leading-none">{b.title.split(' ').map((w: string) => w[0]).join('').slice(0,3)}</span>
                         </div>
-                        <span className="text-[9px] text-ink-400">{b.pct}%</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold text-ink-800 truncate">{b.title}</p>
+                          <p className="text-[9px] text-ink-400 truncate">{b.author}</p>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <div className="flex-1 h-1 bg-ink-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand-400 rounded-full" style={{ width: `${b.pct}%` }} />
+                            </div>
+                            <span className="text-[9px] text-ink-400 flex-shrink-0">{b.pct}%</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {/* AI Insights preview */}
-              <div className="bg-gradient-to-br from-violet-50 to-brand-50 rounded-xl p-3 border border-violet-100">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <div className="w-4 h-4 rounded bg-gradient-to-br from-violet-500 to-brand-500 flex items-center justify-center">
-                    <span className="text-[8px] text-white">✨</span>
-                  </div>
-                  <p className="text-[10px] font-semibold text-violet-700">AI Insight · Powered by Claude</p>
                 </div>
-                <p className="text-[10px] text-ink-600 leading-relaxed">You read 40% faster on weekday mornings. Try scheduling your sessions before 10am!</p>
+
+                {/* AI insight */}
+                <div className="bg-gradient-to-br from-violet-50 to-brand-50 rounded-xl p-3 border border-violet-100">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="w-4 h-4 rounded bg-gradient-to-br from-violet-500 to-brand-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[8px] text-white">✨</span>
+                    </div>
+                    <p className="text-[9px] font-bold text-violet-700 uppercase tracking-wide">AI Insight · Claude</p>
+                  </div>
+                  <p className="text-[10px] text-ink-700 leading-relaxed font-medium">You read 40% faster on weekday mornings — try blocking 8–10am for sessions.</p>
+                </div>
+
+                {/* Friends strip */}
+                <div className="rounded-xl border border-ink-100 overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-paper-100 bg-paper-50/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse flex-shrink-0" />
+                    <p className="text-[9px] font-bold text-ink-500 uppercase tracking-wide">Friends Activity</p>
+                  </div>
+                  {[
+                    { name: 'Sarah K.', action: 'finished', book: 'The Midnight Library', color: 'bg-violet-100 text-violet-700' },
+                    { name: 'James R.', action: 'started', book: 'Fourth Wing', color: 'bg-blue-100 text-blue-700' },
+                  ].map(e => (
+                    <div key={e.name} className="flex items-center gap-2 px-3 py-2 border-b border-paper-50 last:border-0">
+                      <div className={`w-5 h-5 rounded-full ${e.color} flex-shrink-0 flex items-center justify-center text-[8px] font-bold`}>
+                        {e.name[0]}
+                      </div>
+                      <p className="text-[9px] text-ink-600 leading-snug truncate">
+                        <span className="font-semibold">{e.name}</span> {e.action} <span className="font-medium">{e.book}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* Floating streak badge */}
-            <div className="absolute -bottom-6 -left-8 bg-ink-950 rounded-2xl p-4 text-white text-center shadow-xl w-28">
-              <div className="text-3xl mb-1">🔥</div>
-              <p className="font-display text-2xl font-bold">23</p>
-              <p className="text-[10px] text-ink-400 uppercase tracking-wider">Day Streak</p>
+            <div className="absolute bottom-0 -left-4 bg-ink-950 rounded-2xl p-4 text-white text-center shadow-xl w-24">
+              <div className="text-2xl mb-1">🔥</div>
+              <p className="font-display text-xl font-bold">23</p>
+              <p className="text-[9px] text-ink-400 uppercase tracking-wider">Day Streak</p>
             </div>
 
             {/* Floating stat */}
-            <div className="absolute -top-4 -right-4 bg-emerald-500 rounded-2xl px-4 py-2.5 text-white shadow-lg">
-              <p className="text-[10px] font-medium uppercase tracking-wide opacity-80">On pace for</p>
+            <div className="absolute top-0 right-0 bg-emerald-500 rounded-2xl px-4 py-2.5 text-white shadow-lg">
+              <p className="text-[9px] font-medium uppercase tracking-wide opacity-80">On pace for</p>
               <p className="font-display font-bold text-lg leading-tight">24 books</p>
-              <p className="text-[10px] opacity-70">this year 🎯</p>
+              <p className="text-[9px] opacity-70">this year 🎯</p>
             </div>
           </div>
         </div>
