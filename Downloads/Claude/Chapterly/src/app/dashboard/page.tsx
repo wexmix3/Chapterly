@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth, useShelf } from '@/hooks';
 import Navigation from '@/components/layout/Navigation';
 import StatsOverview from '@/components/dashboard/StatsOverview';
@@ -13,8 +13,9 @@ import GoodreadsImport from '@/components/books/GoodreadsImport';
 import ReadNext from '@/components/books/ReadNext';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import DailyGoal from '@/components/dashboard/DailyGoal';
-import { BookOpen, Search, Share2, Upload, BarChart3, Loader2, X } from 'lucide-react';
+import { BookOpen, Loader2, X } from 'lucide-react';
 import AIInsights from '@/components/dashboard/AIInsights';
+import SocialPulse from '@/components/dashboard/SocialPulse';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
@@ -22,12 +23,9 @@ type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
 function DashboardContent() {
   const { user, loading } = useAuth();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const tab = (searchParams.get('tab') as Tab) || 'overview';
   const [logModal, setLogModal] = useState<any>(null);
   const { books: currentlyReading, fetchBooks: refetchShelf } = useShelf('reading');
-
-  const setTab = (t: Tab) => router.push(`/dashboard?tab=${t}`);
 
   if (!loading && !user) { window.location.href = '/'; return null; }
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
@@ -51,6 +49,7 @@ function DashboardContent() {
           {tab === 'overview' && (
             <ErrorBoundary>
             <div className="space-y-8">
+              {/* 1 — Currently reading */}
               {currentlyReading.length > 0 && (
                 <section>
                   <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Continue Reading</h2>
@@ -81,32 +80,31 @@ function DashboardContent() {
                 </section>
               )}
 
+              {/* 2 — AI Insights (prominent, before stats) */}
+              <section>
+                <AIInsights />
+              </section>
+
+              {/* 3 — Social pulse */}
+              <section>
+                <SocialPulse />
+              </section>
+
+              {/* 4 — Daily goal */}
               <section>
                 <DailyGoal />
               </section>
 
-              <section>
-                <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Read Next</h2>
-                <ReadNext />
-              </section>
-
+              {/* 5 — Stats */}
               <section>
                 <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Your Stats</h2>
                 <StatsOverview />
               </section>
 
+              {/* 6 — Read next */}
               <section>
-                <AIInsights />
-              </section>
-
-              <section>
-                <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 gap-3">
-                  <QA icon={<Search className="w-5 h-5" />} label="Search Books" onClick={() => setTab('search')} />
-                  <QA icon={<Share2 className="w-5 h-5" />} label="Share Card" onClick={() => setTab('share')} />
-                  <QA icon={<Upload className="w-5 h-5" />} label="Import Goodreads" onClick={() => setTab('import')} />
-                  <QA icon={<BarChart3 className="w-5 h-5" />} label="Full Stats" onClick={() => setTab('streak')} />
-                </div>
+                <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Read Next</h2>
+                <ReadNext />
               </section>
             </div>
             </ErrorBoundary>
@@ -163,10 +161,3 @@ export default function DashboardPage() {
   );
 }
 
-function QA({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-ink-100 hover:border-brand-200 hover:bg-brand-50/30 transition-all text-left">
-      <span className="text-ink-400">{icon}</span><span className="text-sm font-medium text-ink-700">{label}</span>
-    </button>
-  );
-}
