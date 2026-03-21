@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { BookOpen, Star, Loader2 } from 'lucide-react';
+import { BookOpen, Star, Loader2, X, Check, AlertCircle } from 'lucide-react';
 import { useShelf } from '@/hooks';
 import type { ShelfStatus, UserBook } from '@/types';
 
@@ -14,9 +13,17 @@ const TABS: { value: ShelfStatus | 'all'; label: string; emoji: string }[] = [
   { value: 'dnf', label: 'DNF', emoji: '🚫' },
 ];
 
+const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
+  { value: 'to_read', label: 'Want to Read' },
+  { value: 'reading', label: 'Currently Reading' },
+  { value: 'read', label: 'Read' },
+  { value: 'dnf', label: 'Did Not Finish' },
+];
+
 export default function BookShelf() {
   const [activeTab, setActiveTab] = useState<ShelfStatus | 'all'>('all');
-  const { books, loading } = useShelf(activeTab === 'all' ? undefined : activeTab);
+  const { books, loading, fetchBooks } = useShelf(activeTab === 'all' ? undefined : activeTab);
+  const [selectedBook, setSelectedBook] = useState<UserBook | null>(null);
 
   return (
     <div className="space-y-4">
@@ -53,14 +60,28 @@ export default function BookShelf() {
       {/* Book grid */}
       {!loading && books.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-          {books.map((ub) => <BookCard key={ub.id} userBook={ub} />)}
+          {books.map((ub) => (
+            <BookCard key={ub.id} userBook={ub} onEdit={() => setSelectedBook(ub)} />
+          ))}
         </div>
+      )}
+
+      {/* Edit modal */}
+      {selectedBook && (
+        <BookEditModal
+          userBook={selectedBook}
+          onClose={() => setSelectedBook(null)}
+          onSaved={() => {
+            setSelectedBook(null);
+            fetchBooks();
+          }}
+        />
       )}
     </div>
   );
 }
 
-function BookCard({ userBook }: { userBook: UserBook }) {
+function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void }) {
   const { book } = userBook;
   const progress =
     userBook.current_page && book?.page_count
@@ -68,7 +89,7 @@ function BookCard({ userBook }: { userBook: UserBook }) {
       : null;
 
   return (
-    <Link href={`/book/${userBook.id}`} className="group relative block">
+    <button onClick={onEdit} className="group relative block text-left w-full">
       {/* Cover */}
       <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all">
         {book?.cover_url ? (
@@ -101,6 +122,284 @@ function BookCard({ userBook }: { userBook: UserBook }) {
 
       {/* Title */}
       <p className="mt-1.5 text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight">{book?.title}</p>
-    </Link>
+    </button>
+  );
+}
+
+function BookEditModal({
+  userBook,
+  onClose,
+  onSaved,
+}: {
+  userBook: UserBook;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { book } = userBook;
+
+  const [status, setStatus] = useState<ShelfStatus>(userBook.status);
+  const [currentPage, setCurrentPage] = useState<string>(
+    userBook.current_page != null ? String(userBook.current_page) : '',
+  );
+  const [rating, setRating] = useState<number>(userBook.rating ?? 0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [reviewText, setReviewText] = useState(userBook.review_text ?? '');
+  const [startedAt, setStartedAt] = useState(
+    userBook.started_at ? userBook.started_at.slice(0, 10) : '',
+  );
+  const [finishedAt, setFinishedAt] = useState(
+    userBook.finished_at ? userBook.finished_at.slice(0, 10) : '',
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const updates: Record<string, unknown> = {
+        status,
+        current_page: currentPage !== '' ? Number(currentPage) : null,
+        rating: rating > 0 ? rating : null,
+        review_text: reviewText.trim() || null,
+        started_at: startedAt ? new Date(startedAt).toISOString() : null,
+        finished_at: finishedAt ? new Date(finishedAt).toISOString() : null,
+      };
+      const res = await fetch(`/api/user-books/${userBook.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        onSaved();
+      } else {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error ?? 'Failed to save changes');
+      }
+    } catch {
+      setError('Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Sheet */}
+      <div className="relative z-10 w-full sm:max-w-lg bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-start gap-4 p-5 border-b border-paper-100">
+          {/* Cover thumbnail */}
+          <div className="w-12 flex-shrink-0">
+            <div className="aspect-[2/3] bg-paper-200 rounded-lg overflow-hidden shadow-sm">
+              {book?.cover_url ? (
+                <img src={book.cover_url} alt={book?.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-ink-300" />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-ink-900 line-clamp-2 leading-tight">{book?.title}</p>
+            <p className="text-xs text-ink-500 mt-0.5">{book?.authors?.join(', ')}</p>
+            {book?.page_count && (
+              <p className="text-xs text-ink-400 mt-0.5">{book.page_count} pages</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 p-1.5 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-paper-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 p-5 space-y-5">
+
+          {/* Status */}
+          <div>
+            <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+              Shelf Status
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SHELF_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    setStatus(opt.value);
+                    // Auto-set finished date if marking as read
+                    if (opt.value === 'read' && !finishedAt) {
+                      setFinishedAt(new Date().toISOString().slice(0, 10));
+                    }
+                    // Auto-set started date if marking as reading
+                    if (opt.value === 'reading' && !startedAt) {
+                      setStartedAt(new Date().toISOString().slice(0, 10));
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    status === opt.value
+                      ? 'bg-brand-500 text-white border-brand-500'
+                      : 'bg-white border-ink-200 text-ink-600 hover:border-brand-300'
+                  }`}
+                >
+                  {status === opt.value && <Check className="w-3 h-3" />}
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Current page */}
+          <div>
+            <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+              Current Page
+              {book?.page_count && (
+                <span className="ml-1 normal-case font-normal">/ {book.page_count}</span>
+              )}
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={book?.page_count ?? undefined}
+              value={currentPage}
+              onChange={(e) => setCurrentPage(e.target.value)}
+              placeholder="0"
+              className="w-32 px-3 py-2 border border-ink-200 rounded-xl text-sm text-ink-800 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+
+          {/* Rating */}
+          <div>
+            <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+              Your Rating
+            </label>
+            <div className="flex items-center gap-1">
+              {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map((v) => {
+                const isHalf = v % 1 !== 0;
+                const active = (hoverRating || rating) >= v;
+                return (
+                  <button
+                    key={v}
+                    onMouseEnter={() => setHoverRating(v)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => setRating(v === rating ? 0 : v)}
+                    className="focus:outline-none relative"
+                    style={{ width: isHalf ? '12px' : '24px' }}
+                    title={`${v}★`}
+                  >
+                    {!isHalf ? (
+                      <Star
+                        className={`w-6 h-6 transition-colors ${
+                          active ? 'fill-brand-400 text-brand-400' : 'text-ink-200'
+                        }`}
+                      />
+                    ) : (
+                      <div className="w-3 h-6 overflow-hidden absolute left-0">
+                        <Star
+                          className={`w-6 h-6 transition-colors ${
+                            active ? 'fill-brand-400 text-brand-400' : 'text-ink-200'
+                          }`}
+                        />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+              {rating > 0 && (
+                <span className="ml-2 text-sm font-semibold text-brand-600">{rating}★</span>
+              )}
+              {rating > 0 && (
+                <button
+                  onClick={() => setRating(0)}
+                  className="ml-1 text-xs text-ink-400 hover:text-ink-600"
+                >
+                  clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Review / notes */}
+          <div>
+            <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+              Notes / Review
+            </label>
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              placeholder="Your thoughts on this book…"
+              rows={3}
+              className="w-full px-3 py-2.5 border border-ink-200 rounded-xl text-sm text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none"
+            />
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+                Started
+              </label>
+              <input
+                type="date"
+                value={startedAt}
+                onChange={(e) => setStartedAt(e.target.value)}
+                className="w-full px-3 py-2 border border-ink-200 rounded-xl text-sm text-ink-800 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+                Finished
+              </label>
+              <input
+                type="date"
+                value={finishedAt}
+                onChange={(e) => setFinishedAt(e.target.value)}
+                className="w-full px-3 py-2 border border-ink-200 rounded-xl text-sm text-ink-800 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-5 border-t border-paper-100 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 text-sm font-medium text-ink-600 hover:bg-paper-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              'Save changes'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
