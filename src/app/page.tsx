@@ -34,23 +34,23 @@ export default async function LandingPage() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-50 border border-brand-100 rounded-full text-brand-700 text-xs font-semibold mb-6">
-              <span>🔥</span> The reading tracker BookTok actually uses
+              <span>✨</span> AI-powered · Social · Free forever
             </div>
             <h1 className="font-display text-5xl md:text-6xl font-bold text-ink-950 leading-tight mb-5">
               Track every page.<br />
               <span className="text-brand-500">Share every chapter.</span>
             </h1>
             <p className="text-lg text-ink-500 mb-8 leading-relaxed">
-              Beautiful reading logs, streak tracking, book clubs, AI-powered recommendations, and share cards built for social — all in one free app.
+              The reading tracker that GoodReads never built — with AI insights, streaks, social feeds, and beautiful share cards.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-start">
               <Link href="/login"
                 className="px-8 py-3.5 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl text-base font-semibold transition-colors shadow-lg shadow-brand-500/20">
                 Start for free
               </Link>
-              <Link href="#features"
-                className="px-8 py-3.5 bg-white border border-ink-200 hover:border-ink-300 text-ink-700 rounded-2xl text-base font-semibold transition-colors">
-                See what&apos;s inside →
+              <Link href="/demo"
+                className="px-8 py-3.5 bg-white border border-ink-200 hover:border-brand-300 hover:text-brand-700 text-ink-700 rounded-2xl text-base font-semibold transition-colors">
+                Try the demo →
               </Link>
             </div>
             <p className="text-xs text-ink-400 mt-4">Free forever · No credit card · Import from Goodreads in 30 sec</p>
@@ -88,10 +88,12 @@ export default async function LandingPage() {
                 ))}
               </div>
               {/* AI Insights preview */}
-              <div className="bg-gradient-to-br from-brand-50 to-amber-50 rounded-xl p-3 border border-brand-100">
+              <div className="bg-gradient-to-br from-violet-50 to-brand-50 rounded-xl p-3 border border-violet-100">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-sm">✨</span>
-                  <p className="text-[10px] font-semibold text-brand-700">AI Insight</p>
+                  <div className="w-4 h-4 rounded bg-gradient-to-br from-violet-500 to-brand-500 flex items-center justify-center">
+                    <span className="text-[8px] text-white">✨</span>
+                  </div>
+                  <p className="text-[10px] font-semibold text-violet-700">AI Insight · Powered by Claude</p>
                 </div>
                 <p className="text-[10px] text-ink-600 leading-relaxed">You read 40% faster on weekday mornings. Try scheduling your sessions before 10am!</p>
               </div>
@@ -124,25 +126,51 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      {/* How it works */}
+      {/* Three pillars */}
       <section className="max-w-4xl mx-auto px-6 py-20">
         <h2 className="font-display text-3xl md:text-4xl font-bold text-ink-950 text-center mb-3">
-          Up and running in 60 seconds
+          Built different. Not just different-looking.
         </h2>
         <p className="text-ink-500 text-center mb-14 max-w-lg mx-auto">
-          No setup. No configuration. Just start reading.
+          Three things Goodreads never got right. We got all three.
         </p>
         <div className="grid md:grid-cols-3 gap-6">
           {[
-            { step: '01', emoji: '📦', title: 'Import or start fresh', desc: 'Drag in your Goodreads CSV to bring your entire library, or search any book and add it in seconds.' },
-            { step: '02', emoji: '📝', title: 'Log your sessions', desc: 'Tap "Log Reading" after each session. Enter pages or minutes. Your streak builds automatically.' },
-            { step: '03', emoji: '✨', title: 'Share & discover', desc: 'Get AI-powered insights on your habits, create stunning share cards, and join book clubs with friends.' },
-          ].map(s => (
-            <div key={s.step} className="relative bg-white rounded-2xl border border-ink-100 p-6 hover:shadow-sm transition-all">
-              <div className="text-xs font-bold text-ink-200 mb-4 font-mono">{s.step}</div>
-              <div className="text-3xl mb-3">{s.emoji}</div>
-              <h3 className="font-display font-bold text-ink-900 mb-2">{s.title}</h3>
-              <p className="text-sm text-ink-500 leading-relaxed">{s.desc}</p>
+            {
+              icon: '🤖',
+              gradient: 'from-violet-500 to-brand-500',
+              bg: 'bg-violet-50',
+              border: 'border-violet-100',
+              label: 'AI Intelligence',
+              title: 'Your reading coach, built in',
+              desc: 'Claude analyzes your habits and surfaces insights you\'d never find yourself — peak reading times, genre patterns, what to read next.',
+            },
+            {
+              icon: '👥',
+              gradient: 'from-pink-500 to-rose-500',
+              bg: 'bg-pink-50',
+              border: 'border-pink-100',
+              label: 'Social & Community',
+              title: 'Reading is better together',
+              desc: 'Follow friends, see their live activity, join book clubs, compete on leaderboards, and share your progress with beautiful story cards.',
+            },
+            {
+              icon: '✦',
+              gradient: 'from-brand-400 to-emerald-500',
+              bg: 'bg-brand-50',
+              border: 'border-brand-100',
+              label: 'Clean UX',
+              title: 'An app you\'ll actually open',
+              desc: 'No clutter. No dark patterns. Just a fast, beautiful app that makes tracking feel rewarding — not like homework.',
+            },
+          ].map(p => (
+            <div key={p.label} className={`${p.bg} rounded-2xl border ${p.border} p-6`}>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${p.gradient} flex items-center justify-center text-white text-lg mb-4 shadow-sm`}>
+                {p.icon}
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-400 mb-1">{p.label}</p>
+              <h3 className="font-display font-bold text-ink-900 mb-2">{p.title}</h3>
+              <p className="text-sm text-ink-500 leading-relaxed">{p.desc}</p>
             </div>
           ))}
         </div>
@@ -184,8 +212,78 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* AI Insights spotlight */}
+      {/* Social feed spotlight */}
       <section className="max-w-4xl mx-auto px-6 py-20">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-pink-50 border border-pink-100 rounded-full text-rose-600 text-xs font-semibold mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse inline-block" /> Live friend activity
+            </div>
+            <h2 className="font-display text-3xl font-bold text-ink-950 mb-4">Reading is better with friends</h2>
+            <p className="text-ink-500 mb-6 leading-relaxed">
+              Follow other readers and see what your network is reading in real time. Get nudged when a friend finishes a book you&apos;ve been eyeing.
+            </p>
+            <ul className="space-y-3 text-sm text-ink-500 mb-8">
+              {[
+                'Live friend activity feed',
+                'Follow readers by taste and genre',
+                'Private book clubs with chapter discussion',
+                'Beautiful share cards for every milestone',
+              ].map(item => (
+                <li key={item} className="flex items-center gap-2">
+                  <span className="text-rose-400 font-bold">✓</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link href="/demo#friends"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm">
+              See the social feed →
+            </Link>
+          </div>
+
+          {/* Social feed mock */}
+          <div className="bg-white rounded-2xl border border-ink-100 overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-paper-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center shadow-sm">
+                  <span className="text-[10px] text-white">👥</span>
+                </div>
+                <span className="font-display text-sm font-semibold text-ink-800">Friends Activity</span>
+                <span className="flex items-center gap-1 text-[10px] text-rose-500 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse inline-block" />
+                  Live
+                </span>
+              </div>
+            </div>
+            <div className="divide-y divide-paper-50">
+              {[
+                { name: 'Sarah K.', initials: 'S', action: 'finished', book: 'The Midnight Library', time: '2h ago', color: 'bg-violet-100 text-violet-700' },
+                { name: 'James R.', initials: 'J', action: 'started reading', book: 'Fourth Wing', time: '5h ago', color: 'bg-blue-100 text-blue-700' },
+                { name: 'Maya T.', initials: 'M', action: 'rated ★★★★★', book: 'Demon Copperhead', time: 'yesterday', color: 'bg-emerald-100 text-emerald-700' },
+                { name: 'Alex W.', initials: 'A', action: 'added', book: 'Tomorrow, and Tomorrow', time: '2d ago', color: 'bg-amber-100 text-amber-700' },
+              ].map(e => (
+                <div key={e.name} className="flex items-center gap-3 px-5 py-3.5">
+                  <div className={`w-8 h-8 rounded-full ${e.color} flex-shrink-0 flex items-center justify-center text-xs font-bold`}>
+                    {e.initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-ink-800 leading-snug">
+                      <span className="font-semibold">{e.name}</span>{' '}
+                      <span className="text-ink-400">{e.action}</span>{' '}
+                      <span className="font-medium truncate">{e.book}</span>
+                    </p>
+                    <p className="text-[10px] text-ink-300 mt-0.5">{e.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Insights spotlight */}
+      <section className="max-w-4xl mx-auto px-6 pb-20">
         <div className="bg-gradient-to-br from-ink-900 via-ink-800 to-brand-900 rounded-3xl p-10 md:p-14 text-white overflow-hidden relative">
           <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl" />
           <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center">
@@ -197,7 +295,7 @@ export default async function LandingPage() {
               <p className="text-ink-300 mb-6 leading-relaxed">
                 Chapterly uses Claude — Anthropic&apos;s AI — to analyze your reading patterns and surface genuinely useful insights. Not generic tips. Your data, your habits, your recommendations.
               </p>
-              <ul className="space-y-3 text-sm text-ink-300">
+              <ul className="space-y-3 text-sm text-ink-300 mb-8">
                 {[
                   'Discover when you read fastest during the day',
                   'Get 6 personalized book recommendations based on your taste',
@@ -210,22 +308,26 @@ export default async function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <Link href="/demo"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl text-sm font-semibold transition-colors">
+                See AI insights in action →
+              </Link>
             </div>
             <div className="flex-shrink-0 bg-white/5 border border-white/10 rounded-2xl p-5 w-full md:w-72">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-brand-400 to-amber-400 flex items-center justify-center">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-400 to-brand-400 flex items-center justify-center">
                   <span className="text-[10px]">✨</span>
                 </div>
                 <p className="text-sm font-semibold">AI Insights</p>
-                <span className="ml-auto text-[10px] bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded-full">Beta</span>
+                <span className="ml-auto text-[10px] bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded-full">Claude</span>
               </div>
               <div className="space-y-2.5">
                 {[
-                  { type: 'pattern', emoji: '📈', title: 'Morning Reader', body: 'You log 73% of your pages before noon on weekdays.' },
-                  { type: 'achievement', emoji: '🏆', title: '30-Day Milestone', body: "You've read every day this month — that's your longest streak ever!" },
-                  { type: 'suggestion', emoji: '📚', title: 'Try Fantasy', body: 'Based on your 5-star ratings, you might love The Name of the Wind.' },
+                  { emoji: '📈', title: 'Morning Reader', body: 'You log 73% of your pages before noon on weekdays.', border: 'border-l-blue-400' },
+                  { emoji: '🏆', title: '30-Day Milestone', body: "You've read every day this month — that's your longest streak ever!", border: 'border-l-emerald-400' },
+                  { emoji: '📚', title: 'Try Fantasy', body: 'Based on your 5-star ratings, you might love The Name of the Wind.', border: 'border-l-violet-400' },
                 ].map(insight => (
-                  <div key={insight.title} className="bg-white/5 rounded-xl p-3 border border-white/10">
+                  <div key={insight.title} className={`bg-white/5 rounded-xl p-3 border-l-[3px] ${insight.border} border border-white/10`}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm">{insight.emoji}</span>
                       <p className="text-xs font-semibold text-white">{insight.title}</p>
@@ -252,10 +354,10 @@ export default async function LandingPage() {
             </div>
             {[
               ['AI-powered insights', true, false],
+              ['Live social reading feed', true, false],
               ['Book clubs with progress tracking', true, false],
               ['Year in Books (Wrapped)', true, false],
               ['Streak leaderboard', true, false],
-              ['BookTok creator hub', true, false],
               ['Half-star ratings', true, false],
               ['Beautiful share cards', true, false],
               ['Dark mode', true, false],
@@ -321,7 +423,7 @@ export default async function LandingPage() {
                   'Advanced stats & analytics',
                   'Custom share card themes',
                   '1 streak freeze per month',
-                  'Ad-free experience',
+                  'Priority AI insights',
                   'Priority support',
                 ].map(f => (
                   <li key={f} className="flex items-center gap-2"><span className="text-brand-400 font-bold">✓</span>{f}</li>
@@ -335,33 +437,14 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Goodreads import CTA */}
-      <section className="max-w-4xl mx-auto px-6 pb-16">
-        <div className="bg-gradient-to-br from-brand-500 to-brand-700 rounded-3xl p-10 md:p-14 text-white">
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="flex-1">
-              <h2 className="font-display text-3xl font-bold mb-3">Bring your library with you</h2>
-              <p className="text-brand-100 mb-6">
-                Already on Goodreads? Import your entire library in seconds. Every book, every rating, every shelf — no manual entry.
-              </p>
-              <Link href="/login"
-                className="inline-flex px-6 py-3 bg-white text-brand-600 rounded-xl font-semibold hover:bg-brand-50 transition-colors">
-                Import from Goodreads →
-              </Link>
-            </div>
-            <div className="flex-shrink-0 text-7xl">📦</div>
-          </div>
-        </div>
-      </section>
-
       {/* Testimonials */}
       <section className="max-w-4xl mx-auto px-6 pb-16">
-        <h2 className="font-display text-2xl font-bold text-ink-950 text-center mb-8">BookTok creators love it</h2>
+        <h2 className="font-display text-2xl font-bold text-ink-950 text-center mb-8">Readers love it</h2>
         <div className="grid md:grid-cols-3 gap-4">
           {[
-            { handle: '@readingwithray', platform: 'TikTok', quote: "Finally a reading app that gets it. The share cards are stunning and my followers love seeing my progress.", followers: '890K' },
-            { handle: '@pagebypageclub', platform: 'Instagram', quote: "Switched from Goodreads and never looked back. The streak system actually keeps me reading every day.", followers: '420K' },
-            { handle: '@booknerdvibes', platform: 'TikTok', quote: "The AI insights are wild — it told me I read 40% faster in the mornings. Now I block that time every day.", followers: '1.2M' },
+            { handle: 'Rachel M.', platform: 'Switched from Goodreads', quote: "Finally a reading app that gets it. The share cards are stunning and the AI insights actually changed how I plan my reading time.", initials: 'R', color: 'bg-violet-100 text-violet-700' },
+            { handle: 'Tom K.', platform: 'Using since launch', quote: "Switched from Goodreads and never looked back. The streak system actually keeps me reading every single day. I\'m at 47 days.", initials: 'T', color: 'bg-blue-100 text-blue-700' },
+            { handle: 'Priya S.', platform: 'Power user', quote: "The AI insights blew my mind — it told me I read 40% faster in the mornings. Now I block that time every day and I\'ve doubled my book count.", initials: 'P', color: 'bg-emerald-100 text-emerald-700' },
           ].map(t => (
             <div key={t.handle} className="bg-white rounded-2xl border border-ink-100 p-6">
               <div className="flex gap-1 mb-3">
@@ -369,12 +452,12 @@ export default async function LandingPage() {
               </div>
               <p className="text-sm text-ink-600 italic mb-4">&ldquo;{t.quote}&rdquo;</p>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold">
-                  {t.handle[1].toUpperCase()}
+                <div className={`w-8 h-8 rounded-full ${t.color} flex items-center justify-center text-xs font-bold`}>
+                  {t.initials}
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-ink-900">{t.handle}</p>
-                  <p className="text-[11px] text-ink-400">{t.platform} · {t.followers} followers</p>
+                  <p className="text-[11px] text-ink-400">{t.platform}</p>
                 </div>
               </div>
             </div>
@@ -390,10 +473,16 @@ export default async function LandingPage() {
             Read more.<br />Share more.<br />Enjoy it more.
           </h2>
           <p className="text-ink-500 mb-8">Free forever. No credit card. Import from Goodreads in 30 seconds.</p>
-          <Link href="/login"
-            className="inline-flex items-center px-10 py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl text-lg font-bold transition-colors shadow-xl shadow-brand-500/20">
-            Create your reading journal →
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/login"
+              className="inline-flex items-center justify-center px-10 py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl text-lg font-bold transition-colors shadow-xl shadow-brand-500/20">
+              Create your free account →
+            </Link>
+            <Link href="/demo"
+              className="inline-flex items-center justify-center px-10 py-4 bg-white border border-ink-200 hover:border-brand-300 text-ink-700 rounded-2xl text-lg font-semibold transition-colors">
+              Try the demo
+            </Link>
+          </div>
           <p className="text-xs text-ink-400 mt-4">Join thousands of readers already tracking with Chapterly</p>
         </div>
       </section>
@@ -410,6 +499,8 @@ export default async function LandingPage() {
             <Link href="#features" className="hover:text-ink-700 transition-colors">Features</Link>
             <span>·</span>
             <Link href="#premium" className="hover:text-ink-700 transition-colors">Premium</Link>
+            <span>·</span>
+            <Link href="/demo" className="hover:text-ink-700 transition-colors">Demo</Link>
             <span>·</span>
             <Link href="/login" className="hover:text-ink-700 transition-colors">Sign up</Link>
           </div>
