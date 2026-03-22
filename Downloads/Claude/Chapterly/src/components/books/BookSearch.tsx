@@ -96,16 +96,23 @@ export default function BookSearch() {
             <div key={key}
               className="bg-white rounded-2xl border border-ink-100 overflow-hidden transition-all">
               <div className="flex items-center gap-3 p-3">
-                {/* Cover */}
-                <div className="w-10 h-[60px] bg-paper-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
-                  {result.cover_url ? (
-                    <img src={result.cover_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="w-4 h-4 text-ink-300" />
-                    </div>
-                  )}
-                </div>
+                {/* Cover — links to book preview */}
+                {(() => {
+                  const q = new URLSearchParams({ source: result.source, id: result.source_id, title: result.title, author: result.authors[0] ?? '' });
+                  if (result.isbn13) q.set('isbn', result.isbn13);
+                  const previewHref = `/book/preview?${q}`;
+                  return (
+                    <a href={previewHref} className="w-10 h-[60px] bg-paper-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm hover:opacity-90 transition-opacity">
+                      {result.cover_url ? (
+                        <img src={result.cover_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <BookOpen className="w-4 h-4 text-ink-300" />
+                        </div>
+                      )}
+                    </a>
+                  );
+                })()}
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">

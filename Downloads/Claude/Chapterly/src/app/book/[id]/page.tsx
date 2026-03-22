@@ -8,10 +8,11 @@ import QuickLog from '@/components/sessions/QuickLog';
 import ReadingTimer from '@/components/sessions/ReadingTimer';
 import {
   ArrowLeft, BookOpen, Star, Calendar, Hash, Loader2,
-  CheckCircle, Clock, ExternalLink, Timer
+  CheckCircle, Clock, ExternalLink, Timer, MessageCircle, Send, Share2, X, Check
 } from 'lucide-react';
 import type { UserBook, ReadingSession } from '@/types';
 import { format, parseISO, addDays } from 'date-fns';
+import CelebrationModal, { type CelebrationEvent } from '@/components/ui/CelebrationModal';
 
 type ShelfStatus = 'to_read' | 'reading' | 'read' | 'dnf';
 
@@ -21,6 +22,215 @@ const STATUS_LABELS: Record<ShelfStatus, { label: string; emoji: string; color: 
   read:     { label: 'Read',         emoji: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   dnf:      { label: 'Did Not Finish', emoji: '🚫', color: 'bg-ink-50 text-ink-500 border-ink-200' },
 };
+
+type ReviewComment = {
+  id: string;
+  text: string;
+  created_at: string;
+  user: { display_name: string; avatar_url: string | null; handle: string | null } | null;
+};
+
+function ReviewComments({ reviewId }: { reviewId: string }) {
+  const [open, setOpen] = useState(false);
+  const [comments, setComments] = useState<ReviewComment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = async () => {
+    setLoadingComments(true);
+    try {
+      const res = await fetch(`/api/review-comments?review_id=${reviewId}`);
+      if (res.ok) {
+        const json = await res.json();
+        setComments(json.data ?? []);
+      }
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const toggle = () => {
+    if (!open) load();
+    setOpen((v) => !v);
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/review-comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review_id: reviewId, text: text.trim() }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setComments((prev) => [...prev, json.data]);
+        setText('');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={toggle}
+        className="flex items-center gap-1.5 text-[11px] text-ink-400 hover:text-brand-600 transition-colors"
+      >
+        <MessageCircle className="w-3.5 h-3.5" />
+        {open ? 'Hide comments' : `Comment${comments.length > 0 ? ` (${comments.length})` : ''}`}
+      </button>
+
+      {open && (
+        <div className="mt-2 pl-2 border-l-2 border-ink-100 space-y-2">
+          {loadingComments ? (
+            <div className="flex items-center gap-1.5 text-xs text-ink-400">
+              <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+            </div>
+          ) : comments.length === 0 ? (
+            <p className="text-xs text-ink-400 italic">No comments yet.</p>
+          ) : (
+            comments.map((c) => (
+              <div key={c.id} className="flex gap-2">
+                <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center text-[9px] font-bold text-brand-700 flex-shrink-0 mt-0.5">
+                  {c.user?.display_name?.[0] ?? '?'}
+                </div>
+                <div>
+                  <span className="text-[11px] font-medium text-ink-700">{c.user?.display_name ?? 'Reader'} </span>
+                  <span className="text-[11px] text-ink-500">{c.text}</span>
+                </div>
+              </div>
+            ))
+          )}
+
+          <form onSubmit={submit} className="flex gap-2 pt-1">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Add a comment…"
+              className="flex-1 text-xs px-2.5 py-1.5 border border-ink-200 rounded-lg focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-100"
+            />
+            <button
+              type="submit"
+              disabled={!text.trim() || submitting}
+              className="p-1.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white rounded-lg transition-colors"
+            >
+              {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type FollowingUser = { id: string; display_name: string; avatar_url: string | null; handle: string | null };
+
+function RecommendModal({ bookId, onClose }: { bookId: string; onClose: () => void }) {
+  const [following, setFollowing] = useState<FollowingUser[]>([]);
+  const [loadingFollowing, setLoadingFollowing] = useState(true);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/social')
+      .then(r => r.json())
+      .then(j => setFollowing(j.data ?? []))
+      .finally(() => setLoadingFollowing(false));
+  }, []);
+
+  const send = async () => {
+    if (!selected || sending) return;
+    setSending(true);
+    const res = await fetch('/api/friend-recommendations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient_id: selected, book_id: bookId, message }),
+    });
+    setSending(false);
+    if (res.ok) setSent(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-display font-semibold text-ink-900 text-sm">Recommend this book</h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-ink-100 text-ink-400 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {sent ? (
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+              <Check className="w-5 h-5 text-emerald-600" />
+            </div>
+            <p className="text-sm font-medium text-ink-800">Recommendation sent!</p>
+            <button onClick={onClose} className="mt-2 text-xs text-brand-600 hover:underline">Close</button>
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-ink-500 mb-3">Pick someone you follow:</p>
+            {loadingFollowing ? (
+              <div className="flex items-center gap-2 text-xs text-ink-400 py-4">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+              </div>
+            ) : following.length === 0 ? (
+              <p className="text-xs text-ink-400 italic py-4">You aren&apos;t following anyone yet.</p>
+            ) : (
+              <div className="space-y-1 max-h-48 overflow-y-auto mb-3">
+                {following.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => setSelected(selected === u.id ? null : u.id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all ${
+                      selected === u.id
+                        ? 'bg-brand-50 border border-brand-300'
+                        : 'hover:bg-ink-50 border border-transparent'
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
+                      {u.display_name?.[0] ?? '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-ink-800 truncate">{u.display_name}</p>
+                      {u.handle && <p className="text-[10px] text-ink-400 truncate">@{u.handle}</p>}
+                    </div>
+                    {selected === u.id && <Check className="w-3.5 h-3.5 text-brand-600 flex-shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Add a message (optional)…"
+              rows={2}
+              className="w-full text-xs px-3 py-2 border border-ink-200 rounded-xl focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-100 resize-none mb-3"
+            />
+
+            <button
+              onClick={send}
+              disabled={!selected || sending}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors"
+            >
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+              Send Recommendation
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function StarRating({ value, onChange, readonly }: { value: number; onChange?: (v: number) => void; readonly?: boolean }) {
   const [hover, setHover] = useState(0);
@@ -56,6 +266,8 @@ function BookDetailContent({ id }: { id: string }) {
   const [showLog, setShowLog] = useState(false);
   const [logMode, setLogMode] = useState<'quick' | 'timer'>('quick');
   const [moodTags, setMoodTags] = useState<string[]>([]);
+  const [showRecommend, setShowRecommend] = useState(false);
+  const [celebration, setCelebration] = useState<CelebrationEvent | null>(null);
 
   const fetchUserBook = async () => {
     const res = await fetch(`/api/user-books/${id}`);
@@ -123,6 +335,9 @@ function BookDetailContent({ id }: { id: string }) {
     if (res.ok) {
       const json = await res.json();
       setUserBook(json.data);
+      if (newStatus === 'read' && userBook.status !== 'read') {
+        setCelebration({ type: 'book_finished', bookTitle: userBook.book?.title ?? 'your book', bookCover: userBook.book?.cover_url });
+      }
     }
     setStatusSaving(false);
   };
@@ -145,6 +360,7 @@ function BookDetailContent({ id }: { id: string }) {
   return (
     <div className="min-h-screen bg-paper-50 dark:bg-ink-950">
       <Navigation />
+      <CelebrationModal event={celebration} onClose={() => setCelebration(null)} />
       <main className="md:ml-64 pb-24 md:pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
 
@@ -203,6 +419,14 @@ function BookDetailContent({ id }: { id: string }) {
                   </button>
                 ))}
               </div>
+
+              {/* Recommend button */}
+              <button
+                onClick={() => setShowRecommend(true)}
+                className="mt-2 inline-flex items-center gap-1.5 text-xs text-ink-500 hover:text-brand-600 bg-ink-50 hover:bg-brand-50 px-3 py-1.5 rounded-xl border border-ink-100 hover:border-brand-200 transition-all"
+              >
+                <Share2 className="w-3.5 h-3.5" /> Recommend to a friend
+              </button>
             </div>
           </div>
 
@@ -422,6 +646,7 @@ function BookDetailContent({ id }: { id: string }) {
                       </div>
                     ) : null}
                     {r.text && <p className="text-sm text-ink-600 leading-relaxed">{r.text}</p>}
+                    <ReviewComments reviewId={r.id} />
                   </div>
                 ))}
               </div>
@@ -448,6 +673,10 @@ function BookDetailContent({ id }: { id: string }) {
 
         </div>
       </main>
+
+      {showRecommend && userBook?.book_id && (
+        <RecommendModal bookId={userBook.book_id} onClose={() => setShowRecommend(false)} />
+      )}
     </div>
   );
 }

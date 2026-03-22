@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     .select('pages, minutes, sessions_count')
     .eq('user_id', user.id)
     .eq('date', today)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     await supabase

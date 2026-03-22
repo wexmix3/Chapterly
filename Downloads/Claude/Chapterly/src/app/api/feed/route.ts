@@ -25,7 +25,7 @@ export async function GET() {
   // Get recent shelf updates from followed users (only public or followers-visible entries)
   const { data: shelfUpdates } = await supabase
     .from('user_books')
-    .select('id, user_id, status, rating, updated_at, books(title, cover_url), users(display_name, avatar_url)')
+    .select('id, user_id, status, rating, updated_at, books(id, title, cover_url), users(display_name, avatar_url, handle)')
     .in('user_id', followeeIds)
     .in('visibility', ['public', 'followers'])
     .order('updated_at', { ascending: false })
@@ -43,11 +43,14 @@ export async function GET() {
       id: ub.id,
       event_type,
       user_id: ub.user_id,
+      user_book_id: ub.id,
+      book_id: ub.books?.id ?? null,
       book_title: ub.books?.title ?? 'Unknown',
       book_cover: ub.books?.cover_url ?? null,
       rating: ub.rating ?? null,
       display_name: ub.users?.display_name ?? 'Reader',
       avatar_url: ub.users?.avatar_url ?? null,
+      handle: ub.users?.handle ?? null,
       created_at: ub.updated_at,
     };
   });

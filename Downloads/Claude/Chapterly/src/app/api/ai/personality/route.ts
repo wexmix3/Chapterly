@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
  */
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { aiGuard } from '@/lib/ai-guard';
 import Anthropic from '@anthropic-ai/sdk';
 import { format, subDays } from 'date-fns';
 
@@ -20,6 +21,9 @@ export async function POST() {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const guard = await aiGuard(supabase, user.id, 'personality');
+  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 

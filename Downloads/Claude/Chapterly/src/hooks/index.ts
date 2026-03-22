@@ -138,17 +138,23 @@ const signInWithEmail = useCallback(async (email: string, password: string): Pro
   };
 }
 
+const SHELF_PAGE_SIZE = 24;
+
 // ─── useShelf ────────────────────────────────────────────────
 export function useShelf(status?: ShelfStatus) {
   const [books, setBooks] = useState<UserBook[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
 
   const fetchBooks = useCallback(async () => {
     setLoading(true);
+    setOffset(0);
     const params = new URLSearchParams();
     if (status) params.set('status', status);
-    params.set('limit', '50');
+    params.set('limit', String(SHELF_PAGE_SIZE));
+    params.set('offset', '0');
 
     const res = await fetch(`/api/user-books?${params}`);
     const json = await res.json();
@@ -159,7 +165,27 @@ export function useShelf(status?: ShelfStatus) {
     setLoading(false);
   }, [status]);
 
+  const fetchMore = useCallback(async () => {
+    const nextOffset = offset + SHELF_PAGE_SIZE;
+    if (nextOffset >= total) return;
+    setLoadingMore(true);
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    params.set('limit', String(SHELF_PAGE_SIZE));
+    params.set('offset', String(nextOffset));
+
+    const res = await fetch(`/api/user-books?${params}`);
+    const json = await res.json();
+    if (json.data) {
+      setBooks(prev => [...prev, ...json.data]);
+      setOffset(nextOffset);
+    }
+    setLoadingMore(false);
+  }, [status, offset, total]);
+
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
+
+  const hasMore = books.length < total;
 
   const addBook = useCallback(
     async (searchResult: BookSearchResult, bookStatus: ShelfStatus) => {
@@ -187,7 +213,7 @@ export function useShelf(status?: ShelfStatus) {
     [fetchBooks]
   );
 
-  return { books, loading, total, fetchBooks, addBook, updateBook };
+  return { books, loading, loadingMore, total, hasMore, fetchBooks, fetchMore, addBook, updateBook };
 }
 
 // ─── useStats ────────────────────────────────────────────────
@@ -231,6 +257,38 @@ export function useBookSearch() {
   }, [query]);
 
   return { query, setQuery, results, loading };
+}
+
+// ─── useNotifications ────────────────────────────────────────
+export function useNotifications(pollInterval = 30_000) {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchCount = useCallback(async () => {
+    try {
+      const res = await fetch('/api/notifications?limit=1&unread=true');
+      if (res.ok) {
+        const json = await res.json();
+        setUnreadCount(json.unread_count ?? 0);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    fetchCount();
+    const id = setInterval(fetchCount, pollInterval);
+    return () => clearInterval(id);
+  }, [fetchCount, pollInterval]);
+
+  const markAllRead = useCallback(async () => {
+    await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ all: true }),
+    });
+    setUnreadCount(0);
+  }, []);
+
+  return { unreadCount, refetch: fetchCount, markAllRead };
 }
 
 // ─── useLogSession ───────────────────────────────────────────

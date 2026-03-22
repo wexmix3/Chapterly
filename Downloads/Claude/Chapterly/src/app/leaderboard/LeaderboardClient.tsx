@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
 import { Trophy, Flame, BookOpen, FileText, Loader2, Crown, Medal } from 'lucide-react';
+import { LeaderRowSkeleton } from '@/components/ui/Skeleton';
 import Link from 'next/link';
 
 type LeaderType = 'streak' | 'books' | 'pages';
@@ -122,8 +123,8 @@ export default function LeaderboardClient() {
           {/* Leaderboard list */}
           <div className="bg-white rounded-2xl border border-paper-200 overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+              <div className="divide-y divide-ink-50 p-2 space-y-1">
+                {Array.from({ length: 8 }).map((_, i) => <LeaderRowSkeleton key={i} />)}
               </div>
             ) : entries.length === 0 ? (
               <div className="text-center py-16 space-y-2">

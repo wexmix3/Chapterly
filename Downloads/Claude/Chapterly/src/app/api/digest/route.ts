@@ -98,11 +98,15 @@ export async function POST(req: NextRequest) {
 
   const challengeMap = new Map((challenges ?? []).map(c => [c.user_id, c.goal_books]));
 
+  // Hard cap: never send more than MAX_EMAILS_PER_RUN in a single cron invocation.
+  // This bounds Resend usage regardless of how many users are active.
+  const MAX_EMAILS_PER_RUN = 500;
+
   // Send emails
   let sent = 0;
   const errors: string[] = [];
 
-  for (const userId of activeUserIds) {
+  for (const userId of activeUserIds.slice(0, MAX_EMAILS_PER_RUN)) {
     const email = authUserMap.get(userId);
     const profile = profileMap.get(userId);
     if (!email || !profile) continue;

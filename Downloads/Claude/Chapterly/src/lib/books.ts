@@ -116,7 +116,7 @@ export async function getOrCreateBook(
     .select('*')
     .eq('source', searchResult.source)
     .eq('source_id', searchResult.source_id)
-    .single();
+    .maybeSingle();
 
   if (existing) return existing as Book;
 
