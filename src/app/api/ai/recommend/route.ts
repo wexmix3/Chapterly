@@ -88,10 +88,13 @@ REQUIRED FORMAT:
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const raw = response.content[0].type === 'text' ? response.content[0].text : '';
+    // Strip markdown code fences if present (Claude sometimes wraps JSON in ```json ... ```)
+    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     const parsed = JSON.parse(text);
     return NextResponse.json(parsed);
-  } catch {
+  } catch (err) {
+    console.error('[ai/recommend]', err);
     return NextResponse.json({ error: 'Failed to generate recommendations' }, { status: 500 });
   }
 }
