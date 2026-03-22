@@ -21,25 +21,40 @@ export default function PremiumClient({
   const searchParams = useSearchParams();
   const justSubscribed = searchParams.get('success') === 'true';
   const [loading, setLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   const handleCheckout = async () => {
     setLoading(true);
+    setCheckoutError('');
     try {
       const res = await fetch('/api/stripe/checkout', { method: 'POST' });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setCheckoutError(data.error ?? 'Something went wrong. Please try again.');
+        setLoading(false);
+      }
     } catch {
+      setCheckoutError('Could not connect. Please try again.');
       setLoading(false);
     }
   };
 
   const handleManage = async () => {
     setLoading(true);
+    setCheckoutError('');
     try {
       const res = await fetch('/api/stripe/portal', { method: 'POST' });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setCheckoutError(data.error ?? 'Something went wrong. Please try again.');
+        setLoading(false);
+      }
     } catch {
+      setCheckoutError('Could not connect. Please try again.');
       setLoading(false);
     }
   };
@@ -124,16 +139,24 @@ export default function PremiumClient({
               <p className="text-center text-xs text-ink-400">
                 Cancel anytime. No charge for 7 days.
               </p>
+              {checkoutError && (
+                <p className="text-center text-xs text-red-500">{checkoutError}</p>
+              )}
             </div>
           ) : (
-            <button
-              onClick={handleManage}
-              disabled={loading}
-              className="w-full bg-paper-100 text-ink-700 py-3 rounded-2xl font-medium text-sm border border-paper-200 hover:bg-paper-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Manage subscription
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={handleManage}
+                disabled={loading}
+                className="w-full bg-paper-100 text-ink-700 py-3 rounded-2xl font-medium text-sm border border-paper-200 hover:bg-paper-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Manage subscription
+              </button>
+              {checkoutError && (
+                <p className="text-center text-xs text-red-500">{checkoutError}</p>
+              )}
+            </div>
           )}
 
           {/* Free tier reminder */}
