@@ -32,18 +32,23 @@ export async function POST(req: NextRequest) {
     await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', user.id);
   }
 
-  const checkoutSession = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: PREMIUM_PRICE_ID, quantity: 1 }],
-    success_url: `${origin}/premium?success=true`,
-    cancel_url: `${origin}/premium`,
-    subscription_data: {
-      metadata: { supabase_user_id: user.id },
-      trial_period_days: 7,
-    },
-    allow_promotion_codes: true,
-  });
-
-  return NextResponse.json({ url: checkoutSession.url });
+  try {
+    const checkoutSession = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: PREMIUM_PRICE_ID, quantity: 1 }],
+      success_url: `${origin}/premium?success=true`,
+      cancel_url: `${origin}/premium`,
+      subscription_data: {
+        metadata: { supabase_user_id: user.id },
+        trial_period_days: 7,
+      },
+      allow_promotion_codes: true,
+    });
+    return NextResponse.json({ url: checkoutSession.url });
+  } catch (err) {
+    console.error('[stripe/checkout]', err);
+    const message = err instanceof Error ? err.message : 'Stripe error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

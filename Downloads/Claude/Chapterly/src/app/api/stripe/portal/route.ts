@@ -21,10 +21,15 @@ export async function POST(req: NextRequest) {
   }
 
   const stripe = getStripe();
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: `${req.nextUrl.origin}/premium`,
-  });
-
-  return NextResponse.json({ url: portalSession.url });
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: `${req.nextUrl.origin}/premium`,
+    });
+    return NextResponse.json({ url: portalSession.url });
+  } catch (err) {
+    console.error('[stripe/portal]', err);
+    const message = err instanceof Error ? err.message : 'Stripe error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
