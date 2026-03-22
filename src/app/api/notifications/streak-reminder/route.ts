@@ -76,8 +76,11 @@ export async function POST(req: NextRequest) {
   const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   const emailMap = new Map((authUsers?.users ?? []).map(u => [u.id, u.email ?? '']));
 
+  // Hard cap to bound Resend usage per cron run
+  const MAX_EMAILS_PER_RUN = 500;
+
   let sent = 0;
-  for (const userId of toRemind) {
+  for (const userId of toRemind.slice(0, MAX_EMAILS_PER_RUN)) {
     const email = emailMap.get(userId);
     const profile = profileMap.get(userId);
     if (!email || !profile) continue;

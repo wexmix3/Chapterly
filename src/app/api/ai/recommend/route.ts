@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
  */
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { aiGuard } from '@/lib/ai-guard';
 import Anthropic from '@anthropic-ai/sdk';
 
 let _anthropic: Anthropic | null = null;
@@ -20,6 +21,9 @@ export async function POST() {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const guard = await aiGuard(supabase, user.id, 'recommend');
+  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   // Gather reading history
   const { data: shelf } = await supabase
@@ -84,7 +88,7 @@ REQUIRED FORMAT:
     const anthropic = getAnthropic();
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
     });
 

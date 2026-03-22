@@ -61,18 +61,55 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  // Remove a book from the list
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  // Update list metadata (title, description, is_public)
   const supabase = createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { book_id } = await req.json();
-  if (!book_id) return NextResponse.json({ error: 'book_id required' }, { status: 400 });
+  const { title, description, is_public } = await req.json();
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (title !== undefined) updates.title = title?.trim();
+  if (description !== undefined) updates.description = description?.trim() || null;
+  if (is_public !== undefined) updates.is_public = is_public;
 
-  await supabase.from('reading_list_books').delete().eq('list_id', params.id).eq('book_id', book_id);
-  await supabase.from('reading_lists').update({ updated_at: new Date().toISOString() }).eq('id', params.id).eq('user_id', user.id);
+  const { data, error } = await supabase
+    .from('reading_lists')
+    .update(updates)
+    .eq('id', params.id)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ data });
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const supabase = createServerSupabaseClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // If body contains book_id, remove book from list; otherwise delete the entire list
+  let book_id: string | undefined;
+  try {
+    const body = await req.json();
+    book_id = body?.book_id;
+  } catch {
+    // No body — delete entire list
+  }
+
+  if (book_id) {
+    await supabase.from('reading_list_books').delete().eq('list_id', params.id).eq('book_id', book_id);
+    await supabase.from('reading_lists').update({ updated_at: new Date().toISOString() }).eq('id', params.id).eq('user_id', user.id);
+  } else {
+    // Delete entire list (cascade deletes reading_list_books via FK)
+    await supabase.from('reading_list_books').delete().eq('list_id', params.id);
+    const { error } = await supabase.from('reading_lists').delete().eq('id', params.id).eq('user_id', user.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true });
 }

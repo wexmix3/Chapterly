@@ -31,3 +31,28 @@ export async function PATCH(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
 }
+
+export async function DELETE() {
+  const supabase = createServerSupabaseClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Delete all user data (RLS cascades will handle related rows, or delete manually)
+  // Order matters: child tables first
+  await supabase.from('sessions').delete().eq('user_id', user.id);
+  await supabase.from('user_books').delete().eq('user_id', user.id);
+  await supabase.from('reading_challenges').delete().eq('user_id', user.id);
+  await supabase.from('social_follow').delete().or(`follower_id.eq.${user.id},followee_id.eq.${user.id}`);
+  await supabase.from('share_cards').delete().eq('user_id', user.id);
+  await supabase.from('stats_daily').delete().eq('user_id', user.id);
+  await supabase.from('users').delete().eq('id', user.id);
+
+  // Delete auth user
+  const adminSupabase = createServerSupabaseClient();
+  await adminSupabase.auth.admin.deleteUser(user.id).catch(() => {
+    // If admin delete fails (missing service role key), sign out is still called client-side
+  });
+
+  return NextResponse.json({ success: true });
+}

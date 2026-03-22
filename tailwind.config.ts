@@ -49,12 +49,22 @@ const config: Config = {
           '60%': { transform: 'translateX(-4px)' },
           '80%': { transform: 'translateX(4px)' },
         },
+        'confetti-fall': {
+          '0%': { transform: 'translateY(-10px) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(300px) rotate(720deg)', opacity: '0' },
+        },
+        'scale-in': {
+          from: { opacity: '0', transform: 'scale(0.92)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
       },
       animation: {
         'streak-glow': 'streak-glow 2s ease-in-out infinite',
         'page-enter': 'page-enter 0.3s ease-out',
         'slide-up': 'slide-up 0.25s ease-out',
         shake: 'shake 0.5s ease-in-out',
+        'confetti-fall': 'confetti-fall 1.2s ease-in forwards',
+        'scale-in': 'scale-in 0.2s ease-out',
       },
     },
   },

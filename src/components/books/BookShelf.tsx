@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Star, Loader2, X, Check, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Star, Loader2, X, Check, AlertCircle, Pencil, Search } from 'lucide-react';
+import { BookCardSkeleton } from '@/components/ui/Skeleton';
 import { useShelf } from '@/hooks';
 import type { ShelfStatus, UserBook } from '@/types';
 
@@ -43,17 +45,38 @@ export default function BookShelf() {
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => <BookCardSkeleton key={i} />)}
         </div>
       )}
 
       {/* Empty */}
       {!loading && books.length === 0 && (
-        <div className="text-center py-16 text-ink-400">
-          <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p className="font-medium text-ink-600">No books here yet</p>
-          <p className="text-sm mt-1">Search for books to add them to your shelf</p>
+        <div className="text-center py-16 px-4">
+          <div className="w-16 h-16 bg-brand-50 dark:bg-brand-950/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-7 h-7 text-brand-400" />
+          </div>
+          <p className="font-semibold text-ink-700 dark:text-ink-300 mb-2">
+            {activeTab === 'all' ? 'Your shelf is empty' :
+             activeTab === 'reading' ? 'Not reading anything yet' :
+             activeTab === 'to_read' ? 'No books in your want-to-read list' :
+             activeTab === 'read' ? 'No finished books yet' :
+             'No DNF books'}
+          </p>
+          <p className="text-sm text-ink-400 dark:text-ink-500 mb-5">
+            {activeTab === 'all' || activeTab === 'to_read'
+              ? 'Search for a book to add it to your shelf'
+              : 'Books you mark will appear here'}
+          </p>
+          {(activeTab === 'all' || activeTab === 'to_read') && (
+            <a
+              href="/dashboard?tab=search"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-colors"
+            >
+              <Search className="w-4 h-4" />
+              Search books
+            </a>
+          )}
         </div>
       )}
 
@@ -89,40 +112,51 @@ function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void
       : null;
 
   return (
-    <button onClick={onEdit} className="group relative block text-left w-full">
-      {/* Cover */}
-      <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all">
-        {book?.cover_url ? (
-          <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-            <BookOpen className="w-6 h-6 text-ink-300 mb-1" />
-            <span className="text-[9px] text-ink-400 leading-tight line-clamp-3">{book?.title}</span>
-          </div>
-        )}
-
-        {/* Progress overlay for reading */}
-        {userBook.status === 'reading' && progress !== null && (
-          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-            <div className="h-1 bg-white/30 rounded-full overflow-hidden">
-              <div className="h-full bg-brand-400 rounded-full" style={{ width: `${progress}%` }} />
+    <div className="group relative block text-left w-full">
+      {/* Cover — links to book detail */}
+      <Link href={`/book/${userBook.id}`} className="block">
+        <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all">
+          {book?.cover_url ? (
+            <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+              <BookOpen className="w-6 h-6 text-ink-300 mb-1" />
+              <span className="text-[9px] text-ink-400 leading-tight line-clamp-3">{book?.title}</span>
             </div>
-            <p className="text-[9px] text-white/80 mt-0.5 text-center">{progress}%</p>
-          </div>
-        )}
+          )}
 
-        {/* Rating badge */}
-        {userBook.rating && (
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-black/60 rounded-md px-1.5 py-0.5">
-            <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
-            <span className="text-[9px] text-white font-medium">{userBook.rating}</span>
-          </div>
-        )}
-      </div>
+          {/* Progress overlay for reading */}
+          {userBook.status === 'reading' && progress !== null && (
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+              <div className="h-1 bg-white/30 rounded-full overflow-hidden">
+                <div className="h-full bg-brand-400 rounded-full" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="text-[9px] text-white/80 mt-0.5 text-center">{progress}%</p>
+            </div>
+          )}
+
+          {/* Rating badge */}
+          {userBook.rating && (
+            <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-black/60 rounded-md px-1.5 py-0.5">
+              <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
+              <span className="text-[9px] text-white font-medium">{userBook.rating}</span>
+            </div>
+          )}
+        </div>
+      </Link>
+
+      {/* Edit button — appears on hover */}
+      <button
+        onClick={onEdit}
+        className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-black/60 rounded-md"
+        title="Edit"
+      >
+        <Pencil className="w-3 h-3 text-white" />
+      </button>
 
       {/* Title */}
       <p className="mt-1.5 text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight">{book?.title}</p>
-    </button>
+    </div>
   );
 }
 
@@ -150,6 +184,7 @@ function BookEditModal({
   const [finishedAt, setFinishedAt] = useState(
     userBook.finished_at ? userBook.finished_at.slice(0, 10) : '',
   );
+  const [dnfReason, setDnfReason] = useState((userBook as any).dnf_reason ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -164,6 +199,7 @@ function BookEditModal({
         review_text: reviewText.trim() || null,
         started_at: startedAt ? new Date(startedAt).toISOString() : null,
         finished_at: finishedAt ? new Date(finishedAt).toISOString() : null,
+        dnf_reason: status === 'dnf' ? (dnfReason.trim() || null) : null,
       };
       const res = await fetch(`/api/user-books/${userBook.id}`, {
         method: 'PATCH',
@@ -367,6 +403,22 @@ function BookEditModal({
               />
             </div>
           </div>
+
+          {/* DNF reason — only visible when status is DNF */}
+          {status === 'dnf' && (
+            <div>
+              <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+                Why did you stop?
+              </label>
+              <textarea
+                value={dnfReason}
+                onChange={(e) => setDnfReason(e.target.value)}
+                placeholder="Optional — not your cup of tea, too slow, life got in the way…"
+                rows={2}
+                className="w-full px-3 py-2.5 border border-ink-200 rounded-xl text-sm text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none"
+              />
+            </div>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">

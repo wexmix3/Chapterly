@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     .select('id')
     .eq('user_id', user.id)
     .eq('book_id', book.id)
-    .single();
+    .maybeSingle();
 
   if (existing) return NextResponse.json({ error: 'Already on shelf' }, { status: 409 });
 

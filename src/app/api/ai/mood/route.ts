@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { aiGuard } from '@/lib/ai-guard';
 import Anthropic from '@anthropic-ai/sdk';
 
 let _anthropic: Anthropic | null = null;
@@ -19,6 +20,9 @@ export async function POST(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const guard = await aiGuard(supabase, user.id, 'mood');
+  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   const { mood, prompt: moodPrompt } = await req.json() as { mood: string; prompt: string };
   if (!mood || !moodPrompt) return NextResponse.json({ error: 'Missing mood' }, { status: 400 });

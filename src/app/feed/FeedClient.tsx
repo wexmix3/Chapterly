@@ -1,18 +1,22 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
 import { UserPlus, Loader2, BookOpen, Search, X, UserCheck } from 'lucide-react';
+import { FeedEventSkeleton } from '@/components/ui/Skeleton';
 
 interface FeedEvent {
   id: string;
   event_type: 'started_reading' | 'finished' | 'rated' | 'shared_card' | 'added_to_shelf';
   user_id: string;
+  user_book_id: string;
   book_title: string;
   book_cover?: string;
   rating?: number;
   display_name: string;
   avatar_url?: string;
+  handle?: string;
   created_at: string;
 }
 
@@ -190,8 +194,8 @@ export default function FeedClient() {
           )}
 
           {loading && (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => <FeedEventSkeleton key={i} />)}
             </div>
           )}
 
@@ -224,27 +228,58 @@ function FeedCard({ event, actionLabel, timeAgo }: {
     .join('')
     .toUpperCase();
 
+  const profileHref = event.handle ? `/u/${event.handle}` : null;
+  const bookHref = event.user_book_id ? `/book/${event.user_book_id}` : null;
+
   return (
     <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-start gap-4">
-      {event.avatar_url ? (
-        <img src={event.avatar_url} alt="" className="w-10 h-10 rounded-full flex-shrink-0 object-cover" />
+      {profileHref ? (
+        <Link href={profileHref} className="flex-shrink-0">
+          {event.avatar_url ? (
+            <img src={event.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover hover:opacity-90 transition-opacity" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-sm font-bold">
+              {initials}
+            </div>
+          )}
+        </Link>
       ) : (
-        <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-sm font-bold flex-shrink-0">
-          {initials}
-        </div>
+        event.avatar_url ? (
+          <img src={event.avatar_url} alt="" className="w-10 h-10 rounded-full flex-shrink-0 object-cover" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-sm font-bold flex-shrink-0">
+            {initials}
+          </div>
+        )
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-ink-700">
-          <span className="font-semibold text-ink-900">{event.display_name}</span>
+          {profileHref ? (
+            <Link href={profileHref} className="font-semibold text-ink-900 hover:text-brand-600 transition-colors">{event.display_name}</Link>
+          ) : (
+            <span className="font-semibold text-ink-900">{event.display_name}</span>
+          )}
           {' '}{actionLabel}{' '}
-          <span className="font-medium text-ink-900">{event.book_title}</span>
+          {bookHref ? (
+            <Link href={bookHref} className="font-medium text-ink-900 hover:text-brand-600 transition-colors">{event.book_title}</Link>
+          ) : (
+            <span className="font-medium text-ink-900">{event.book_title}</span>
+          )}
           {event.event_type === 'rated' && event.rating && (
             <span className="ml-1 text-brand-500">{'★'.repeat(Math.floor(event.rating))}</span>
           )}
         </p>
         <p className="text-xs text-ink-400 mt-0.5">{timeAgo}</p>
       </div>
-      {event.book_cover && (
+      {event.book_cover && bookHref && (
+        <Link href={bookHref} className="flex-shrink-0">
+          <div className="w-10 h-14 bg-paper-200 rounded-lg overflow-hidden hover:opacity-90 transition-opacity">
+            <img src={event.book_cover} alt="" className="w-full h-full object-cover"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          </div>
+        </Link>
+      )}
+      {event.book_cover && !bookHref && (
         <div className="w-10 h-14 bg-paper-200 rounded-lg overflow-hidden flex-shrink-0">
           <img src={event.book_cover} alt="" className="w-full h-full object-cover"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />

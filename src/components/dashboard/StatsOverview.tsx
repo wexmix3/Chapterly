@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Flame, BookOpen, TrendingUp, FileText, Clock, Star, Loader2, X, ChevronRight, Calendar, BarChart3, Zap, Target } from 'lucide-react';
+import { Flame, BookOpen, TrendingUp, FileText, Clock, Star, Loader2, X, ChevronRight, Calendar, BarChart3, Zap, Target, Gauge } from 'lucide-react';
 import { useStats } from '@/hooks';
 import type { UserStats } from '@/types';
 
@@ -237,6 +237,9 @@ function StatDetailSheet({ statKey, stats, onClose }: { statKey: string; stats: 
         </div>
         <DetailRow icon={<Clock className="w-4 h-4" />} label="Avg session length" value={`${stats.session_insights.avg_minutes_per_session} min`} />
         <DetailRow icon={<BarChart3 className="w-4 h-4" />} label="Avg pages per session" value={`${stats.session_insights.avg_pages_per_session} pages`} />
+        {stats.session_insights.avg_minutes_per_session > 0 && stats.session_insights.avg_pages_per_session > 0 && (
+          <DetailRow icon={<Gauge className="w-4 h-4" />} label="Reading speed" value={`${Math.round((stats.session_insights.avg_pages_per_session / stats.session_insights.avg_minutes_per_session) * 60)} pages/hr`} />
+        )}
         {stats.session_insights.best_day_of_week && (
           <DetailRow icon={<Calendar className="w-4 h-4" />} label="Most productive day" value={stats.session_insights.best_day_of_week} />
         )}
@@ -542,6 +545,15 @@ export default function StatsOverview() {
                   <p className="font-display text-xl font-bold text-ink-900">
                     {stats.session_insights.longest_session_pages}
                     <span className="text-xs font-normal text-ink-400 ml-1">pages</span>
+                  </p>
+                </div>
+              )}
+              {stats.session_insights.avg_pages_per_session > 0 && stats.session_insights.avg_minutes_per_session > 0 && (
+                <div>
+                  <p className="text-xs text-ink-400 mb-0.5">Reading speed</p>
+                  <p className="font-display text-xl font-bold text-ink-900">
+                    {Math.round((stats.session_insights.avg_pages_per_session / stats.session_insights.avg_minutes_per_session) * 60)}
+                    <span className="text-xs font-normal text-ink-400 ml-1">pages/hr</span>
                   </p>
                 </div>
               )}

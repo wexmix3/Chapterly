@@ -6,9 +6,9 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
   Search, Share2, Upload, LogOut, Plus, Flame, LayoutDashboard,
   BookMarked, Compass, Users, Trophy, Rss, BookOpen, Crown,
-  CalendarDays, Sparkles, Brain, type LucideIcon,
+  CalendarDays, Sparkles, Brain, Bell, Settings, Target, type LucideIcon,
 } from 'lucide-react';
-import { useAuth } from '@/hooks';
+import { useAuth, useNotifications } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
 type Section = 'shelf' | 'circle' | 'explore';
@@ -26,7 +26,8 @@ const SHELF_NAV: NavItem[] = [
   { href: '/dashboard?tab=search', label: 'Search Books', icon: Search, tab: 'search' },
   { href: '/dashboard?tab=streak', label: 'Stats & Streak', icon: Flame, tab: 'streak' },
   { href: '/ai', label: 'AI Insights', icon: Brain },
-  { href: '/challenge', label: 'Reading Goals', icon: Trophy },
+  { href: '/achievements', label: 'Achievements', icon: Trophy },
+  { href: '/challenge', label: 'Reading Goals', icon: Target },
   { href: '/wrapped', label: 'Year in Books', icon: CalendarDays },
   { href: '/dashboard?tab=share', label: 'Share Cards', icon: Share2, tab: 'share' },
   { href: '/dashboard?tab=import', label: 'Import Library', icon: Upload, tab: 'import' },
@@ -35,6 +36,7 @@ const SHELF_NAV: NavItem[] = [
 const CIRCLE_NAV: NavItem[] = [
   { href: '/feed', label: 'Friends Feed', icon: Rss },
   { href: '/people', label: 'Find Readers', icon: Users },
+  { href: '/lists', label: 'Reading Lists', icon: BookMarked },
   { href: '/clubs', label: 'Book Clubs', icon: BookOpen },
   { href: '/creators', label: 'Creators', icon: Sparkles },
 ];
@@ -42,7 +44,8 @@ const CIRCLE_NAV: NavItem[] = [
 const EXPLORE_NAV: NavItem[] = [
   { href: '/discover', label: 'Browse Books', icon: Compass },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/premium', label: 'Go Premium ✨', icon: Crown },
+  // HIDDEN: premium upsell — re-enable when premium re-launches
+  // { href: '/premium', label: 'Go Premium ✨', icon: Crown },
 ];
 
 const SECTION_NAV: Record<Section, NavItem[]> = {
@@ -77,6 +80,7 @@ export default function Navigation() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const name = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ?? 'Reader';
@@ -165,8 +169,28 @@ export default function Navigation() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-ink-900 dark:text-paper-100 truncate">{name}</p>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-1">
+              <Link href="/notifications" className="relative p-1.5 rounded-lg hover:bg-ink-50 dark:hover:bg-ink-900 transition-colors">
+                <Bell className="w-4 h-4 text-ink-500 dark:text-ink-400" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+              <ThemeToggle />
+            </div>
           </div>
+          <Link
+            href="/settings"
+            className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-xl transition-all ${
+              pathname === '/settings'
+                ? 'bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-400'
+                : 'text-ink-500 hover:text-ink-900 dark:hover:text-ink-100 hover:bg-ink-50 dark:hover:bg-ink-900'
+            }`}
+          >
+            <Settings className="w-4 h-4" /> Settings
+          </Link>
           <button
             onClick={signOut}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-ink-500 hover:text-ink-900 dark:hover:text-ink-100 hover:bg-ink-50 dark:hover:bg-ink-900 rounded-xl transition-all"
@@ -222,16 +246,21 @@ export default function Navigation() {
             <span className="text-[10px] font-medium">Explore</span>
           </button>
 
-          {/* AI shortcut */}
-          <button
-            onClick={() => { setActiveSection('shelf'); router.push('/ai'); }}
-            className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${
-              pathname === '/ai' ? 'text-brand-600' : 'text-ink-400'
+          {/* Notifications shortcut */}
+          <Link
+            href="/notifications"
+            className={`relative flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${
+              pathname === '/notifications' ? 'text-brand-600' : 'text-ink-400'
             }`}
           >
-            <Brain className="w-5 h-5" />
-            <span className="text-[10px] font-medium">AI</span>
-          </button>
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 left-1/2 ml-1 w-4 h-4 bg-brand-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+            <span className="text-[10px] font-medium">Alerts</span>
+          </Link>
         </div>
       </nav>
     </>
