@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Search, Share2, Upload, LogOut, Plus, Flame, LayoutDashboard, BookMarked, Compass, Users, Trophy, Rss, BookOpen, Crown, CalendarDays, Sparkles } from 'lucide-react';
+import { Search, Share2, Upload, LogOut, Plus, Flame, LayoutDashboard, BookMarked, Compass, Users, Trophy, Rss, BookOpen, Crown, CalendarDays, Sparkles, Brain } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
 ];
 
 const DISCOVER_NAV = [
+  { href: '/ai', label: 'AI Hub ✨', icon: Brain },
   { href: '/feed', label: 'Friends', icon: Rss },
   { href: '/people', label: 'Find Readers', icon: Users },
   { href: '/discover', label: 'Discover Books', icon: Compass },
@@ -29,7 +30,7 @@ const DISCOVER_NAV = [
 const MOBILE_NAV = [
   { href: '/dashboard?tab=overview', label: 'Home', icon: LayoutDashboard },
   { href: '/dashboard?tab=reading', label: 'Books', icon: BookMarked },
-  { href: '/feed', label: 'Friends', icon: Rss },
+  { href: '/ai', label: 'AI', icon: Sparkles },
   { href: '/discover', label: 'Discover', icon: Compass },
 ];
 

@@ -89,10 +89,39 @@ REQUIRED FORMAT:
     });
 
     const raw = response.content[0].type === 'text' ? response.content[0].text : '';
-    // Strip markdown code fences if present (Claude sometimes wraps JSON in ```json ... ```)
     const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     const parsed = JSON.parse(text);
-    return NextResponse.json(parsed);
+
+    // Enrich each recommendation with a cover and short description from Google Books
+    const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+    const keyParam = apiKey ? `&key=${apiKey}` : '';
+
+    type RawRec = { title: string; author: string; why: string; genre: string; vibe: string };
+    const enriched = await Promise.all(
+      (parsed.recommendations as RawRec[]).map(async (rec) => {
+        try {
+          const q = encodeURIComponent(`intitle:${rec.title} inauthor:${rec.author}`);
+          const gbRes = await fetch(
+            `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`,
+            { next: { revalidate: 86400 } }
+          );
+          if (!gbRes.ok) return rec;
+          const gbData = await gbRes.json();
+          const vol = gbData.items?.[0]?.volumeInfo;
+          return {
+            ...rec,
+            cover_url: vol?.imageLinks?.thumbnail?.replace('http:', 'https:') ?? null,
+            description: vol?.description
+              ? vol.description.replace(/<[^>]+>/g, '').slice(0, 200) + '…'
+              : null,
+          };
+        } catch {
+          return { ...rec, cover_url: null, description: null };
+        }
+      })
+    );
+
+    return NextResponse.json({ recommendations: enriched });
   } catch (err) {
     console.error('[ai/recommend]', err);
     return NextResponse.json({ error: 'Failed to generate recommendations' }, { status: 500 });
