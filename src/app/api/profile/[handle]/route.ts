@@ -16,7 +16,7 @@ export async function GET(
   // Fetch the profile
   const { data: profile, error } = await supabase
     .from('users')
-    .select('id, handle, display_name, avatar_url, bio, is_public, created_at')
+    .select('id, handle, display_name, avatar_url, bio, is_public, created_at, is_creator, creator_platform, creator_handle')
     .eq('handle', handle)
     .maybeSingle();
 

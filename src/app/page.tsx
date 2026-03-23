@@ -20,8 +20,7 @@ export default async function LandingPage() {
         </div>
         <div className="flex items-center gap-4">
           <Link href="#features" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Features</Link>
-          {/* HIDDEN: premium nav link — re-enable when premium re-launches */}
-          {/* <Link href="#premium" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Premium</Link> */}
+          <Link href="/premium" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Premium</Link>
           <Link href="/login" className="text-sm font-medium text-ink-600 hover:text-ink-900 transition-colors hidden sm:block">Sign in</Link>
           <Link href="/login"
             className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-brand-500/30">
@@ -152,8 +151,8 @@ export default async function LandingPage() {
       {/* Social proof bar */}
       <div className="bg-white border-y border-ink-100 py-4 px-6">
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-8 text-sm text-ink-500">
-          <span>📚 <strong className="text-ink-800">10,000+</strong> books tracked</span>
-          <span>🔥 <strong className="text-ink-800">Avg 12</strong> day streaks</span>
+          <span>📚 <strong className="text-ink-800">Any book</strong>, tracked instantly</span>
+          <span>🔥 <strong className="text-ink-800">Daily streaks</strong> that stick</span>
           <span>🤖 <strong className="text-ink-800">Claude AI</strong> powered insights</span>
           <span>📤 <strong className="text-ink-800">Free</strong> forever, no ads</span>
         </div>
@@ -447,41 +446,109 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* HIDDEN: Premium pricing section — re-enable when premium re-launches
+      {/* Premium pricing section */}
       <section id="premium" className="max-w-4xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-ink-950 mb-3">Free forever. Or go Premium.</h2>
-          <p className="text-ink-500 max-w-xl mx-auto">Everything you need is free. Premium is for readers who want the full experience.</p>
+          <p className="text-ink-500 max-w-xl mx-auto">Everything you need is free. Premium unlocks the full experience.</p>
         </div>
         <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-          [Free card] [Premium card]
+          {/* Free card */}
+          <div className="bg-white rounded-3xl border border-ink-100 p-8 flex flex-col">
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-ink-500 uppercase tracking-wide mb-1">Free</p>
+              <p className="font-display text-4xl font-bold text-ink-950">$0</p>
+              <p className="text-ink-400 text-sm mt-1">Always free, no card needed</p>
+            </div>
+            <ul className="space-y-3 flex-1 mb-8">
+              {['Unlimited book tracking', 'Reading streaks & stats', 'Beautiful share cards', 'Goodreads import', '1 book club'].map(f => (
+                <li key={f} className="flex items-center gap-3 text-sm text-ink-700">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/login"
+              className="block text-center px-6 py-3 border border-ink-200 text-ink-700 rounded-xl font-semibold text-sm hover:border-brand-300 transition-colors">
+              Get started free
+            </Link>
+          </div>
+          {/* Premium card */}
+          <div className="bg-gradient-to-br from-brand-500 to-amber-500 rounded-3xl p-8 flex flex-col text-white shadow-xl shadow-brand-500/20">
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-white/70 uppercase tracking-wide mb-1">Premium</p>
+              <p className="font-display text-4xl font-bold">$4.99<span className="text-xl font-normal text-white/70">/mo</span></p>
+              <p className="text-white/70 text-sm mt-1">7-day free trial, cancel anytime</p>
+            </div>
+            <ul className="space-y-3 flex-1 mb-8">
+              {['Everything in Free', 'AI reading personality & insights', 'Unlimited AI recommendations', 'Advanced reading analytics', 'Unlimited book clubs', 'Priority support'].map(f => (
+                <li key={f} className="flex items-center gap-3 text-sm text-white/90">
+                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/premium"
+              className="block text-center px-6 py-3 bg-white text-brand-600 rounded-xl font-bold text-sm hover:bg-white/90 transition-colors shadow-sm">
+              Start free trial →
+            </Link>
+          </div>
         </div>
       </section>
-      */}
 
-      {/* Testimonials */}
+      {/* Goodreads switcher section */}
       <section className="max-w-4xl mx-auto px-6 pb-16">
-        <h2 className="font-display text-2xl font-bold text-ink-950 text-center mb-8">Readers love it</h2>
+        <h2 className="font-display text-2xl font-bold text-ink-950 text-center mb-3">The things Goodreads readers actually complain about</h2>
+        <p className="text-ink-500 text-center text-sm mb-10 max-w-lg mx-auto">We built Chapterly to fix every one of them.</p>
         <div className="grid md:grid-cols-3 gap-4">
           {[
-            { handle: 'Rachel M.', platform: 'Switched from Goodreads', quote: "Finally a reading app that gets it. The share cards are stunning and the AI insights actually changed how I plan my reading time.", initials: 'R', color: 'bg-violet-100 text-violet-700' },
-            { handle: 'Tom K.', platform: 'Using since launch', quote: "Switched from Goodreads and never looked back. The streak system actually keeps me reading every single day. I\'m at 47 days.", initials: 'T', color: 'bg-blue-100 text-blue-700' },
-            { handle: 'Priya S.', platform: 'Power user', quote: "The AI insights blew my mind — it told me I read 40% faster in the mornings. Now I block that time every day and I\'ve doubled my book count.", initials: 'P', color: 'bg-emerald-100 text-emerald-700' },
-          ].map(t => (
-            <div key={t.handle} className="bg-white rounded-2xl border border-ink-100 p-6">
-              <div className="flex gap-1 mb-3">
-                {[1,2,3,4,5].map(n => <span key={n} className="text-amber-400 text-xs">★</span>)}
+            {
+              pain: '"Goodreads hasn\'t added half-star ratings in 20 years"',
+              fix: 'Rate in 0.5 increments — always.',
+              emoji: '⭐',
+              grad: 'from-amber-400 to-orange-500',
+            },
+            {
+              pain: '"The feed is dead. Nobody uses it."',
+              fix: 'Live friend activity the moment they start, finish, or rate a book.',
+              emoji: '👥',
+              grad: 'from-rose-400 to-pink-500',
+            },
+            {
+              pain: '"I have no idea how or when I actually read."',
+              fix: 'AI-powered insights — peak hours, pace trends, genre patterns.',
+              emoji: '🤖',
+              grad: 'from-violet-400 to-brand-500',
+            },
+            {
+              pain: '"There\'s no way to share my reading on social."',
+              fix: 'Beautiful 9:16 story cards, one tap to export for TikTok or Instagram.',
+              emoji: '✨',
+              grad: 'from-brand-400 to-emerald-500',
+            },
+            {
+              pain: '"I lose my streak and just give up."',
+              fix: 'Streak protection so one missed day doesn\'t erase your momentum.',
+              emoji: '🔥',
+              grad: 'from-red-400 to-orange-500',
+            },
+            {
+              pain: '"Dark mode. Please."',
+              fix: 'Full dark mode. Obviously.',
+              emoji: '🌙',
+              grad: 'from-indigo-400 to-slate-600',
+            },
+          ].map(c => (
+            <div key={c.pain} className="bg-white rounded-2xl border border-ink-100 p-5 hover:border-brand-200 transition-colors">
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${c.grad} flex items-center justify-center text-white text-base mb-4 shadow-sm`}>
+                {c.emoji}
               </div>
-              <p className="text-sm text-ink-600 italic mb-4">&ldquo;{t.quote}&rdquo;</p>
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full ${t.color} flex items-center justify-center text-xs font-bold`}>
-                  {t.initials}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-ink-900">{t.handle}</p>
-                  <p className="text-[11px] text-ink-400">{t.platform}</p>
-                </div>
-              </div>
+              <p className="text-xs text-ink-400 italic mb-2">{c.pain}</p>
+              <p className="text-sm font-semibold text-ink-800">{c.fix}</p>
             </div>
           ))}
         </div>
@@ -505,7 +572,7 @@ export default async function LandingPage() {
               Try the demo
             </Link>
           </div>
-          <p className="text-xs text-ink-400 mt-4">Join thousands of readers already tracking with Chapterly</p>
+          <p className="text-xs text-ink-400 mt-4">Import from Goodreads in 30 seconds. No credit card needed.</p>
         </div>
       </section>
 
@@ -520,9 +587,8 @@ export default async function LandingPage() {
           <div className="flex items-center gap-4">
             <Link href="#features" className="hover:text-ink-700 transition-colors">Features</Link>
             <span>·</span>
-            {/* HIDDEN: premium footer link — re-enable when premium re-launches */}
-            {/* <Link href="#premium" className="hover:text-ink-700 transition-colors">Premium</Link> */}
-            {/* <span>·</span> */}
+            <Link href="/premium" className="hover:text-ink-700 transition-colors">Premium</Link>
+            <span>·</span>
             <Link href="/demo" className="hover:text-ink-700 transition-colors">Demo</Link>
             <span>·</span>
             <Link href="/login" className="hover:text-ink-700 transition-colors">Sign up</Link>
