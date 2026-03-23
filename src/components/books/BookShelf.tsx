@@ -82,11 +82,21 @@ export default function BookShelf() {
 
       {/* Book grid */}
       {!loading && books.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-          {books.map((ub) => (
-            <BookCard key={ub.id} userBook={ub} onEdit={() => setSelectedBook(ub)} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            {books.map((ub) => (
+              <BookCard key={ub.id} userBook={ub} onEdit={() => setSelectedBook(ub)} />
+            ))}
+          </div>
+          {/* Always-visible add more prompt */}
+          <a
+            href="/dashboard?tab=search"
+            className="flex items-center justify-center gap-2 w-full mt-3 py-3 rounded-xl border-2 border-dashed border-ink-200 dark:border-ink-700 text-sm text-ink-400 dark:text-ink-500 hover:border-brand-300 hover:text-brand-600 dark:hover:border-brand-700 dark:hover:text-brand-400 transition-colors"
+          >
+            <Search className="w-4 h-4" />
+            Search &amp; add more books
+          </a>
+        </>
       )}
 
       {/* Edit modal */}
