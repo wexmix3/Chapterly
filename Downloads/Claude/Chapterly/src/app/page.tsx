@@ -48,10 +48,13 @@ export default async function LandingPage() {
                 className="px-8 py-3.5 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl text-base font-semibold transition-colors shadow-lg shadow-brand-500/20">
                 Start for free
               </Link>
-              <Link href="/demo"
-                className="px-8 py-3.5 bg-white border border-ink-200 hover:border-brand-300 hover:text-brand-700 text-ink-700 rounded-2xl text-base font-semibold transition-colors">
-                Try the demo →
-              </Link>
+              <div className="flex flex-col items-start gap-1">
+                <Link href="/demo"
+                  className="px-8 py-3.5 bg-white border border-ink-200 hover:border-brand-300 hover:text-brand-700 text-ink-700 rounded-2xl text-base font-semibold transition-colors">
+                  Try the demo →
+                </Link>
+                <p className="text-xs text-ink-400 pl-1">No account needed</p>
+              </div>
             </div>
             <p className="text-xs text-ink-400 mt-4">Free forever · No credit card · Import from Goodreads in 30 sec</p>
           </div>

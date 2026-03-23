@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
 import {
   BookOpen, Users, MessageSquare, Send, ArrowLeft,
-  Loader2, Globe, Lock, UserPlus, UserMinus, AlertTriangle
+  Loader2, Globe, Lock, UserPlus, UserMinus, AlertTriangle,
+  Search, X, ChevronDown
 } from 'lucide-react';
 
 interface ClubBook {
@@ -64,6 +65,13 @@ export default function ClubDetailClient({ clubId, viewerId }: { clubId: string;
   const [joinLoading, setJoinLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Book-of-the-month state
+  const [bookSearchQuery, setBookSearchQuery] = useState('');
+  const [bookSearchResults, setBookSearchResults] = useState<Array<{ source_id: string; title: string; authors: string[]; cover_url?: string | null }>>([]);
+  const [bookSearchLoading, setBookSearchLoading] = useState(false);
+  const [changingBook, setChangingBook] = useState(false);
+  const [showBookSearch, setShowBookSearch] = useState(false);
+
   const loadClub = useCallback(async () => {
     const res = await fetch(`/api/clubs/${clubId}`);
     if (!res.ok) { router.push('/clubs'); return; }
@@ -110,6 +118,43 @@ export default function ClubDetailClient({ clubId, viewerId }: { clubId: string;
       setSpoiler(false);
     }
     setPosting(false);
+  };
+
+  // Book search for owner book picker
+  useEffect(() => {
+    if (bookSearchQuery.length < 2) { setBookSearchResults([]); return; }
+    const t = setTimeout(async () => {
+      setBookSearchLoading(true);
+      try {
+        const res = await fetch(`/api/books/search?q=${encodeURIComponent(bookSearchQuery)}`);
+        if (res.ok) {
+          const json = await res.json();
+          setBookSearchResults((json.data ?? []).slice(0, 6));
+        }
+      } finally {
+        setBookSearchLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [bookSearchQuery]);
+
+  const handleSetBook = async (bookId: string) => {
+    setChangingBook(true);
+    try {
+      const res = await fetch(`/api/clubs/${clubId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_book_id: bookId }),
+      });
+      if (res.ok) {
+        setShowBookSearch(false);
+        setBookSearchQuery('');
+        setBookSearchResults([]);
+        await loadClub();
+      }
+    } finally {
+      setChangingBook(false);
+    }
   };
 
   if (loading) {
@@ -225,6 +270,123 @@ export default function ClubDetailClient({ clubId, viewerId }: { clubId: string;
           {/* Discussion tab */}
           {activeTab === 'discussion' && (
             <div className="space-y-4">
+
+              {/* Current Book section (visible to all when set; owner can change) */}
+              {(club.book || is_owner) && (
+                <section className="bg-white rounded-xl p-4 shadow-sm border border-paper-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide">
+                      Current Book
+                    </p>
+                    {is_owner && (
+                      <button
+                        onClick={() => setShowBookSearch(s => !s)}
+                        className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 font-medium"
+                      >
+                        {club.book ? 'Change book' : 'Set a book'}
+                        <ChevronDown className={`w-3 h-3 transition-transform ${showBookSearch ? 'rotate-180' : ''}`} />
+                      </button>
+                    )}
+                  </div>
+
+                  {club.book && !showBookSearch && (
+                    <div className="flex gap-3">
+                      <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-paper-200">
+                        {club.book.cover_url
+                          ? <img src={club.book.cover_url} alt={club.book.title} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><BookOpen className="w-4 h-4 text-ink-300" /></div>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-ink-900 truncate">{club.book.title}</p>
+                        <p className="text-xs text-ink-400 truncate">{club.book.authors?.[0]}</p>
+                        {club.book.page_count && (
+                          <p className="text-xs text-ink-400 mt-0.5">{club.book.page_count} pages</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Owner book search picker */}
+                  {is_owner && showBookSearch && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2 bg-paper-50 border border-ink-200 rounded-xl px-3 py-2">
+                        <Search className="w-4 h-4 text-ink-400 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={bookSearchQuery}
+                          onChange={e => setBookSearchQuery(e.target.value)}
+                          placeholder="Search for a book..."
+                          className="flex-1 text-sm bg-transparent text-ink-800 placeholder-ink-400 focus:outline-none"
+                          autoFocus
+                        />
+                        {bookSearchQuery && (
+                          <button onClick={() => { setBookSearchQuery(''); setBookSearchResults([]); }}>
+                            <X className="w-3.5 h-3.5 text-ink-400" />
+                          </button>
+                        )}
+                      </div>
+                      {bookSearchLoading && (
+                        <div className="flex justify-center py-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
+                        </div>
+                      )}
+                      {bookSearchResults.length > 0 && (
+                        <div className="space-y-1 max-h-56 overflow-y-auto">
+                          {bookSearchResults.map(book => (
+                            <button
+                              key={book.source_id}
+                              disabled={changingBook}
+                              onClick={() => handleSetBook(book.source_id)}
+                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-brand-50 transition-colors text-left"
+                            >
+                              <div className="w-8 h-12 rounded bg-paper-200 flex-shrink-0 overflow-hidden">
+                                {book.cover_url
+                                  ? <img src={book.cover_url} alt="" className="w-full h-full object-cover" />
+                                  : <BookOpen className="w-3 h-3 text-ink-300 m-auto mt-4" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-ink-800 truncate">{book.title}</p>
+                                <p className="text-xs text-ink-400 truncate">{book.authors?.[0]}</p>
+                              </div>
+                              {changingBook && <Loader2 className="w-3 h-3 animate-spin text-brand-400 flex-shrink-0" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* Static discussion prompts when a book is set */}
+              {club.book && (
+                <div className="bg-gradient-to-br from-brand-50 to-paper-50 rounded-xl p-4 border border-brand-100">
+                  <p className="text-xs font-semibold text-brand-700 uppercase tracking-wide mb-3">
+                    Discussion Starters
+                  </p>
+                  <div className="space-y-2">
+                    {[
+                      'What surprised you most so far?',
+                      'Which character resonates with you and why?',
+                      'How does the setting shape the story?',
+                    ].map(prompt => (
+                      <button
+                        key={prompt}
+                        onClick={() => {
+                          if (textareaRef.current) {
+                            setPostBody(prompt + ' ');
+                            textareaRef.current.focus();
+                          }
+                        }}
+                        className="w-full text-left text-xs text-ink-600 bg-white border border-paper-200 rounded-lg px-3 py-2 hover:border-brand-300 hover:text-brand-700 transition-colors"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {is_member ? (
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-paper-200">
                   <textarea

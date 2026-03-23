@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useNotifications } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import FloatingReadingButton from '@/components/layout/FloatingReadingButton';
 
 type Section = 'shelf' | 'circle' | 'explore';
 
@@ -103,6 +104,8 @@ export default function Navigation() {
 
   return (
     <>
+      <FloatingReadingButton />
+
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col bg-white dark:bg-ink-950 border-r border-ink-100 dark:border-ink-800 z-40">
 

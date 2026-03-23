@@ -41,6 +41,17 @@ const MUST_READS_2026 = [
   { title: 'The Familiar', author: 'Leigh Bardugo', cover: 'https://covers.openlibrary.org/b/isbn/9781250885739-M.jpg' },
 ];
 
+interface TrendingBook {
+  book_id: string;
+  count: number;
+  book: {
+    id: string;
+    title: string;
+    authors: string[];
+    cover_url?: string | null;
+  } | null;
+}
+
 export default function DiscoverClient() {
   const router = useRouter();
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -49,12 +60,24 @@ export default function DiscoverClient() {
   const [adding, setAdding] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [recs, setRecs] = useState<Array<BookSearchResult & { genre: string }>>([]);
+  const [trendingBooks, setTrendingBooks] = useState<TrendingBook[] | null>(null);
 
   // Fetch personalized recommendations
   useEffect(() => {
     fetch('/api/recommendations')
       .then(r => r.ok ? r.json() : { data: [] })
       .then(j => setRecs(j.data ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Fetch real trending data
+  useEffect(() => {
+    fetch('/api/discover/trending')
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => {
+        const items: TrendingBook[] = j.data ?? [];
+        if (items.length > 0) setTrendingBooks(items);
+      })
       .catch(() => {});
   }, []);
 
@@ -117,11 +140,31 @@ export default function DiscoverClient() {
               <TrendingUp className="w-4 h-4 text-brand-500" />
               <h2 className="font-display text-lg font-semibold text-ink-800">Trending on BookTok 🔥</h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {TRENDING_BOOKS.map(book => (
-                <BookCard key={book.title} {...book} onClick={() => toPreview(book.title, book.author, book.cover)} />
-              ))}
-            </div>
+            {trendingBooks && trendingBooks.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {trendingBooks.map((item) => {
+                  const b = item.book;
+                  if (!b) return null;
+                  return (
+                    <BookCard
+                      key={item.book_id}
+                      title={b.title}
+                      author={b.authors?.[0] ?? ''}
+                      cover={b.cover_url ?? ''}
+                      label={`🔥 ${item.count} reader${item.count !== 1 ? 's' : ''} this week`}
+                      creator=""
+                      onClick={() => toPreview(b.title, b.authors?.[0] ?? '', b.cover_url ?? '')}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {TRENDING_BOOKS.map(book => (
+                  <BookCard key={book.title} {...book} onClick={() => toPreview(book.title, book.author, book.cover)} />
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Browse by Genre */}

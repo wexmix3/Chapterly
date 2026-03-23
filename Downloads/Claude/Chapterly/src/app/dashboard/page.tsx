@@ -26,7 +26,16 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const tab = (searchParams.get('tab') as Tab) || 'overview';
   const [logModal, setLogModal] = useState<any>(null);
+  const [userHandle, setUserHandle] = useState<string | undefined>(undefined);
   const { books: currentlyReading, fetchBooks: refetchShelf } = useShelf('reading');
+
+  // Fetch handle for share card watermark
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j?.data?.handle) setUserHandle(j.data.handle); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -170,6 +179,7 @@ function DashboardContent() {
                   coverUrl={currentlyReading[0]?.book?.cover_url}
                   currentPage={currentlyReading[0]?.current_page ?? 0}
                   totalPages={currentlyReading[0]?.book?.page_count ?? 0}
+                  handle={userHandle}
                 />
               </div>
             </ErrorBoundary>
