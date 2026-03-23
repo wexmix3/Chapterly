@@ -9,12 +9,13 @@ type CardType = 'now_reading' | 'streak' | 'recap';
 interface Props {
   bookTitle?: string; bookAuthor?: string; coverUrl?: string | null;
   currentPage?: number; totalPages?: number; streak?: number;
-  booksRead?: number; pagesRead?: number;
+  booksRead?: number; pagesRead?: number; handle?: string;
 }
 
 export default function ShareCardPreview({
   bookTitle = 'The Great Gatsby', bookAuthor = 'F. Scott Fitzgerald', coverUrl,
   currentPage = 184, totalPages = 412, streak = 7, booksRead = 12, pagesRead = 3420,
+  handle,
 }: Props) {
   const [theme, setTheme] = useState<CardThemeName>('warm');
   const [cardType, setCardType] = useState<CardType>('now_reading');
@@ -122,6 +123,12 @@ export default function ShareCardPreview({
           <div className="relative flex items-center gap-1" style={{ color: t.badge }}>
             <span className="text-sm">🔥</span><span className="text-xs font-medium">{streak} day streak</span>
           </div>
+        )}
+
+        {handle && (
+          <p className="relative text-[9px] tracking-[2px]" style={{ color: t.textSecondary }}>
+            getchapterly.com/@{handle}
+          </p>
         )}
       </div>
 

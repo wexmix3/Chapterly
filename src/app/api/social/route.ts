@@ -38,6 +38,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Notify the followee (fire-and-forget)
+  const { data: actor } = await supabase
+    .from('users').select('display_name, handle').eq('id', user.id).maybeSingle();
+  if (actor) {
+    void Promise.resolve(supabase.from('notifications').insert({
+      user_id: followee_id,
+      actor_id: user.id,
+      type: 'new_follower',
+      title: `${actor.display_name} started following you`,
+      link: `/u/${actor.handle}`,
+    })).catch(() => {});
+  }
+
   return NextResponse.json({ data: { success: true } }, { status: 201 });
 }
 

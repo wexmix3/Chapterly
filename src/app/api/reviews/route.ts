@@ -53,5 +53,69 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Fire-and-forget friend_finished notifications (only on new reviews, not edits)
+  // A new review has created_at === updated_at (within a second)
+  const isNew = data && Math.abs(
+    new Date(data.updated_at).getTime() - new Date(data.created_at).getTime()
+  ) < 2000;
+
+  if (isNew && data) {
+    (async () => {
+      try {
+        // Find followers of the reviewer who also have this book with status 'read' or 'reading'
+        const { data: followers } = await supabase
+          .from('social_follow')
+          .select('follower_id')
+          .eq('followee_id', user.id);
+
+        if (!followers || followers.length === 0) return;
+
+        const followerIds = followers.map((f: { follower_id: string }) => f.follower_id);
+
+        // Find which of those followers have this book on their shelf
+        const { data: shelfEntries } = await supabase
+          .from('user_books')
+          .select('user_id')
+          .eq('book_id', book_id)
+          .in('status', ['read', 'reading'])
+          .in('user_id', followerIds);
+
+        if (!shelfEntries || shelfEntries.length === 0) return;
+
+        // Fetch reviewer's display name and book title for notification body
+        const { data: reviewer } = await supabase
+          .from('users')
+          .select('display_name, handle')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const { data: book } = await supabase
+          .from('books')
+          .select('title')
+          .eq('id', book_id)
+          .maybeSingle();
+
+        const actorName = reviewer?.display_name ?? 'Someone you follow';
+        const bookTitle = book?.title ?? 'a book you have';
+
+        const notifications = shelfEntries.map((entry: { user_id: string }) => ({
+          user_id: entry.user_id,
+          actor_id: user.id,
+          type: 'friend_finished' as const,
+          title: `${actorName} reviewed ${bookTitle}`,
+          body: `See what they thought about a book on your shelf.`,
+          link: `/u/${reviewer?.handle ?? user.id}`,
+          read: false,
+          created_at: new Date().toISOString(),
+        }));
+
+        await supabase.from('notifications').insert(notifications);
+      } catch {
+        // fire-and-forget — swallow errors silently
+      }
+    })();
+  }
+
   return NextResponse.json({ data });
 }

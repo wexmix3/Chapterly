@@ -6,7 +6,7 @@ import Navigation from '@/components/layout/Navigation';
 import {
   BookOpen, Star, Users, UserPlus, UserCheck, BookMarked,
   Lock, ChevronRight, MessageSquare, Loader2, BarChart3,
-  Calendar, Award, BadgeCheck
+  Calendar, Award, BadgeCheck, Share2, Check
 } from 'lucide-react';
 
 interface BookEntry {
@@ -101,6 +101,7 @@ export default function ProfileClient({
   const [error, setError] = useState<string | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'reading' | 'reviews'>('reading');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -239,14 +240,32 @@ export default function ProfileClient({
               </div>
 
               {/* Follow / Edit button */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 flex flex-col gap-2">
                 {is_own_profile ? (
-                  <button
-                    onClick={() => router.push('/dashboard?tab=overview')}
-                    className="px-4 py-2 rounded-xl text-sm font-medium bg-paper-100 text-ink-700 hover:bg-paper-200 transition-colors border border-paper-200"
-                  >
-                    Edit profile
-                  </button>
+                  <>
+                    <button
+                      onClick={() => router.push('/dashboard?tab=overview')}
+                      className="px-4 py-2 rounded-xl text-sm font-medium bg-paper-100 text-ink-700 hover:bg-paper-200 transition-colors border border-paper-200"
+                    >
+                      Edit profile
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(`https://getchapterly.com/u/${profile.handle}`);
+                          setLinkCopied(true);
+                          setTimeout(() => setLinkCopied(false), 2000);
+                        } catch { /* ignore */ }
+                      }}
+                      className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors border border-brand-100"
+                    >
+                      {linkCopied ? (
+                        <><Check className="w-3.5 h-3.5" /> Copied!</>
+                      ) : (
+                        <><Share2 className="w-3.5 h-3.5" /> Share profile</>
+                      )}
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={handleFollow}

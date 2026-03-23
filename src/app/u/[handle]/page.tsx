@@ -49,6 +49,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProfilePage({ params }: Props) {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return <ProfileClient handle={params.handle} viewerId={user?.id ?? null} />;
+
+  const [{ data: { user } }, { data: profile }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('users')
+      .select('display_name, bio, avatar_url, handle, is_public')
+      .eq('handle', params.handle)
+      .maybeSingle(),
+  ]);
+
+  const jsonLd =
+    profile && profile.is_public
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'Person',
+          name: profile.display_name ?? `@${params.handle}`,
+          url: `https://getchapterly.com/u/${params.handle}`,
+          description: profile.bio ?? undefined,
+          image: profile.avatar_url ?? undefined,
+        }
+      : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <ProfileClient handle={params.handle} viewerId={user?.id ?? null} />
+    </>
+  );
 }
