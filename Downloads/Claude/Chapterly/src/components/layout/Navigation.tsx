@@ -44,8 +44,7 @@ const CIRCLE_NAV: NavItem[] = [
 const EXPLORE_NAV: NavItem[] = [
   { href: '/discover', label: 'Browse Books', icon: Compass },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  // HIDDEN: premium upsell — re-enable when premium re-launches
-  // { href: '/premium', label: 'Go Premium ✨', icon: Crown },
+  { href: '/premium', label: 'Go Premium ✨', icon: Crown },
 ];
 
 const SECTION_NAV: Record<Section, NavItem[]> = {

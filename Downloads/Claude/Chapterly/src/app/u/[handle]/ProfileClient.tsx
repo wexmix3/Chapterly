@@ -6,7 +6,7 @@ import Navigation from '@/components/layout/Navigation';
 import {
   BookOpen, Star, Users, UserPlus, UserCheck, BookMarked,
   Lock, ChevronRight, MessageSquare, Loader2, BarChart3,
-  Calendar, Award
+  Calendar, Award, BadgeCheck
 } from 'lucide-react';
 
 interface BookEntry {
@@ -50,6 +50,8 @@ interface ProfileData {
     want_to_read_count: number;
     total_pages: number;
     avg_rating: number | null;
+    is_creator?: boolean;
+    creator_platform?: string | null;
   };
   currently_reading: BookEntry[];
   recently_read: BookEntry[];
@@ -220,6 +222,11 @@ export default function ProfileClient({
                   <h1 className="font-display text-xl font-bold text-ink-900 truncate">
                     {profile.display_name}
                   </h1>
+                  {profile.is_creator && (
+                    <span title="Verified Creator" className="flex items-center gap-1 bg-brand-50 text-brand-600 border border-brand-100 rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0">
+                      <BadgeCheck className="w-3 h-3" /> Creator
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-ink-400">@{profile.handle}</p>
                 {profile.bio && (
