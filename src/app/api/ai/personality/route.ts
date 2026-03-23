@@ -107,6 +107,64 @@ Return ONLY valid JSON, no markdown.
   "traits": ["trait 1 with actual data", "trait 2 with actual data", "trait 3 with actual data"]
 }`;
 
+  // ── Computed personality fallback ─────────────────────────────────────────
+  function computedPersonality() {
+    const totalPages = sessions!.reduce((s, r) => s + (r.pages_delta ?? 0), 0);
+    const totalMinutes = sessions!.reduce((s, r) => s + (r.minutes_delta ?? 0), 0);
+    const avgPagesPerSession = sessions!.length > 0 ? Math.round(totalPages / sessions!.length) : 0;
+    const streakDays = (stats ?? []).filter(s => s.is_streak_day).length;
+
+    const hourCounts: Record<number, number> = {};
+    for (const s of sessions!) {
+      const hour = new Date(s.started_at).getHours();
+      hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
+    }
+    const bestHour = Object.entries(hourCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0];
+    const isNight = bestHour !== undefined && (Number(bestHour) >= 21 || Number(bestHour) < 6);
+    const isMorning = bestHour !== undefined && Number(bestHour) >= 5 && Number(bestHour) < 12;
+
+    const genreCounts: Record<string, number> = {};
+    type ShelfBook = { rating?: number | null; book?: { subjects?: string[] } | null };
+    for (const ub of (shelf ?? []) as ShelfBook[]) {
+      for (const s of ub.book?.subjects ?? []) {
+        genreCounts[s] = (genreCounts[s] ?? 0) + 1;
+      }
+    }
+    const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'varied';
+    const rated = ((shelf ?? []) as ShelfBook[]).filter(b => b.rating);
+    const avgRating = rated.length ? rated.reduce((s, b) => s + (b.rating ?? 0), 0) / rated.length : null;
+    const isPicky = avgRating !== null && avgRating <= 3.5;
+    const isGenerous = avgRating !== null && avgRating >= 4.5;
+
+    if (isNight && avgPagesPerSession >= 40) {
+      return { type: 'The Midnight Devourer', badge: '🌙', tagline: `You read ${totalPages} pages in the dark — mystery is your fuel.`, element: 'moon',
+        traits: [`Night owl — most sessions happen after 9pm`, `Covers ${avgPagesPerSession} pages per sitting`, `${streakDays} reading days this month`] };
+    }
+    if (isMorning && streakDays >= 10) {
+      return { type: 'The Dawn Ritual Reader', badge: '🌅', tagline: 'Pages before people — your mornings belong to books.', element: 'air',
+        traits: [`Morning reader with ${streakDays} consistent days`, `${avgPagesPerSession} pages per session`, `Favourite genre: ${topGenre}`] };
+    }
+    if (isPicky) {
+      return { type: 'The Selective Connoisseur', badge: '🔍', tagline: 'You don\'t finish bad books — life is too short.', element: 'earth',
+        traits: [`Rates books an average of ${avgRating?.toFixed(1)}★ — high standards`, `${sessions!.length} sessions logged this month`, `Prefers: ${topGenre}`] };
+    }
+    if (isGenerous) {
+      return { type: 'The Enthusiastic Adventurer', badge: '✨', tagline: 'Every book is a gift — you read with an open heart.', element: 'fire',
+        traits: [`Rates books a generous ${avgRating?.toFixed(1)}★ on average`, `${totalPages} pages read this month`, `Favourite genre: ${topGenre}`] };
+    }
+    if (avgPagesPerSession >= 60) {
+      return { type: 'The Deep Diver', badge: '🐋', tagline: `${avgPagesPerSession} pages per session — you go deep and stay there.`, element: 'water',
+        traits: [`Marathon sessions averaging ${avgPagesPerSession} pages`, `${Math.round(totalMinutes / 60)}h ${totalMinutes % 60}m read this month`, `Genre of choice: ${topGenre}`] };
+    }
+    return { type: 'The Steady Pacer', badge: '📚', tagline: 'Consistent, curious, and always making progress.', element: 'earth',
+      traits: [`${sessions!.length} sessions logged this month`, `${totalPages} pages read across ${Math.round(totalMinutes / 60)} hours`, `Favourite genre: ${topGenre}`] };
+  }
+
+  // If no API key, return computed personality immediately
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(computedPersonality());
+  }
+
   try {
     const anthropic = getAnthropic();
     const response = await anthropic.messages.create({
@@ -120,7 +178,7 @@ Return ONLY valid JSON, no markdown.
     const parsed = JSON.parse(text);
     return NextResponse.json(parsed);
   } catch (err) {
-    console.error('[ai/personality]', err);
-    return NextResponse.json({ error: 'Failed to generate personality' }, { status: 500 });
+    console.error('[ai/personality] Claude API failed, using computed fallback:', err);
+    return NextResponse.json(computedPersonality());
   }
 }

@@ -15,6 +15,13 @@ import { aiGuard } from '@/lib/ai-guard';
 import Anthropic from '@anthropic-ai/sdk';
 import { format, subDays } from 'date-fns';
 
+interface Insight {
+  emoji: string;
+  title: string;
+  body: string;
+  type: 'pattern' | 'achievement' | 'suggestion' | 'encouragement';
+}
+
 let _anthropic: Anthropic | null = null;
 function getAnthropic() {
   if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -103,6 +110,100 @@ READING DATA (last 30 days):
 - Top genre: ${topGenre ?? 'mixed'}
 `.trim();
 
+  // ── Computational fallback (used when no API key is set or API call fails) ──
+  function computedInsights(): Insight[] {
+    const results: Insight[] = [];
+    const safeSessions = sessions ?? [];
+
+    // Reading pace insight
+    if (totalPages > 0 && safeSessions.length > 0) {
+      const pagesPerDay = Math.round(totalPages / 30);
+      if (pagesPerDay >= 20) {
+        results.push({
+          emoji: '🔥',
+          title: 'You\'re on fire this month',
+          body: `You've averaged ${pagesPerDay} pages/day over the last 30 days across ${safeSessions.length} sessions. That puts you well above most readers.`,
+          type: 'achievement',
+        });
+      } else if (pagesPerDay > 0) {
+        results.push({
+          emoji: '📖',
+          title: `${pagesPerDay} pages a day`,
+          body: `You've read ${totalPages} pages across ${safeSessions.length} sessions this month — roughly ${pagesPerDay} pages per day. Small sessions compound fast.`,
+          type: 'pattern',
+        });
+      }
+    }
+
+    // Best reading time insight
+    if (bestTimeLabel) {
+      const sessionCount = safeSessions.length;
+      results.push({
+        emoji: bestTimeLabel === 'morning' ? '🌅' : bestTimeLabel === 'afternoon' ? '☀️' : bestTimeLabel === 'evening' ? '🌆' : '🌙',
+        title: `You\'re a ${bestTimeLabel} reader`,
+        body: `Most of your ${sessionCount} sessions happen in the ${bestTimeLabel}. Knowing your peak reading window helps you protect that time and build a stronger habit.`,
+        type: 'pattern',
+      });
+    }
+
+    // Streak insight
+    if (streakDays >= 7) {
+      results.push({
+        emoji: '🔥',
+        title: `${streakDays} streak days this month`,
+        body: `You read on ${streakDays} out of 30 days — that's consistency. Readers with 7+ streak days per month finish 3× more books on average.`,
+        type: 'achievement',
+      });
+    } else if (streakDays > 0) {
+      results.push({
+        emoji: '🎯',
+        title: 'Build your reading streak',
+        body: `You read on ${streakDays} days this month. Try for just 10 minutes every day — consistency beats long sporadic sessions every time.`,
+        type: 'suggestion',
+      });
+    }
+
+    // Genre insight
+    if (topGenre) {
+      results.push({
+        emoji: '🎭',
+        title: `Your go-to genre: ${topGenre}`,
+        body: `Your shelf leans heavily toward ${topGenre}. Once you find a genre you love, your reading speed tends to increase because the vocabulary and pacing feel familiar.`,
+        type: 'pattern',
+      });
+    }
+
+    // Session length insight
+    if (avgPagesPerSession > 0) {
+      const style = avgPagesPerSession >= 50 ? 'marathon reader' : avgPagesPerSession >= 25 ? 'steady reader' : 'sprint reader';
+      results.push({
+        emoji: '⏱️',
+        title: `You\'re a ${style}`,
+        body: `Your average session covers ${avgPagesPerSession} pages. ${
+          avgPagesPerSession >= 50
+            ? 'Long focused sessions are great for complex books that need immersion.'
+            : 'Short, consistent sessions are proven to help with retention — your brain loves the spaced repetition.'
+        }`,
+        type: 'encouragement',
+      });
+    }
+
+    // Books finished insight
+    const booksFinished = (booksRead ?? []).filter(b => b.status === 'read').length;
+    if (booksFinished > 0) {
+      results.push({
+        emoji: '✅',
+        title: `${booksFinished} book${booksFinished === 1 ? '' : 's'} finished this year`,
+        body: `You've completed ${booksFinished} book${booksFinished === 1 ? '' : 's'} so far this year. The average person finishes 4 books a year — you're already ahead of the curve.`,
+        type: 'achievement',
+      });
+    }
+
+    // Return top 4 insights
+    return results.slice(0, 4);
+  }
+
+  // ── Prompt for Claude (if API key is available) ────────────────────────────
   const prompt = `You are an encouraging, insightful reading coach. Analyze this reader's data and generate 4 personalized insights.
 
 ${dataProfile}
@@ -121,6 +222,11 @@ Return ONLY valid JSON, no markdown, no extra text.
   ]
 }`;
 
+  // If no API key, return computed insights immediately
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ insights: computedInsights() });
+  }
+
   try {
     const anthropic = getAnthropic();
     const response = await anthropic.messages.create({
@@ -135,7 +241,8 @@ Return ONLY valid JSON, no markdown, no extra text.
     const parsed = JSON.parse(text);
     return NextResponse.json(parsed);
   } catch (err) {
-    console.error('[ai/insights]', err);
-    return NextResponse.json({ error: 'Failed to generate insights' }, { status: 500 });
+    console.error('[ai/insights] Claude API failed, using computed fallback:', err);
+    // Fall back to computed insights on any API error
+    return NextResponse.json({ insights: computedInsights() });
   }
 }
