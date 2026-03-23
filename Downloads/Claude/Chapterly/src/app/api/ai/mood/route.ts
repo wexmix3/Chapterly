@@ -60,6 +60,65 @@ Return ONLY valid JSON, no markdown.
   ]
 }`;
 
+  // ── Static fallback recs keyed by mood ────────────────────────────────────
+  const STATIC_RECS: Record<string, Array<{ title: string; author: string; why: string; genre: string; vibe: string }>> = {
+    Adventurous: [
+      { title: 'Into Thin Air', author: 'Jon Krakauer', why: 'A gripping true account of the deadliest Everest expedition — pure adrenaline on every page.', genre: 'Adventure Nonfiction', vibe: '⛰️ Edge of your seat' },
+      { title: 'The Alchemist', author: 'Paulo Coelho', why: 'A timeless journey across continents in pursuit of a personal legend — adventure meets philosophy.', genre: 'Literary Fiction', vibe: '🗺️ Soul journey' },
+      { title: 'Wild', author: 'Cheryl Strayed', why: 'A raw, honest 1,100-mile solo hike that\'s as much internal as external.', genre: 'Memoir', vibe: '🌲 Raw & real' },
+      { title: 'Endurance', author: 'Alfred Lansing', why: 'Shackleton\'s impossible Antarctic survival story — the ultimate adventure tale.', genre: 'Historical Nonfiction', vibe: '🧊 Epic survival' },
+    ],
+    Cozy: [
+      { title: 'The House in the Cerulean Sea', author: 'TJ Klune', why: 'Warm, whimsical fantasy about found family — the literary equivalent of a hot drink by the fire.', genre: 'Fantasy', vibe: '☕ Warm & fuzzy' },
+      { title: 'Remarkably Bright Creatures', author: 'Shelby Van Pelt', why: 'A charming mystery narrated partly by an octopus — cozy with unexpected depth.', genre: 'Literary Fiction', vibe: '🐙 Gentle mystery' },
+      { title: 'A Man Called Ove', author: 'Fredrik Backman', why: 'A grumpy old man and his neighbours — quietly heartwarming and deeply funny.', genre: 'Contemporary Fiction', vibe: '🏠 Heartwarming' },
+      { title: 'The Thursday Murder Club', author: 'Richard Osman', why: 'Retired detectives solving crimes — witty, cozy, and utterly delightful.', genre: 'Cozy Mystery', vibe: '🍵 Cozy crime' },
+    ],
+    Thoughtful: [
+      { title: 'Sapiens', author: 'Yuval Noah Harari', why: 'A sweeping, provocative history of humankind that changes how you see everything.', genre: 'History / Philosophy', vibe: '🧠 Mind-expanding' },
+      { title: 'The Remains of the Day', author: 'Kazuo Ishiguro', why: 'A quiet meditation on duty, regret, and what it means to live well — devastatingly beautiful.', genre: 'Literary Fiction', vibe: '🍂 Quietly profound' },
+      { title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', why: 'Nobel-winning insights into how your mind actually works — permanently changes your thinking.', genre: 'Psychology', vibe: '💡 Eye-opening' },
+      { title: 'Stoner', author: 'John Williams', why: 'A plain, perfect novel about an ordinary life — it will make you reconsider what matters.', genre: 'Literary Fiction', vibe: '📜 Quietly devastating' },
+    ],
+    Thrilled: [
+      { title: 'Gone Girl', author: 'Gillian Flynn', why: 'The twists will make you question everything — don\'t start this one late at night.', genre: 'Psychological Thriller', vibe: '😱 Jaw-dropping twists' },
+      { title: 'The Girl with the Dragon Tattoo', author: 'Stieg Larsson', why: 'A dark, compulsive Swedish thriller with one of fiction\'s most unforgettable protagonists.', genre: 'Crime Thriller', vibe: '🔥 Dark & gripping' },
+      { title: 'The Silent Patient', author: 'Alex Michaelides', why: 'A woman who shoots her husband then never speaks again — the ending will stun you.', genre: 'Psychological Thriller', vibe: '🔮 Twisty mystery' },
+      { title: 'Sharp Objects', author: 'Gillian Flynn', why: 'A haunting, deeply unsettling story of a journalist returning to her small Southern hometown.', genre: 'Thriller', vibe: '🌑 Dark & atmospheric' },
+    ],
+    Romantic: [
+      { title: 'The Hating Game', author: 'Sally Thorne', why: 'Office rivals with undeniable chemistry — sharp, funny, and deeply swoony.', genre: 'Romance', vibe: '💕 Enemies to lovers' },
+      { title: 'Beach Read', author: 'Emily Henry', why: 'Two writers swap genres for the summer — romantic, funny, and surprisingly emotional.', genre: 'Contemporary Romance', vibe: '🌊 Warm & witty' },
+      { title: 'Persuasion', author: 'Jane Austen', why: 'Second chances at love — Austen\'s most emotionally mature and bittersweet romance.', genre: 'Classic Romance', vibe: '🌹 Timeless longing' },
+      { title: 'It Ends with Us', author: 'Colleen Hoover', why: 'A raw, unflinching love story that will break your heart in the best possible way.', genre: 'Contemporary Romance', vibe: '💔 Emotionally raw' },
+    ],
+    Inspired: [
+      { title: 'Atomic Habits', author: 'James Clear', why: 'The most practical system for building good habits — every page is immediately actionable.', genre: 'Self-Help', vibe: '⚡ Life-changing' },
+      { title: 'When Breath Becomes Air', author: 'Paul Kalanithi', why: 'A dying neurosurgeon\'s meditation on meaning — one of the most profound books ever written.', genre: 'Memoir', vibe: '✨ Soul-stirring' },
+      { title: 'Educated', author: 'Tara Westover', why: 'A memoir about self-invention against all odds — genuinely inspiring in the truest sense.', genre: 'Memoir', vibe: '🎓 Transformative' },
+      { title: 'Man\'s Search for Meaning', author: 'Viktor Frankl', why: 'A Holocaust survivor\'s lessons on finding purpose — small book, enormous impact.', genre: 'Philosophy / Memoir', vibe: '🕯️ Deeply meaningful' },
+    ],
+    Escapist: [
+      { title: 'The Name of the Wind', author: 'Patrick Rothfuss', why: 'The most immersive fantasy world ever built — you won\'t want to leave Kvothe\'s story.', genre: 'Epic Fantasy', vibe: '🔮 Fully immersive' },
+      { title: 'The Night Circus', author: 'Erin Morgenstern', why: 'A magical circus appears without warning — lush, dream-like, and impossibly beautiful.', genre: 'Fantasy', vibe: '✨ Enchanting' },
+      { title: 'Jonathan Strange & Mr Norrell', author: 'Susanna Clarke', why: 'Magic returns to England — a dense, extraordinary novel like nothing else.', genre: 'Historical Fantasy', vibe: '🎩 Utterly transporting' },
+      { title: 'Piranesi', author: 'Susanna Clarke', why: 'A man lives in an infinite house of halls and statues — mysterious, original, unforgettable.', genre: 'Fantasy', vibe: '🌊 Strange & beautiful' },
+    ],
+    Funny: [
+      { title: 'Good Omens', author: 'Terry Pratchett & Neil Gaiman', why: 'An angel and demon try to prevent the apocalypse — the funniest book about the end of the world ever written.', genre: 'Comic Fantasy', vibe: '😂 Hilarious' },
+      { title: 'The Hitchhiker\'s Guide to the Galaxy', author: 'Douglas Adams', why: 'The answer to life, the universe and everything is 42 — and getting there is absurdly funny.', genre: 'Comic Sci-Fi', vibe: '🚀 Absurdly brilliant' },
+      { title: 'I\'m Glad My Mom Died', author: 'Jennette McCurdy', why: 'A darkly funny, raw memoir — the title says it all and it\'s completely earned.', genre: 'Memoir', vibe: '😬 Dark comedy' },
+      { title: 'Catch-22', author: 'Joseph Heller', why: 'WWII military bureaucracy taken to its logical, hilarious extreme — a classic for a reason.', genre: 'Classic Satire', vibe: '🎭 Satirical brilliance' },
+    ],
+  };
+
+  const staticRecs = STATIC_RECS[mood] ?? STATIC_RECS.Adventurous;
+
+  // If no API key, return static recs immediately
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ recommendations: staticRecs });
+  }
+
   try {
     const anthropic = getAnthropic();
     const response = await anthropic.messages.create({
@@ -100,7 +159,7 @@ Return ONLY valid JSON, no markdown.
 
     return NextResponse.json({ recommendations: enriched });
   } catch (err) {
-    console.error('[ai/mood]', err);
-    return NextResponse.json({ error: 'Failed to generate mood recommendations' }, { status: 500 });
+    console.error('[ai/mood] Claude API failed, using static fallback:', err);
+    return NextResponse.json({ recommendations: staticRecs });
   }
 }

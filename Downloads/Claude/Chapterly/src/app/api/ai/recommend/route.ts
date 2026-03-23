@@ -84,6 +84,14 @@ REQUIRED FORMAT:
   ]
 }`;
 
+  // If no API key, return a prompt to configure it
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({
+      recommendations: [],
+      message: 'AI recommendations require an Anthropic API key. Add ANTHROPIC_API_KEY to your environment variables to enable this feature.',
+    });
+  }
+
   try {
     const anthropic = getAnthropic();
     const response = await anthropic.messages.create({
@@ -128,6 +136,9 @@ REQUIRED FORMAT:
     return NextResponse.json({ recommendations: enriched });
   } catch (err) {
     console.error('[ai/recommend]', err);
-    return NextResponse.json({ error: 'Failed to generate recommendations' }, { status: 500 });
+    return NextResponse.json({
+      recommendations: [],
+      message: 'Recommendations are temporarily unavailable. Please try again shortly.',
+    });
   }
 }
