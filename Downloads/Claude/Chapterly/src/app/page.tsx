@@ -20,7 +20,7 @@ export default async function LandingPage() {
         </div>
         <div className="flex items-center gap-4">
           <Link href="#features" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Features</Link>
-          <Link href="/premium" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Premium</Link>
+          {/* HIDDEN: premium nav — re-enable when monetizing */}
           <Link href="/login" className="text-sm font-medium text-ink-600 hover:text-ink-900 transition-colors hidden sm:block">Sign in</Link>
           <Link href="/login"
             className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-brand-500/30">
@@ -446,59 +446,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Premium pricing section */}
-      <section id="premium" className="max-w-4xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-ink-950 mb-3">Free forever. Or go Premium.</h2>
-          <p className="text-ink-500 max-w-xl mx-auto">Everything you need is free. Premium unlocks the full experience.</p>
-        </div>
-        <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-          {/* Free card */}
-          <div className="bg-white rounded-3xl border border-ink-100 p-8 flex flex-col">
-            <div className="mb-6">
-              <p className="text-sm font-semibold text-ink-500 uppercase tracking-wide mb-1">Free</p>
-              <p className="font-display text-4xl font-bold text-ink-950">$0</p>
-              <p className="text-ink-400 text-sm mt-1">Always free, no card needed</p>
-            </div>
-            <ul className="space-y-3 flex-1 mb-8">
-              {['Unlimited book tracking', 'Reading streaks & stats', 'Beautiful share cards', 'Goodreads import', '1 book club'].map(f => (
-                <li key={f} className="flex items-center gap-3 text-sm text-ink-700">
-                  <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <Link href="/login"
-              className="block text-center px-6 py-3 border border-ink-200 text-ink-700 rounded-xl font-semibold text-sm hover:border-brand-300 transition-colors">
-              Get started free
-            </Link>
-          </div>
-          {/* Premium card */}
-          <div className="bg-gradient-to-br from-brand-500 to-amber-500 rounded-3xl p-8 flex flex-col text-white shadow-xl shadow-brand-500/20">
-            <div className="mb-6">
-              <p className="text-sm font-semibold text-white/70 uppercase tracking-wide mb-1">Premium</p>
-              <p className="font-display text-4xl font-bold">$4.99<span className="text-xl font-normal text-white/70">/mo</span></p>
-              <p className="text-white/70 text-sm mt-1">7-day free trial, cancel anytime</p>
-            </div>
-            <ul className="space-y-3 flex-1 mb-8">
-              {['Everything in Free', 'AI reading personality & insights', 'Unlimited AI recommendations', 'Advanced reading analytics', 'Unlimited book clubs', 'Priority support'].map(f => (
-                <li key={f} className="flex items-center gap-3 text-sm text-white/90">
-                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <Link href="/premium"
-              className="block text-center px-6 py-3 bg-white text-brand-600 rounded-xl font-bold text-sm hover:bg-white/90 transition-colors shadow-sm">
-              Start free trial →
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* HIDDEN: Premium pricing section — re-enable when monetizing */}
 
       {/* Goodreads switcher section */}
       <section className="max-w-4xl mx-auto px-6 pb-16">
@@ -587,8 +535,7 @@ export default async function LandingPage() {
           <div className="flex items-center gap-4">
             <Link href="#features" className="hover:text-ink-700 transition-colors">Features</Link>
             <span>·</span>
-            <Link href="/premium" className="hover:text-ink-700 transition-colors">Premium</Link>
-            <span>·</span>
+            {/* HIDDEN: premium footer link — re-enable when monetizing */}
             <Link href="/demo" className="hover:text-ink-700 transition-colors">Demo</Link>
             <span>·</span>
             <Link href="/login" className="hover:text-ink-700 transition-colors">Sign up</Link>
