@@ -247,9 +247,9 @@ export default function ListDetailClient({ listId, viewerId }: { listId: string;
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-paper-50 dark:bg-ink-950">
+      <div className="min-h-screen bg-paper-50 dark:bg-ink-950 pt-[52px]">
         <Navigation />
-        <main className="md:ml-64 flex items-center justify-center min-h-[80vh]">
+        <main className="flex items-center justify-center min-h-[80vh]">
           <p className="text-ink-400">List not found.</p>
         </main>
       </div>
@@ -261,9 +261,9 @@ export default function ListDetailClient({ listId, viewerId }: { listId: string;
   const existingBookIds = new Set(books.map(b => b.book?.id).filter(Boolean) as string[]);
 
   return (
-    <div className="min-h-screen bg-paper-50 dark:bg-ink-950">
+    <div className="min-h-screen bg-paper-50 dark:bg-ink-950 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6 space-y-5">
 
           <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-800 dark:hover:text-ink-200 transition-colors">

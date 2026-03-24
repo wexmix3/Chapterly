@@ -48,9 +48,9 @@ export default function WrappedClient() {
 
   if (!data || data.totalBooks === 0) {
     return (
-      <div className="min-h-screen bg-paper-50">
+      <div className="min-h-screen bg-paper-50 pt-[52px]">
         <Navigation />
-        <main className="md:ml-64 flex items-center justify-center min-h-[80vh] px-4">
+        <main className="flex items-center justify-center min-h-[80vh] px-4">
           <div className="text-center max-w-sm space-y-4">
             <BookOpen className="w-12 h-12 text-ink-200 mx-auto" />
             <h1 className="font-display text-2xl font-bold text-ink-800">{new Date().getFullYear()} isn&apos;t over yet!</h1>
@@ -64,9 +64,9 @@ export default function WrappedClient() {
   const slides = buildSlides(data);
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-sm mx-auto px-4 pt-6 space-y-4">
 
           {/* Header */}

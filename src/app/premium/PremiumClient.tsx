@@ -60,9 +60,9 @@ export default function PremiumClient({
   };
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-lg mx-auto px-4 md:px-8 pt-6 space-y-6">
 
           {justSubscribed && (
@@ -163,7 +163,7 @@ export default function PremiumClient({
           <div className="bg-paper-100 rounded-xl p-4 border border-paper-200">
             <p className="text-xs font-semibold text-ink-600 mb-2">Free plan always includes:</p>
             <div className="space-y-1">
-              {['Unlimited book tracking', 'Reading streaks & stats', 'Share cards', 'Goodreads import', '1 book club'].map(f => (
+              {['Unlimited book tracking', 'Reading streaks & stats', 'Share cards', 'Library import', '1 book club'].map(f => (
                 <div key={f} className="flex items-center gap-2 text-xs text-ink-500">
                   <Check className="w-3 h-3 text-emerald-500 flex-shrink-0" />
                   {f}

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Upload, FileText, ChevronDown, ChevronUp, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { parseGoodreadsCSV, convertGoodreadsRow } from '@/lib/import';
+import { parseLibraryCSV, convertLibraryRow } from '@/lib/import';
 
 interface ImportResult {
   imported: number;
@@ -10,7 +10,7 @@ interface ImportResult {
   errors: number;
 }
 
-export default function GoodreadsImport({ onComplete }: { onComplete?: () => void }) {
+export default function LibraryImport({ onComplete }: { onComplete?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -37,13 +37,13 @@ export default function GoodreadsImport({ onComplete }: { onComplete?: () => voi
     setProgress(0);
 
     const text = await file.text();
-    const rows = parseGoodreadsCSV(text).slice(0, MAX_ROWS);
+    const rows = parseLibraryCSV(text).slice(0, MAX_ROWS);
     const totals: ImportResult = { imported: 0, already_on_shelf: 0, errors: 0 };
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        const { searchResult, status, rating, review } = convertGoodreadsRow(row);
+        const { searchResult, status, rating, review } = convertLibraryRow(row);
         const res = await fetch('/api/user-books', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -100,7 +100,7 @@ export default function GoodreadsImport({ onComplete }: { onComplete?: () => voi
         ) : (
           <div className="flex flex-col items-center gap-2">
             <Upload className="w-8 h-8 text-ink-300" />
-            <p className="font-medium text-ink-600 text-sm">Drop your Goodreads CSV here</p>
+            <p className="font-medium text-ink-600 text-sm">Drop your reading history CSV here</p>
             <p className="text-xs text-ink-400">or click to browse</p>
           </div>
         )}
@@ -110,11 +110,12 @@ export default function GoodreadsImport({ onComplete }: { onComplete?: () => voi
       <div className="border border-ink-100 rounded-xl overflow-hidden">
         <button onClick={() => setHowOpen(!howOpen)}
           className="flex items-center justify-between w-full px-4 py-3 text-sm text-ink-600 hover:bg-ink-50 transition-colors">
-          <span>How do I export from Goodreads?</span>
+          <span>How do I export my reading history?</span>
           {howOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
         {howOpen && (
           <div className="px-4 pb-4 text-xs text-ink-500 space-y-1 border-t border-ink-100 pt-3">
+            <p className="font-medium text-ink-600 mb-2">From Goodreads:</p>
             <p>1. Go to <strong>goodreads.com</strong> → My Books</p>
             <p>2. Click <strong>Import and export</strong> in the left sidebar</p>
             <p>3. Click <strong>Export Library</strong> → wait for the email</p>

@@ -1,6 +1,9 @@
 import type { GoodreadsCSVRow, BookSearchResult, ShelfStatus } from '@/types';
 
-export function parseGoodreadsCSV(csvText: string): GoodreadsCSVRow[] {
+// Alias for backward compatibility
+export { parseLibraryCSV as parseGoodreadsCSV, convertLibraryRow as convertGoodreadsRow };
+
+export function parseLibraryCSV(csvText: string): GoodreadsCSVRow[] {
   const lines = csvText.split('\n').filter(Boolean);
   if (lines.length < 2) return [];
 
@@ -49,7 +52,7 @@ export function mapShelfStatus(exclusiveShelf: string): ShelfStatus {
   return map[exclusiveShelf.toLowerCase()] ?? 'to_read';
 }
 
-export function convertGoodreadsRow(row: GoodreadsCSVRow): {
+export function convertLibraryRow(row: GoodreadsCSVRow): {
   searchResult: BookSearchResult;
   status: ShelfStatus;
   rating: number | null;

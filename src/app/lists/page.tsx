@@ -208,9 +208,9 @@ export default function ListsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-paper-50 dark:bg-ink-950">
+    <div className="min-h-screen bg-paper-50 dark:bg-ink-950 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-12">
+      <main className="pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
 
           {/* Header */}

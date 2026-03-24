@@ -76,9 +76,9 @@ export default function NotificationsClient() {
   const unread = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6 md:pt-10">
           <div className="flex items-center justify-between mb-6">
             <div>

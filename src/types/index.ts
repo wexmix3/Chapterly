@@ -147,7 +147,7 @@ export interface ShareCard {
   created_at: string;
 }
 
-// ─── Goodreads Import ────────────────────────────────────────
+// ─── Library Import (Goodreads-compatible CSV format) ────────
 export interface GoodreadsCSVRow {
   'Book Id': string;
   Title: string;

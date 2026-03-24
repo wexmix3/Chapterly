@@ -110,9 +110,9 @@ function BookPreviewContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-paper-50">
+      <div className="min-h-screen bg-paper-50 pt-[52px]">
         <Navigation />
-        <main className="md:ml-64 flex items-center justify-center min-h-[60vh]">
+        <main className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
         </main>
       </div>
@@ -121,9 +121,9 @@ function BookPreviewContent() {
 
   if (!book) {
     return (
-      <div className="min-h-screen bg-paper-50">
+      <div className="min-h-screen bg-paper-50 pt-[52px]">
         <Navigation />
-        <main className="md:ml-64 flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <main className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <BookOpen className="w-12 h-12 text-ink-200" />
           <p className="text-ink-500">Book not found.</p>
           <button onClick={() => router.back()} className="text-sm text-brand-600 hover:underline">Go back</button>
@@ -137,9 +137,9 @@ function BookPreviewContent() {
   const cover   = book.cover_url ?? (isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` : null);
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6 md:pt-10 space-y-8">
 
           {/* Back */}
@@ -224,12 +224,6 @@ function BookPreviewContent() {
                 target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-2 bg-black text-white rounded-xl text-xs font-medium hover:opacity-80 transition-opacity">
                 🎵 BookTok
-                <ExternalLink className="w-3 h-3" />
-              </a>
-              <a href={`https://www.goodreads.com/search?q=${encodeURIComponent(title)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#F4F1EA] text-[#382110] rounded-xl text-xs font-medium hover:opacity-80 transition-opacity">
-                📗 Goodreads
                 <ExternalLink className="w-3 h-3" />
               </a>
               {book.source === 'openlibrary' && book.source_id && (

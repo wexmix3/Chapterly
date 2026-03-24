@@ -63,9 +63,9 @@ export default function ChallengeClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-paper-50">
+      <div className="min-h-screen bg-paper-50 pt-[52px]">
         <Navigation />
-        <main className="md:ml-64 flex items-center justify-center min-h-[60vh]">
+        <main className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
         </main>
       </div>
@@ -92,9 +92,9 @@ export default function ChallengeClient() {
   const earnedMilestones = MILESTONES.filter(m => current >= m.books);
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6 md:pt-10 space-y-8">
 
           {/* Header */}

@@ -41,7 +41,7 @@ export default async function LandingPage() {
               <span className="text-brand-500">Share every chapter.</span>
             </h1>
             <p className="text-lg text-ink-500 mb-8 leading-relaxed">
-              The reading tracker that GoodReads never built — with AI insights, streaks, social feeds, and beautiful share cards.
+              The reading tracker built for how people actually read — with AI insights, streaks, social feeds, and beautiful share cards.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-start">
               <Link href="/login"
@@ -56,7 +56,7 @@ export default async function LandingPage() {
                 <p className="text-xs text-ink-400 pl-1">No account needed</p>
               </div>
             </div>
-            <p className="text-xs text-ink-400 mt-4">Free forever · No credit card · Import from Goodreads in 30 sec</p>
+            <p className="text-xs text-ink-400 mt-4">Free forever · No credit card · Import your library in seconds</p>
           </div>
 
           {/* App preview card */}
@@ -167,7 +167,7 @@ export default async function LandingPage() {
           Built different. Not just different-looking.
         </h2>
         <p className="text-ink-500 text-center mb-14 max-w-lg mx-auto">
-          Three things Goodreads never got right. We got all three.
+          Three things most reading apps never got right. We got all three.
         </p>
         <div className="grid md:grid-cols-3 gap-6">
           {[
@@ -215,7 +215,7 @@ export default async function LandingPage() {
       <section id="features" className="bg-white border-y border-ink-100 py-20 px-6">
         <div className="max-w-4xl mx-auto">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-ink-950 text-center mb-3">
-            Everything Goodreads should have been
+            Everything a reading app should be
           </h2>
           <p className="text-ink-500 text-center mb-14 max-w-xl mx-auto">
             Beautiful, fast, social — and actually fun to use.
@@ -229,8 +229,8 @@ export default async function LandingPage() {
               { emoji: '✨', title: 'Share Cards', desc: "Beautiful 9:16 story cards for TikTok and Instagram. Four themes. One tap to export. No design skills needed.", badge: null },
               { emoji: '📊', title: 'Deep Stats', desc: "Pages, hours, streaks, reading calendar, monthly charts. Know your habits better than any app has shown you before.", badge: null },
               { emoji: '🏆', title: 'Leaderboard', desc: "See how your reading stacks up against friends and the world. Compete on streak days, books read, or total pages.", badge: 'New' },
-              { emoji: '⭐', title: 'Half-Star Ratings', desc: "The feature Goodreads users have begged for since 2007. Rate books in 0.5 increments. Finally.", badge: null },
-              { emoji: '📦', title: 'Goodreads Import', desc: "Bring your entire reading history in seconds. Every book, every shelf, every rating. One CSV file.", badge: null },
+              { emoji: '⭐', title: 'Half-Star Ratings', desc: "Rate books in 0.5 increments — the way you actually think about books.", badge: null },
+              { emoji: '📦', title: 'Library Import', desc: "Bring your entire reading history in seconds. Every book, every shelf, every rating. One CSV file.", badge: null },
             ].map(f => (
               <div key={f.title} className="bg-paper-50 rounded-2xl border border-ink-100 p-6 hover:border-brand-200 hover:bg-brand-50/20 transition-all group">
                 <div className="flex items-start justify-between mb-3">
@@ -379,13 +379,13 @@ export default async function LandingPage() {
       {/* Comparison table */}
       <section className="bg-ink-950 py-16 px-6">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-display text-3xl font-bold text-white text-center mb-2">Why not Goodreads?</h2>
-          <p className="text-ink-400 text-center mb-10">We built what they never did. And kept building.</p>
+          <h2 className="font-display text-3xl font-bold text-white text-center mb-2">Why Chapterly?</h2>
+          <p className="text-ink-400 text-center mb-10">Built from scratch with the features readers actually want.</p>
           <div className="bg-ink-900 rounded-2xl overflow-hidden border border-ink-800">
             <div className="grid grid-cols-3 text-xs font-semibold uppercase tracking-wider text-ink-400 px-6 py-3 border-b border-ink-800">
               <span>Feature</span>
               <span className="text-center text-brand-400">Chapterly</span>
-              <span className="text-center">Goodreads</span>
+              <span className="text-center">Others</span>
             </div>
             {[
               ['AI-powered insights', true, false],
@@ -398,7 +398,7 @@ export default async function LandingPage() {
               ['Dark mode', true, false],
               ['No ads ever', true, false],
               ['Reading calendar heatmap', true, false],
-              ['Goodreads import', true, true],
+              ['Library import', true, false],
               ['Book reviews', true, true],
             ].map(([feature, ours, theirs]) => (
               <div key={String(feature)} className="grid grid-cols-3 px-6 py-3 border-b border-ink-800/50 text-sm">
@@ -433,7 +433,7 @@ export default async function LandingPage() {
               'Beautiful share cards',
               'Reading calendar + stats',
               'Book clubs',
-              'Goodreads import',
+              'Library import',
               'Public profile + social feed',
             ].map(f => (
               <li key={f} className="flex items-center gap-2.5">
@@ -453,12 +453,12 @@ export default async function LandingPage() {
 
       {/* Goodreads switcher section */}
       <section className="max-w-4xl mx-auto px-6 pb-16">
-        <h2 className="font-display text-2xl font-bold text-ink-950 text-center mb-3">The things Goodreads readers actually complain about</h2>
-        <p className="text-ink-500 text-center text-sm mb-10 max-w-lg mx-auto">We built Chapterly to fix every one of them.</p>
+        <h2 className="font-display text-2xl font-bold text-ink-950 text-center mb-3">What readers have always wanted — and never had</h2>
+        <p className="text-ink-500 text-center text-sm mb-10 max-w-lg mx-auto">We built Chapterly to solve every one of them.</p>
         <div className="grid md:grid-cols-3 gap-4">
           {[
             {
-              pain: '"Goodreads hasn\'t added half-star ratings in 20 years"',
+              pain: '"I can\'t rate a book 3.5 stars anywhere"',
               fix: 'Rate in 0.5 increments — always.',
               emoji: '⭐',
               grad: 'from-amber-400 to-orange-500',
@@ -512,7 +512,7 @@ export default async function LandingPage() {
           <h2 className="font-display text-4xl md:text-5xl font-bold text-ink-950 mb-5 leading-tight">
             Read more.<br />Share more.<br />Enjoy it more.
           </h2>
-          <p className="text-ink-500 mb-8">Free forever. No credit card. Import from Goodreads in 30 seconds.</p>
+          <p className="text-ink-500 mb-8">Free forever. No credit card. Import your library in seconds.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/login"
               className="inline-flex items-center justify-center px-10 py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl text-lg font-bold transition-colors shadow-xl shadow-brand-500/20">
@@ -523,7 +523,7 @@ export default async function LandingPage() {
               Try the demo
             </Link>
           </div>
-          <p className="text-xs text-ink-400 mt-4">Import from Goodreads in 30 seconds. No credit card needed.</p>
+          <p className="text-xs text-ink-400 mt-4">Import your reading history in seconds. No credit card needed.</p>
         </div>
       </section>
 
