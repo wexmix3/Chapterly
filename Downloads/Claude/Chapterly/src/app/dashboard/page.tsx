@@ -9,7 +9,7 @@ import BookSearch from '@/components/books/BookSearch';
 import BookShelf from '@/components/books/BookShelf';
 import QuickLog from '@/components/sessions/QuickLog';
 import ShareCardPreview from '@/components/share/ShareCardPreview';
-import GoodreadsImport from '@/components/books/GoodreadsImport';
+import LibraryImport from '@/components/books/GoodreadsImport';
 import ReadNext from '@/components/books/ReadNext';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import DailyGoal from '@/components/dashboard/DailyGoal';
@@ -53,9 +53,9 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6 md:pt-10 page-enter">
           <div className="mb-8">
             <h1 className="font-display text-2xl md:text-3xl font-bold text-ink-900">
@@ -187,7 +187,7 @@ function DashboardContent() {
           {tab === 'import' && (
             <ErrorBoundary>
               <div className="bg-white rounded-2xl border border-ink-100 p-6">
-                <GoodreadsImport />
+                <LibraryImport />
               </div>
             </ErrorBoundary>
           )}

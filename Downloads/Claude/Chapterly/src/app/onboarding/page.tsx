@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks';
-import GoodreadsImport from '@/components/books/GoodreadsImport';
+import LibraryImport from '@/components/books/GoodreadsImport';
 import { ChevronRight, Minus, Plus, Loader2, Brain, Sparkles, BarChart2, BookOpen } from 'lucide-react';
 
 const GOAL_PRESETS = [6, 12, 24, 52];
@@ -80,9 +80,9 @@ export default function OnboardingPage() {
           <div className="space-y-6">
             <div>
               <h2 className="font-display text-2xl font-bold text-ink-950 mb-1">Import your library</h2>
-              <p className="text-ink-500 text-sm">Already on Goodreads? Bring your books over.</p>
+              <p className="text-ink-500 text-sm">Bring your reading history over in one click.</p>
             </div>
-            <GoodreadsImport />
+            <LibraryImport />
             <div className="flex gap-3">
               <button onClick={() => setStep(3)}
                 className="flex-1 py-3 bg-ink-50 hover:bg-ink-100 text-ink-700 rounded-2xl font-medium transition-colors text-sm">

@@ -318,7 +318,7 @@ export default function DemoPage() {
                       Create account <ArrowRight className="w-4 h-4" />
                     </Link>
                     <Link href="/login" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 text-white rounded-xl font-medium text-sm hover:bg-white/20 transition-colors border border-white/20">
-                      Import from Goodreads
+                      Import your library
                     </Link>
                   </div>
                 </div>

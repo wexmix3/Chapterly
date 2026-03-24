@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
 import {
   Sparkles, BookOpen, RefreshCw, Loader2, Plus, Check,
-  Brain, TrendingUp, Clock, Star, Zap, AlertCircle,
+  Brain, TrendingUp, Clock, Star, Zap, AlertCircle, Target, Dna,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -41,6 +41,34 @@ interface MoodRec {
   genre: string;
   vibe: string;
   cover_url?: string | null;
+}
+
+interface PacePrediction {
+  user_book_id: string;
+  title: string;
+  author: string;
+  cover_url: string | null;
+  current_page: number;
+  total_pages: number;
+  progress_pct: number;
+  pages_left: number;
+  avg_pages_per_day: number;
+  days_to_finish: number | null;
+  finish_date: string | null;
+  sessions_used: number;
+}
+
+interface GenreSlice {
+  genre: string;
+  pct: number;
+  count: number;
+}
+
+interface DNAResult {
+  top_genres: GenreSlice[];
+  themes: string[];
+  author_patterns: string;
+  summary: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -120,10 +148,24 @@ export default function AIPageClient() {
   const [moodLoading, setMoodLoading] = useState(false);
   const [moodError, setMoodError] = useState('');
 
+  // Pace predictions
+  const [pace, setPace] = useState<PacePrediction[]>([]);
+  const [paceLoading, setPaceLoading] = useState(false);
+  const [paceLoaded, setPaceLoaded] = useState(false);
+
+  // DNA
+  const [dna, setDna] = useState<DNAResult | null>(null);
+  const [dnaLoading, setDnaLoading] = useState(false);
+  const [dnaLoaded, setDnaLoaded] = useState(false);
+
   // Load on tab switch
   useEffect(() => {
     if (activeTab === 'picks' && !recsLoaded) loadRecs();
-    if (activeTab === 'insights' && !insightsLoaded) loadInsights();
+    if (activeTab === 'insights') {
+      if (!insightsLoaded) loadInsights();
+      if (!paceLoaded) loadPace();
+      if (!dnaLoaded) loadDNA();
+    }
     if (activeTab === 'personality' && !personalityLoaded) loadPersonality();
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -191,6 +233,34 @@ export default function AIPageClient() {
     }
   };
 
+  const loadPace = async () => {
+    setPaceLoading(true);
+    try {
+      const res = await fetch('/api/ai/pace');
+      const data = await res.json();
+      if (res.ok) setPace(data.predictions ?? []);
+      setPaceLoaded(true);
+    } catch {
+      setPaceLoaded(true);
+    } finally {
+      setPaceLoading(false);
+    }
+  };
+
+  const loadDNA = async () => {
+    setDnaLoading(true);
+    try {
+      const res = await fetch('/api/ai/dna');
+      const data = await res.json();
+      if (res.ok) setDna(data);
+      setDnaLoaded(true);
+    } catch {
+      setDnaLoaded(true);
+    } finally {
+      setDnaLoading(false);
+    }
+  };
+
   const handleAddToShelf = async (title: string, author: string) => {
     const key = `${title}-${author}`;
     if (added.has(key)) return;
@@ -216,9 +286,9 @@ export default function AIPageClient() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 dark:bg-ink-950 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6 md:pt-10">
 
           {/* Header */}
@@ -291,46 +361,94 @@ export default function AIPageClient() {
 
           {/* ── Tab: Insights ── */}
           {activeTab === 'insights' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-lg font-semibold text-ink-800">Reading Insights</h2>
-                  <p className="text-xs text-ink-400">Patterns & coaching from your last 30 days</p>
+            <div className="space-y-6">
+              {/* Reading Insights section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-display text-lg font-semibold text-ink-800">Reading Insights</h2>
+                    <p className="text-xs text-ink-400">Patterns and coaching from your last 30 days</p>
+                  </div>
+                  {insightsLoaded && (
+                    <button onClick={() => { setInsightsLoaded(false); loadInsights(); }}
+                      disabled={insightsLoading}
+                      className="w-8 h-8 rounded-xl bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
+                      <RefreshCw className={`w-3.5 h-3.5 text-ink-500 ${insightsLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                  )}
                 </div>
-                {insightsLoaded && (
-                  <button onClick={() => { setInsightsLoaded(false); loadInsights(); }}
-                    disabled={insightsLoading}
-                    className="w-8 h-8 rounded-xl bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
-                    <RefreshCw className={`w-3.5 h-3.5 text-ink-500 ${insightsLoading ? 'animate-spin' : ''}`} />
-                  </button>
+
+                {insightsLoading ? (
+                  <LoadingCard message="Analyzing your reading patterns…" />
+                ) : insightsError ? (
+                  <ErrorCard message={insightsError} onRetry={() => { setInsightsLoaded(false); loadInsights(); }} />
+                ) : (
+                  <div className="space-y-3">
+                    {insights.map((insight, i) => {
+                      const cfg = INSIGHT_STYLES[insight.type] ?? INSIGHT_STYLES.encouragement;
+                      return (
+                        <div key={i} className={`rounded-2xl p-4 border-l-2 ${cfg.border} ${cfg.bg} border border-ink-100 bg-white`}>
+                          <div className="flex items-start gap-3">
+                            <span className="text-2xl leading-none mt-0.5 flex-shrink-0">{insight.emoji}</span>
+                            <div>
+                              <p className="font-semibold text-sm text-ink-900 leading-snug">{insight.title}</p>
+                              <p className="text-xs text-ink-500 leading-relaxed mt-1">{insight.body}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {insights.length === 0 && !insightsLoading && (
+                      <EmptyCard icon="📖" message="Log 3+ reading sessions to unlock your insights." />
+                    )}
+                  </div>
                 )}
               </div>
 
-              {insightsLoading ? (
-                <LoadingCard message="Analyzing your reading patterns…" />
-              ) : insightsError ? (
-                <ErrorCard message={insightsError} onRetry={() => { setInsightsLoaded(false); loadInsights(); }} />
-              ) : (
-                <div className="space-y-3">
-                  {insights.map((insight, i) => {
-                    const cfg = INSIGHT_STYLES[insight.type] ?? INSIGHT_STYLES.encouragement;
-                    return (
-                      <div key={i} className={`rounded-2xl p-4 border-l-2 ${cfg.border} ${cfg.bg} border border-ink-100 bg-white`}>
-                        <div className="flex items-start gap-3">
-                          <span className="text-2xl leading-none mt-0.5 flex-shrink-0">{insight.emoji}</span>
-                          <div>
-                            <p className="font-semibold text-sm text-ink-900 leading-snug">{insight.title}</p>
-                            <p className="text-xs text-ink-500 leading-relaxed mt-1">{insight.body}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {insights.length === 0 && !insightsLoading && (
-                    <EmptyCard icon="📖" message="Log 3+ reading sessions to unlock your insights." />
-                  )}
+              {/* Finish Line card */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-brand-500" />
+                  <h2 className="font-display text-base font-semibold text-ink-800">Finish Line</h2>
                 </div>
-              )}
+                <p className="text-xs text-ink-400 -mt-1">At your current pace, you&apos;ll finish these by…</p>
+
+                {paceLoading ? (
+                  <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
+                    <span className="text-sm text-ink-400">Calculating your pace…</span>
+                  </div>
+                ) : pace.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-ink-100 p-5 text-center">
+                    <BookOpen className="w-7 h-7 text-ink-200 mx-auto mb-2" />
+                    <p className="text-sm text-ink-500">Start a book to see your finish line.</p>
+                    <p className="text-xs text-ink-400 mt-1">Log a few reading sessions and we&apos;ll predict when you&apos;ll finish.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {pace.map((p) => (
+                      <FinishLineCard key={p.user_book_id} prediction={p} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Reading DNA card */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Dna className="w-4 h-4 text-brand-500" />
+                  <h2 className="font-display text-base font-semibold text-ink-800">Reading DNA</h2>
+                </div>
+
+                {dnaLoading ? (
+                  <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
+                    <span className="text-sm text-ink-400">Analyzing your reading DNA…</span>
+                  </div>
+                ) : dna ? (
+                  <DNACard dna={dna} />
+                ) : null}
+              </div>
             </div>
           )}
 
@@ -591,6 +709,115 @@ function PersonalityCard({ personality }: { personality: Personality }) {
           Your personality is recalculated each time based on your latest reading data — come back after a few more sessions to see how you evolve.
         </p>
       </div>
+    </div>
+  );
+}
+
+function FinishLineCard({ prediction }: { prediction: PacePrediction }) {
+  const { title, author, cover_url, progress_pct, pages_left, avg_pages_per_day, days_to_finish, finish_date, sessions_used } = prediction;
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-4">
+      {/* Cover */}
+      <div className="flex-shrink-0 w-10 h-14 bg-paper-200 rounded-lg overflow-hidden shadow-sm">
+        {cover_url && !imgError ? (
+          <img src={cover_url} alt={title} onError={() => setImgError(true)} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <BookOpen className="w-4 h-4 text-ink-300" />
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-ink-900 truncate">{title}</p>
+        <p className="text-xs text-ink-400 truncate mb-1.5">{author}</p>
+
+        {/* Progress bar */}
+        <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden mb-1.5">
+          <div className="h-full bg-brand-400 rounded-full" style={{ width: `${progress_pct}%` }} />
+        </div>
+
+        {days_to_finish !== null && finish_date ? (
+          <p className="text-xs text-ink-500">
+            <span className="font-semibold text-brand-600">{days_to_finish === 1 ? 'Tomorrow' : `${days_to_finish} days`}</span>
+            {' '}&mdash; around <span className="font-medium text-ink-700">{finish_date}</span>
+            {avg_pages_per_day > 0 && (
+              <span className="text-ink-400"> ({avg_pages_per_day} pg/day, {pages_left} left)</span>
+            )}
+          </p>
+        ) : (
+          <p className="text-xs text-ink-400">
+            {sessions_used === 0
+              ? 'Log a reading session to see your finish estimate.'
+              : `${pages_left} pages left — log more sessions to see a prediction.`}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DNACard({ dna }: { dna: DNAResult }) {
+  if (dna.top_genres.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-ink-100 p-5 text-center">
+        <span className="text-3xl block mb-2">🧬</span>
+        <p className="text-sm text-ink-500">{dna.author_patterns}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-ink-100 p-5 space-y-4">
+      {/* Summary */}
+      {dna.summary && (
+        <p className="text-sm text-ink-600 italic border-l-2 border-brand-200 pl-3 leading-relaxed">
+          &ldquo;{dna.summary}&rdquo;
+        </p>
+      )}
+
+      {/* Genre bars */}
+      {dna.top_genres.length > 0 && (
+        <div className="space-y-2.5">
+          <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest">Top Genres</p>
+          {dna.top_genres.map((g) => (
+            <div key={g.genre}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-ink-700 truncate max-w-[60%]">{g.genre}</span>
+                <span className="text-[10px] text-ink-400">{g.count} book{g.count !== 1 ? 's' : ''} · {g.pct}%</span>
+              </div>
+              <div className="h-2 bg-ink-100 rounded-full overflow-hidden">
+                <div className="h-full bg-brand-400 rounded-full transition-all duration-500" style={{ width: `${g.pct}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Themes */}
+      {dna.themes.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest mb-2">Themes You Love</p>
+          <div className="flex flex-wrap gap-1.5">
+            {dna.themes.map((theme) => (
+              <span key={theme} className="text-xs bg-brand-50 text-brand-700 border border-brand-100 px-2.5 py-1 rounded-full font-medium">
+                {theme}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Author patterns */}
+      {dna.author_patterns && (
+        <div className="pt-1 border-t border-ink-50">
+          <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest mb-1">Author Patterns</p>
+          <p className="text-xs text-ink-600 leading-relaxed">{dna.author_patterns}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -54,9 +54,9 @@ export default function LeaderboardClient() {
   const cfg = TYPE_CONFIG[type];
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-lg mx-auto px-4 pt-6 space-y-5">
 
           {/* Header */}

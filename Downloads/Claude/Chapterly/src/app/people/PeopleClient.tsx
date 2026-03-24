@@ -132,9 +132,9 @@ export default function PeopleClient() {
   const enrichedSuggestions = suggestions.map(u => ({ ...u, is_following: following.has(u.id) }));
 
   return (
-    <div className="min-h-screen bg-paper-50">
+    <div className="min-h-screen bg-paper-50 pt-[52px]">
       <Navigation />
-      <main className="md:ml-64 pb-24 md:pb-8">
+      <main className="pb-12">
         <div className="max-w-lg mx-auto px-4 md:px-8 pt-6 space-y-6">
 
           <div>

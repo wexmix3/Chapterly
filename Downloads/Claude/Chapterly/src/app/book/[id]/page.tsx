@@ -358,10 +358,10 @@ function BookDetailContent({ id }: { id: string }) {
   const totalMinRead = sessions.reduce((sum, s) => sum + (s.minutes_delta ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-paper-50 dark:bg-ink-950">
+    <div className="min-h-screen bg-paper-50 dark:bg-ink-950 pt-[52px]">
       <Navigation />
       <CelebrationModal event={celebration} onClose={() => setCelebration(null)} />
-      <main className="md:ml-64 pb-24 md:pb-12">
+      <main className="pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
 
           {/* Back */}
@@ -659,9 +659,9 @@ function BookDetailContent({ id }: { id: string }) {
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'Reddit', url: `https://www.reddit.com/search/?q=${encodeURIComponent(`${book?.title} ${book?.authors?.[0] ?? ''}`)}` },
-                { label: 'Goodreads', url: `https://www.goodreads.com/search?q=${encodeURIComponent(book?.title ?? '')}` },
                 { label: 'Open Library', url: book?.source === 'openlibrary' ? `https://openlibrary.org/works/${book.source_id}` : `https://openlibrary.org/search?q=${encodeURIComponent(book?.title ?? '')}` },
                 { label: 'Google Books', url: book?.source === 'googlebooks' ? `https://books.google.com/books?id=${book.source_id}` : `https://books.google.com/books?q=${encodeURIComponent(book?.title ?? '')}` },
+                { label: 'BookTok', url: `https://www.tiktok.com/search?q=${encodeURIComponent(`${book?.title ?? ''} booktok`)}` },
               ].map(({ label, url }) => (
                 <a key={label} href={url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 px-3 py-2.5 bg-ink-50 hover:bg-ink-100 rounded-xl text-xs font-medium text-ink-700 transition-colors">
