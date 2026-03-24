@@ -9,11 +9,10 @@ import dynamic from 'next/dynamic';
 
 const ISBNScanner = dynamic(() => import('./ISBNScanner'), { ssr: false });
 
-const SHELF_OPTIONS: { value: ShelfStatus; label: string; emoji: string }[] = [
-  { value: 'to_read', label: 'Want to Read', emoji: '📚' },
-  { value: 'reading', label: 'Reading', emoji: '📖' },
-  { value: 'read', label: 'Read', emoji: '✅' },
-  { value: 'dnf', label: 'Did Not Finish', emoji: '🚫' },
+const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
+  { value: 'to_read', label: 'Want to Read' },
+  { value: 'reading', label: 'Reading' },
+  { value: 'read', label: 'Read' },
 ];
 
 export default function BookSearch() {
@@ -155,12 +154,12 @@ export default function BookSearch() {
                 <div className="border-t border-ink-100 p-3 bg-paper-50">
                   <p className="text-[10px] uppercase tracking-wider text-ink-400 mb-2">Add to shelf</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {SHELF_OPTIONS.map(({ value, label, emoji }) => (
+                    {SHELF_OPTIONS.map(({ value, label }) => (
                       <button key={value}
                         onClick={() => handleAdd(result, value)}
                         disabled={isAdding}
                         className="flex items-center gap-2 p-2.5 bg-white border border-ink-100 hover:border-brand-300 hover:bg-brand-50/50 rounded-xl text-xs font-medium text-ink-700 transition-all disabled:opacity-50">
-                        {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>{emoji}</span>}
+                        {isAdding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                         {label}
                       </button>
                     ))}

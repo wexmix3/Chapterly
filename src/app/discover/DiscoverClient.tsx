@@ -3,33 +3,24 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
-import { Search, TrendingUp, BookOpen, Plus, Loader2 } from 'lucide-react';
+import { TrendingUp, BookOpen, Plus, Loader2, Star, Sparkles } from 'lucide-react';
 import type { BookSearchResult } from '@/types';
 
 const GENRES = [
-  { name: 'Fantasy', emoji: '🧙', color: 'from-purple-100 to-purple-200' },
-  { name: 'Romance', emoji: '💕', color: 'from-pink-100 to-rose-200' },
-  { name: 'Thriller', emoji: '🔪', color: 'from-slate-100 to-slate-200' },
-  { name: 'Sci-Fi', emoji: '🚀', color: 'from-blue-100 to-blue-200' },
-  { name: 'Literary Fiction', emoji: '📝', color: 'from-amber-100 to-amber-200' },
-  { name: 'Memoir', emoji: '✍️', color: 'from-orange-100 to-orange-200' },
-  { name: 'Self-Help', emoji: '💡', color: 'from-yellow-100 to-yellow-200' },
-  { name: 'Horror', emoji: '👻', color: 'from-red-100 to-red-200' },
-  { name: 'Historical Fiction', emoji: '🏰', color: 'from-stone-100 to-stone-200' },
-  { name: 'YA', emoji: '✨', color: 'from-emerald-100 to-emerald-200' },
-  { name: 'Nonfiction', emoji: '📰', color: 'from-cyan-100 to-cyan-200' },
-  { name: 'Romantasy', emoji: '🐉', color: 'from-violet-100 to-pink-200' },
+  'Fantasy', 'Romance', 'Thriller', 'Sci-Fi', 'Literary Fiction',
+  'Memoir', 'Self-Help', 'Horror', 'Historical Fiction', 'YA',
+  'Nonfiction', 'Romantasy',
 ];
 
 const TRENDING_BOOKS = [
-  { title: 'Fourth Wing', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374042-M.jpg', label: '🔥 #BookTok', creator: '@cassiesbooktok' },
-  { title: 'Iron Flame', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374172-M.jpg', label: '🔥 Sequel hype', creator: '@morgannbook' },
-  { title: 'A Court of Thorns and Roses', author: 'Sarah J. Maas', cover: 'https://covers.openlibrary.org/b/isbn/9781619635180-M.jpg', label: '👑 Classic pick', creator: '@cassiesbooktok' },
-  { title: 'Happy Place', author: 'Emily Henry', cover: 'https://covers.openlibrary.org/b/isbn/9780593334867-M.jpg', label: '💕 Romance fave', creator: '@amyjordanj' },
-  { title: 'Lessons in Chemistry', author: 'Bonnie Garmus', cover: 'https://covers.openlibrary.org/b/isbn/9780385547345-M.jpg', label: '✨ Must-read', creator: '@morgannbook' },
-  { title: 'The Housemaid', author: 'Freida McFadden', cover: 'https://covers.openlibrary.org/b/isbn/9781538742549-M.jpg', label: '🔪 Thriller of the year', creator: '@stressinabox' },
-  { title: 'Daisy Jones & The Six', author: 'Taylor Jenkins Reid', cover: 'https://covers.openlibrary.org/b/isbn/9781524798659-M.jpg', label: '🎵 Summer read', creator: '@abbysbooks' },
-  { title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', cover: 'https://covers.openlibrary.org/b/isbn/9780593321201-M.jpg', label: '🕹️ Mind-bending', creator: '@booksandquills' },
+  { title: 'Fourth Wing', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374042-M.jpg', label: '#BookTok', creator: '@cassiesbooktok' },
+  { title: 'Iron Flame', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374172-M.jpg', label: 'Sequel hype', creator: '@morgannbook' },
+  { title: 'A Court of Thorns and Roses', author: 'Sarah J. Maas', cover: 'https://covers.openlibrary.org/b/isbn/9781619635180-M.jpg', label: 'Classic pick', creator: '@cassiesbooktok' },
+  { title: 'Happy Place', author: 'Emily Henry', cover: 'https://covers.openlibrary.org/b/isbn/9780593334867-M.jpg', label: 'Romance fave', creator: '@amyjordanj' },
+  { title: 'Lessons in Chemistry', author: 'Bonnie Garmus', cover: 'https://covers.openlibrary.org/b/isbn/9780385547345-M.jpg', label: 'Must-read', creator: '@morgannbook' },
+  { title: 'The Housemaid', author: 'Freida McFadden', cover: 'https://covers.openlibrary.org/b/isbn/9781538742549-M.jpg', label: 'Thriller of the year', creator: '@stressinabox' },
+  { title: 'Daisy Jones & The Six', author: 'Taylor Jenkins Reid', cover: 'https://covers.openlibrary.org/b/isbn/9781524798659-M.jpg', label: 'Summer read', creator: '@abbysbooks' },
+  { title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', cover: 'https://covers.openlibrary.org/b/isbn/9780593321201-M.jpg', label: 'Mind-bending', creator: '@booksandquills' },
 ];
 
 const MUST_READS_2026 = [
@@ -44,6 +35,9 @@ const MUST_READS_2026 = [
 interface TrendingBook {
   book_id: string;
   count: number;
+  source?: 'reddit' | 'internal' | 'both';
+  label?: string;
+  subreddit?: string;
   book: {
     id: string;
     title: string;
@@ -138,20 +132,33 @@ export default function DiscoverClient() {
           <section>
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="w-4 h-4 text-brand-500" />
-              <h2 className="font-display text-lg font-semibold text-ink-800">Trending on BookTok 🔥</h2>
+              <h2 className="font-display text-lg font-semibold text-ink-800">Trending on BookTok</h2>
             </div>
             {trendingBooks && trendingBooks.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {trendingBooks.map((item) => {
                   const b = item.book;
                   if (!b) return null;
+                  const cardLabel = item.label ?? `${item.count} reader${item.count !== 1 ? 's' : ''} this week`;
+                  const sourceBadge =
+                    item.source === 'reddit' && item.subreddit === 'booktok' ? 'BookTok'
+                    : item.source === 'reddit' && item.subreddit === 'books' ? 'r/books'
+                    : item.source === 'reddit' && item.subreddit === '52books' ? 'r/52books'
+                    : item.source === 'both' ? 'Trending'
+                    : 'This week';
+                  const badgeClass =
+                    item.source === 'reddit' && item.subreddit === 'booktok' ? 'bg-brand-500 text-white'
+                    : item.source === 'reddit' ? 'bg-ink-700 text-white'
+                    : 'bg-paper-300 text-ink-700';
                   return (
                     <BookCard
                       key={item.book_id}
                       title={b.title}
                       author={b.authors?.[0] ?? ''}
                       cover={b.cover_url ?? ''}
-                      label={`🔥 ${item.count} reader${item.count !== 1 ? 's' : ''} this week`}
+                      label={cardLabel}
+                      badge={sourceBadge}
+                      badgeClass={badgeClass}
                       creator=""
                       onClick={() => toPreview(b.title, b.authors?.[0] ?? '', b.cover_url ?? '')}
                     />
@@ -161,7 +168,7 @@ export default function DiscoverClient() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {TRENDING_BOOKS.map(book => (
-                  <BookCard key={book.title} {...book} onClick={() => toPreview(book.title, book.author, book.cover)} />
+                  <BookCard key={book.title} {...book} badge="BookTok" badgeClass="bg-brand-500 text-white" onClick={() => toPreview(book.title, book.author, book.cover)} />
                 ))}
               </div>
             )}
@@ -171,18 +178,17 @@ export default function DiscoverClient() {
           <section>
             <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Browse by Genre</h2>
             <div className="flex gap-2 flex-wrap">
-              {GENRES.map(g => (
+              {GENRES.map(name => (
                 <button
-                  key={g.name}
-                  onClick={() => setSelectedGenre(selectedGenre === g.name ? null : g.name)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                    selectedGenre === g.name
+                  key={name}
+                  onClick={() => setSelectedGenre(selectedGenre === name ? null : name)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
+                    selectedGenre === name
                       ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
                       : 'bg-white border-ink-200 text-ink-700 hover:border-brand-300 hover:bg-brand-50'
                   }`}
                 >
-                  <span>{g.emoji}</span>
-                  <span>{g.name}</span>
+                  {name}
                 </button>
               ))}
             </div>
@@ -191,7 +197,7 @@ export default function DiscoverClient() {
               <div className="mt-5">
                 {genreLoading ? (
                   <div className="flex items-center gap-2 text-sm text-ink-500 py-4">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Loading {selectedGenre} books…
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading {selectedGenre} books...
                   </div>
                 ) : genreResults.length > 0 ? (
                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
@@ -210,7 +216,10 @@ export default function DiscoverClient() {
 
           {/* 2026 Must-Reads */}
           <section>
-            <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">📚 2026 Must-Reads</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="w-4 h-4 text-brand-500" />
+              <h2 className="font-display text-lg font-semibold text-ink-800">2026 Must-Reads</h2>
+            </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {MUST_READS_2026.map(book => (
                 <button key={book.title} onClick={() => toPreview(book.title, book.author, book.cover)}
@@ -230,9 +239,12 @@ export default function DiscoverClient() {
           {/* Personalized — Because you read X */}
           {recs.length > 0 && topGenre && (
             <section>
-              <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">
-                💡 Because you read {topGenre}
-              </h2>
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-4 h-4 text-brand-500" />
+                <h2 className="font-display text-lg font-semibold text-ink-800">
+                  Because you read {topGenre}
+                </h2>
+              </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {recs.slice(0, 10).map(book => (
                   <ShelfableBook key={book.source_id} book={book} onAdd={handleAdd}
@@ -248,8 +260,9 @@ export default function DiscoverClient() {
   );
 }
 
-function BookCard({ title, author, cover, label, creator, onClick }: {
-  title: string; author: string; cover: string; label: string; creator: string; onClick: () => void;
+function BookCard({ title, author, cover, label, badge, badgeClass, creator, onClick }: {
+  title: string; author: string; cover: string; label: string;
+  badge?: string; badgeClass?: string; creator: string; onClick: () => void;
 }) {
   return (
     <button onClick={onClick} className="group text-left w-full">
@@ -257,13 +270,15 @@ function BookCard({ title, author, cover, label, creator, onClick }: {
         <img src={cover} alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-        <div className="absolute top-2 left-2 bg-black/70 text-white text-[9px] px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">
-          {label}
-        </div>
+        {badge && (
+          <div className={`absolute top-2 left-2 text-[9px] px-2 py-0.5 rounded-full font-medium backdrop-blur-sm ${badgeClass ?? 'bg-black/70 text-white'}`}>
+            {badge}
+          </div>
+        )}
       </div>
       <p className="text-xs font-medium text-ink-800 truncate">{title}</p>
       <p className="text-[9px] text-ink-400 truncate">{author}</p>
-      <p className="text-[9px] text-brand-600 truncate mt-0.5">{creator}</p>
+      {creator && <p className="text-[9px] text-brand-600 truncate mt-0.5">{creator}</p>}
     </button>
   );
 }

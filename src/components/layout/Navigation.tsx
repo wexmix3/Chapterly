@@ -22,7 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard?tab=reading', label: 'My Books', icon: BookOpen, tab: 'reading' },
   { href: '/ai', label: 'AI Insights', icon: Sparkles },
   { href: '/discover', label: 'Discover', icon: Compass },
-  { href: '/dashboard?tab=streak', label: 'Progress', icon: TrendingUp, tab: 'streak' },
+  { href: '/progress', label: 'Progress', icon: TrendingUp },
   { href: '/feed', label: 'Social', icon: Users },
 ];
 

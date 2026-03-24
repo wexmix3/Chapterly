@@ -68,7 +68,10 @@ function StatDetailSheet({ statKey, stats, onClose }: { statKey: string; stats: 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-brand-50 rounded-xl p-4">
             <p className="text-xs text-ink-400 mb-1">Current streak</p>
-            <p className="font-display text-3xl font-bold text-ink-900">{stats.current_streak} <span className="text-2xl">🔥</span></p>
+            <p className="font-display text-3xl font-bold text-ink-900 flex items-center gap-2">
+              {stats.current_streak}
+              <Flame className="w-6 h-6 text-brand-500" />
+            </p>
             {stats.current_streak > 0 && <p className="text-xs text-ink-400 mt-1">Since {streakStartDate(stats.current_streak)}</p>}
           </div>
           <div className="bg-paper-50 rounded-xl p-4">
@@ -84,7 +87,7 @@ function StatDetailSheet({ statKey, stats, onClose }: { statKey: string; stats: 
           <DetailRow icon={<Clock className="w-4 h-4" />} label="Best time of day" value={stats.session_insights.best_time_of_day} />
         )}
         <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-800">
-          💡 Reading at the same time each day is the #1 predictor of a long streak.
+          Reading at the same time each day is the #1 predictor of a long streak.
         </div>
       </div>
     ),
@@ -304,12 +307,12 @@ function StatDetailSheet({ statKey, stats, onClose }: { statKey: string; stats: 
   };
 
   const titles: Record<string, string> = {
-    'Current Streak': '🔥 Streak Details',
-    'Books Read': '📚 Books Read',
-    'This Year': '📈 This Year',
-    'Total Pages': '📄 Pages',
-    'Total Time': '⏱ Reading Time',
-    'Avg Rating': '⭐ Your Ratings',
+    'Current Streak': 'Streak Details',
+    'Books Read': 'Books Read',
+    'This Year': 'This Year',
+    'Total Pages': 'Pages',
+    'Total Time': 'Reading Time',
+    'Avg Rating': 'Your Ratings',
   };
 
   return (

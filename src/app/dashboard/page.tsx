@@ -11,14 +11,13 @@ import QuickLog from '@/components/sessions/QuickLog';
 import ShareCardPreview from '@/components/share/ShareCardPreview';
 import LibraryImport from '@/components/books/GoodreadsImport';
 import ReadNext from '@/components/books/ReadNext';
-import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import DailyGoal from '@/components/dashboard/DailyGoal';
 import { BookOpen, Loader2, X, Plus, Search as SearchIcon } from 'lucide-react';
 import AIInsights from '@/components/dashboard/AIInsights';
 import SocialPulse from '@/components/dashboard/SocialPulse';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
+type Tab = 'overview' | 'reading' | 'search' | 'share' | 'import';
 
 
 function DashboardContent() {
@@ -62,7 +61,6 @@ function DashboardContent() {
               {tab === 'overview' && `Hey, ${user?.user_metadata?.full_name?.split(' ')[0] || 'Reader'}`}
               {tab === 'reading' && 'My Books'}
               {tab === 'search' && 'Find a Book'}
-              {tab === 'streak' && 'Your Streak'}
               {tab === 'share' && 'Share Cards'}
               {tab === 'import' && 'Import Library'}
             </h1>
@@ -151,25 +149,6 @@ function DashboardContent() {
 
           {tab === 'reading' && <ErrorBoundary><BookShelf /></ErrorBoundary>}
           {tab === 'search' && <ErrorBoundary><BookSearch /></ErrorBoundary>}
-          {tab === 'streak' && (
-            <ErrorBoundary>
-              <div className="space-y-8">
-                <StatsOverview />
-                <section>
-                  <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Reading Calendar</h2>
-                  <ReadingCalendar />
-                </section>
-                {currentlyReading.length > 0 && (
-                  <section>
-                    <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Log a Session</h2>
-                    <div className="bg-white rounded-2xl border border-ink-100 p-6">
-                      <QuickLog userBook={currentlyReading[0]} onLogged={refetchShelf} />
-                    </div>
-                  </section>
-                )}
-              </div>
-            </ErrorBoundary>
-          )}
           {tab === 'share' && (
             <ErrorBoundary>
               <div className="bg-white rounded-2xl border border-ink-100 p-6">
