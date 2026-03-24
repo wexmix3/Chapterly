@@ -252,7 +252,7 @@ export function useBookSearch() {
         setResults(json.data ?? []);
       }
       setLoading(false);
-    }, 350);
+    }, 500);
     return () => clearTimeout(timer);
   }, [query]);
 

@@ -7,6 +7,9 @@ export const dynamic = 'force-dynamic';
  */
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { aiGuard } from '@/lib/ai-guard';
+import { getCachedAI, setCachedAI } from '@/lib/ai-cache';
+import { logAIUsage } from '@/lib/ai-usage-log';
 import Anthropic from '@anthropic-ai/sdk';
 
 let _anthropic: Anthropic | null = null;
@@ -33,6 +36,18 @@ export async function GET() {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Apply rate limiting
+  const guard = await aiGuard(supabase, user.id, 'dna');
+  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
+  // Check cache before calling Claude (dna TTL = 48h)
+  const cacheKey = `dna:${user.id}`;
+  const cached = await getCachedAI(supabase, user.id, 'dna', cacheKey);
+  if (cached !== null) {
+    logAIUsage(supabase, user.id, 'dna', 0, 0, true);
+    return NextResponse.json(cached);
+  }
 
   // Fetch all read/reading books with ratings and subjects
   const { data: shelf } = await supabase
@@ -137,16 +152,26 @@ Return ONLY valid JSON, no markdown.
       messages: [{ role: 'user', content: prompt }],
     });
 
+    logAIUsage(
+      supabase, user.id, 'dna',
+      response.usage.input_tokens,
+      response.usage.output_tokens,
+      false,
+    );
+
     const raw = response.content[0].type === 'text' ? response.content[0].text : '';
     const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     const parsed = JSON.parse(text) as { themes: string[]; author_patterns: string; summary: string };
 
-    return NextResponse.json({
+    const result: DNAResult = {
       top_genres: normalizedTop3.length > 0 ? normalizedTop3 : topGenres.slice(0, 3),
       themes: parsed.themes ?? [],
       author_patterns: parsed.author_patterns ?? '',
       summary: parsed.summary ?? '',
-    } satisfies DNAResult);
+    };
+
+    await setCachedAI(supabase, user.id, cacheKey, result);
+    return NextResponse.json(result satisfies DNAResult);
   } catch (err) {
     console.error('[ai/dna] Claude API failed, using computed fallback:', err);
     return NextResponse.json(computedDNA());

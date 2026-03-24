@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic';
  * Sends a "don't break your streak" email to users who:
  *   - Have a streak of 1+ days
  *   - Have NOT logged any reading today
+ *   - Have email_notifications = true (not opted out)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase-server';
-import { getResend, FROM_EMAIL, buildStreakReminderHtml } from '@/lib/email';
+import { getResend, FROM_EMAIL, buildStreakReminderHtml, generateUnsubscribeToken } from '@/lib/email';
 import { format } from 'date-fns';
 
 export async function POST(req: NextRequest) {
@@ -64,10 +65,10 @@ export async function POST(req: NextRequest) {
     streakMap[row.user_id] = (streakMap[row.user_id] ?? 0) + 1;
   }
 
-  // Get profiles
+  // Get profiles — include email_notifications preference
   const { data: profiles } = await supabase
     .from('users')
-    .select('id, display_name')
+    .select('id, display_name, email_notifications')
     .in('id', toRemind);
 
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
@@ -85,7 +86,12 @@ export async function POST(req: NextRequest) {
     const profile = profileMap.get(userId);
     if (!email || !profile) continue;
 
+    // Skip users who have opted out of emails
+    if (profile.email_notifications === false) continue;
+
     const streak = streakMap[userId] ?? 1;
+    const unsubscribeToken = generateUnsubscribeToken(userId);
+
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
@@ -93,7 +99,7 @@ export async function POST(req: NextRequest) {
         subject: streak > 1
           ? `🔥 Your ${streak}-day streak is at risk — log reading today!`
           : '📖 Log some reading today!',
-        html: buildStreakReminderHtml(profile.display_name, streak),
+        html: buildStreakReminderHtml(profile.display_name, streak, `${unsubscribeToken}&uid=${userId}`),
       });
       sent++;
     } catch {
