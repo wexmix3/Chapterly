@@ -1,25 +1,23 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { BookOpen, Star, Loader2, X, Check, AlertCircle, Pencil, Search } from 'lucide-react';
+import { BookOpen, Star, Loader2, X, Check, AlertCircle, Pencil, Search, Library, Bookmark, CheckCircle, Plus } from 'lucide-react';
 import { BookCardSkeleton } from '@/components/ui/Skeleton';
 import { useShelf } from '@/hooks';
-import type { ShelfStatus, UserBook } from '@/types';
+import type { ShelfStatus, UserBook, BookSearchResult } from '@/types';
 
-const TABS: { value: ShelfStatus | 'all'; label: string; emoji: string }[] = [
-  { value: 'all', label: 'All', emoji: '📚' },
-  { value: 'reading', label: 'Reading', emoji: '📖' },
-  { value: 'to_read', label: 'Want to Read', emoji: '🔖' },
-  { value: 'read', label: 'Read', emoji: '✅' },
-  { value: 'dnf', label: 'DNF', emoji: '🚫' },
+const TABS: { value: ShelfStatus | 'all'; label: string; icon: React.ReactNode }[] = [
+  { value: 'all', label: 'All', icon: <Library className="w-3.5 h-3.5" /> },
+  { value: 'reading', label: 'Reading', icon: <BookOpen className="w-3.5 h-3.5" /> },
+  { value: 'to_read', label: 'Want to Read', icon: <Bookmark className="w-3.5 h-3.5" /> },
+  { value: 'read', label: 'Read', icon: <CheckCircle className="w-3.5 h-3.5" /> },
 ];
 
 const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
   { value: 'to_read', label: 'Want to Read' },
   { value: 'reading', label: 'Currently Reading' },
   { value: 'read', label: 'Read' },
-  { value: 'dnf', label: 'Did Not Finish' },
 ];
 
 export default function BookShelf() {
@@ -28,10 +26,68 @@ export default function BookShelf() {
   const [selectedBook, setSelectedBook] = useState<UserBook | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Inline search state (Reading tab)
+  const [inlineQuery, setInlineQuery] = useState('');
+  const [inlineResults, setInlineResults] = useState<BookSearchResult[]>([]);
+  const [inlineLoading, setInlineLoading] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const inlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced inline search
+  useEffect(() => {
+    if (inlineTimerRef.current) clearTimeout(inlineTimerRef.current);
+    if (!inlineQuery.trim() || inlineQuery.trim().length < 2) {
+      setInlineResults([]);
+      return;
+    }
+    inlineTimerRef.current = setTimeout(async () => {
+      setInlineLoading(true);
+      try {
+        const res = await fetch(`/api/books/search?q=${encodeURIComponent(inlineQuery)}`);
+        if (res.ok) {
+          const json = await res.json();
+          setInlineResults((json.data ?? []).slice(0, 5));
+        }
+      } finally {
+        setInlineLoading(false);
+      }
+    }, 500);
+    return () => {
+      if (inlineTimerRef.current) clearTimeout(inlineTimerRef.current);
+    };
+  }, [inlineQuery]);
+
+  const handleInlineAdd = async (result: BookSearchResult) => {
+    const key = result.source_id;
+    setAddingId(key);
+    try {
+      const res = await fetch('/api/user-books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ searchResult: result, status: 'reading' }),
+      });
+      if (res.ok || res.status === 409) {
+        setAddedIds(prev => new Set([...prev, key]));
+        // Clear added state after 2 seconds, then refresh shelf
+        setTimeout(() => {
+          setAddedIds(prev => { const n = new Set(prev); n.delete(key); return n; });
+          setInlineQuery('');
+          setInlineResults([]);
+          fetchBooks();
+        }, 1500);
+      }
+    } finally {
+      setAddingId(null);
+    }
+  };
+
   // Reset search when switching tabs
   const handleTabChange = (value: ShelfStatus | 'all') => {
     setActiveTab(value);
     setSearchQuery('');
+    setInlineQuery('');
+    setInlineResults([]);
   };
 
   // Client-side filtering by title or author
@@ -49,14 +105,14 @@ export default function BookShelf() {
     <div className="space-y-4">
       {/* Tab bar */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {TABS.map(({ value, label, emoji }) => (
+        {TABS.map(({ value, label, icon }) => (
           <button key={value} onClick={() => handleTabChange(value)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
               activeTab === value
                 ? 'bg-brand-500 text-white'
                 : 'bg-white border border-ink-100 text-ink-600 hover:border-brand-200 hover:bg-brand-50/50'
             }`}>
-            <span>{emoji}</span> {label}
+            {icon} {label}
           </button>
         ))}
       </div>
@@ -92,30 +148,44 @@ export default function BookShelf() {
 
       {/* Empty shelf (no books at all) */}
       {!loading && books.length === 0 && (
-        <div className="text-center py-16 px-4">
-          <div className="w-16 h-16 bg-brand-50 dark:bg-brand-950/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-7 h-7 text-brand-400" />
+        <div className="space-y-4">
+          <div className="text-center py-10 px-4">
+            <div className="w-16 h-16 bg-brand-50 dark:bg-brand-950/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="w-7 h-7 text-brand-400" />
+            </div>
+            <p className="font-semibold text-ink-700 dark:text-ink-300 mb-2">
+              {activeTab === 'all' ? 'Your shelf is empty' :
+               activeTab === 'reading' ? 'Not reading anything yet' :
+               activeTab === 'to_read' ? 'No books in your want-to-read list' :
+               'No finished books yet'}
+            </p>
+            <p className="text-sm text-ink-400 dark:text-ink-500 mb-5">
+              {activeTab === 'all' || activeTab === 'to_read'
+                ? 'Search for a book to add it to your shelf'
+                : activeTab === 'reading'
+                ? 'Use the search below to find and add a book'
+                : 'Books you mark will appear here'}
+            </p>
+            {(activeTab === 'all' || activeTab === 'to_read') && (
+              <a
+                href="/dashboard?tab=search"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-colors"
+              >
+                <Search className="w-4 h-4" />
+                Search books
+              </a>
+            )}
           </div>
-          <p className="font-semibold text-ink-700 dark:text-ink-300 mb-2">
-            {activeTab === 'all' ? 'Your shelf is empty' :
-             activeTab === 'reading' ? 'Not reading anything yet' :
-             activeTab === 'to_read' ? 'No books in your want-to-read list' :
-             activeTab === 'read' ? 'No finished books yet' :
-             'No DNF books'}
-          </p>
-          <p className="text-sm text-ink-400 dark:text-ink-500 mb-5">
-            {activeTab === 'all' || activeTab === 'to_read'
-              ? 'Search for a book to add it to your shelf'
-              : 'Books you mark will appear here'}
-          </p>
-          {(activeTab === 'all' || activeTab === 'to_read') && (
-            <a
-              href="/dashboard?tab=search"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-colors"
-            >
-              <Search className="w-4 h-4" />
-              Search books
-            </a>
+          {activeTab === 'reading' && (
+            <InlineBookSearch
+              query={inlineQuery}
+              setQuery={setInlineQuery}
+              results={inlineResults}
+              loading={inlineLoading}
+              addingId={addingId}
+              addedIds={addedIds}
+              onAdd={handleInlineAdd}
+            />
           )}
         </div>
       )}
@@ -147,14 +217,18 @@ export default function BookShelf() {
               <BookCard key={ub.id} userBook={ub} onEdit={() => setSelectedBook(ub)} />
             ))}
           </div>
-          {/* Always-visible add more prompt */}
-          <a
-            href="/dashboard?tab=search"
-            className="flex items-center justify-center gap-2 w-full mt-3 py-3 rounded-xl border-2 border-dashed border-ink-200 dark:border-ink-700 text-sm text-ink-400 dark:text-ink-500 hover:border-brand-300 hover:text-brand-600 dark:hover:border-brand-700 dark:hover:text-brand-400 transition-colors"
-          >
-            <Search className="w-4 h-4" />
-            Search &amp; add more books
-          </a>
+          {/* Inline search widget — only on Reading tab */}
+          {activeTab === 'reading' && (
+            <InlineBookSearch
+              query={inlineQuery}
+              setQuery={setInlineQuery}
+              results={inlineResults}
+              loading={inlineLoading}
+              addingId={addingId}
+              addedIds={addedIds}
+              onAdd={handleInlineAdd}
+            />
+          )}
         </>
       )}
 
@@ -253,7 +327,6 @@ function BookEditModal({
   const [finishedAt, setFinishedAt] = useState(
     userBook.finished_at ? userBook.finished_at.slice(0, 10) : '',
   );
-  const [dnfReason, setDnfReason] = useState((userBook as any).dnf_reason ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -268,7 +341,6 @@ function BookEditModal({
         review_text: reviewText.trim() || null,
         started_at: startedAt ? new Date(startedAt).toISOString() : null,
         finished_at: finishedAt ? new Date(finishedAt).toISOString() : null,
-        dnf_reason: status === 'dnf' ? (dnfReason.trim() || null) : null,
       };
       const res = await fetch(`/api/user-books/${userBook.id}`, {
         method: 'PATCH',
@@ -473,21 +545,6 @@ function BookEditModal({
             </div>
           </div>
 
-          {/* DNF reason — only visible when status is DNF */}
-          {status === 'dnf' && (
-            <div>
-              <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
-                Why did you stop?
-              </label>
-              <textarea
-                value={dnfReason}
-                onChange={(e) => setDnfReason(e.target.value)}
-                placeholder="Optional — not your cup of tea, too slow, life got in the way…"
-                rows={2}
-                className="w-full px-3 py-2.5 border border-ink-200 rounded-xl text-sm text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none"
-              />
-            </div>
-          )}
 
           {error && (
             <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
@@ -521,6 +578,101 @@ function BookEditModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Inline search widget for the Reading tab ─────────────────────────────────
+
+interface InlineBookSearchProps {
+  query: string;
+  setQuery: (q: string) => void;
+  results: BookSearchResult[];
+  loading: boolean;
+  addingId: string | null;
+  addedIds: Set<string>;
+  onAdd: (result: BookSearchResult) => void;
+}
+
+function InlineBookSearch({ query, setQuery, results, loading, addingId, addedIds, onAdd }: InlineBookSearchProps) {
+  return (
+    <div className="mt-4 rounded-2xl border border-ink-100 bg-white p-4 space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Plus className="w-4 h-4 text-ink-400" />
+        <span className="text-sm font-medium text-ink-500">Search and add books</span>
+      </div>
+
+      {/* Search input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-400 pointer-events-none" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by title or author…"
+          className="w-full pl-9 pr-4 py-2 text-sm bg-paper-50 border border-ink-100 rounded-xl text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-colors"
+        />
+        {loading && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-400 animate-spin" />
+        )}
+        {query && !loading && (
+          <button
+            onClick={() => setQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div className="space-y-1">
+          {results.map((result) => {
+            const key = result.source_id;
+            const isAdded = addedIds.has(key);
+            const isAdding = addingId === key;
+            return (
+              <div key={key} className="flex items-center gap-3 py-2 border-b border-ink-50 last:border-0">
+                {/* Cover thumbnail */}
+                <div className="w-8 h-12 bg-paper-200 rounded-md overflow-hidden flex-shrink-0">
+                  {result.cover_url ? (
+                    <img src={result.cover_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen className="w-3 h-3 text-ink-300" />
+                    </div>
+                  )}
+                </div>
+                {/* Title + author */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-ink-900 truncate">{result.title}</p>
+                  <p className="text-[11px] text-ink-400 truncate">{result.authors.join(', ')}</p>
+                </div>
+                {/* Add button */}
+                <button
+                  onClick={() => onAdd(result)}
+                  disabled={isAdded || isAdding}
+                  className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                    isAdded
+                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                      : 'bg-brand-500 hover:bg-brand-600 text-white'
+                  } disabled:opacity-60`}
+                >
+                  {isAdding ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : isAdded ? (
+                    <><Check className="w-3 h-3" /> Added</>
+                  ) : (
+                    <><Plus className="w-3 h-3" /> Add to Reading</>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
