@@ -8,16 +8,14 @@ import StatsOverview from '@/components/dashboard/StatsOverview';
 import BookSearch from '@/components/books/BookSearch';
 import BookShelf from '@/components/books/BookShelf';
 import QuickLog from '@/components/sessions/QuickLog';
-import ShareCardPreview from '@/components/share/ShareCardPreview';
-import LibraryImport from '@/components/books/GoodreadsImport';
 import ReadNext from '@/components/books/ReadNext';
 import DailyGoal from '@/components/dashboard/DailyGoal';
-import { BookOpen, Loader2, X, Plus, Search as SearchIcon } from 'lucide-react';
+import { BookOpen, Loader2, X, Search as SearchIcon } from 'lucide-react';
 import AIInsights from '@/components/dashboard/AIInsights';
 import SocialPulse from '@/components/dashboard/SocialPulse';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-type Tab = 'overview' | 'reading' | 'search' | 'share' | 'import';
+type Tab = 'overview' | 'reading' | 'search';
 
 
 function DashboardContent() {
@@ -26,16 +24,7 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const tab = (searchParams.get('tab') as Tab) || 'overview';
   const [logModal, setLogModal] = useState<any>(null);
-  const [userHandle, setUserHandle] = useState<string | undefined>(undefined);
   const { books: currentlyReading, fetchBooks: refetchShelf } = useShelf('reading');
-
-  // Fetch handle for share card watermark
-  useEffect(() => {
-    fetch('/api/profile')
-      .then(r => r.ok ? r.json() : null)
-      .then(j => { if (j?.data?.handle) setUserHandle(j.data.handle); })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -61,8 +50,6 @@ function DashboardContent() {
               {tab === 'overview' && `Hey, ${user?.user_metadata?.full_name?.split(' ')[0] || 'Reader'}`}
               {tab === 'reading' && 'My Books'}
               {tab === 'search' && 'Find a Book'}
-              {tab === 'share' && 'Share Cards'}
-              {tab === 'import' && 'Import Library'}
             </h1>
           </div>
 
@@ -149,27 +136,6 @@ function DashboardContent() {
 
           {tab === 'reading' && <ErrorBoundary><BookShelf /></ErrorBoundary>}
           {tab === 'search' && <ErrorBoundary><BookSearch /></ErrorBoundary>}
-          {tab === 'share' && (
-            <ErrorBoundary>
-              <div className="bg-white rounded-2xl border border-ink-100 p-6">
-                <ShareCardPreview
-                  bookTitle={currentlyReading[0]?.book?.title}
-                  bookAuthor={currentlyReading[0]?.book?.authors[0]}
-                  coverUrl={currentlyReading[0]?.book?.cover_url}
-                  currentPage={currentlyReading[0]?.current_page ?? 0}
-                  totalPages={currentlyReading[0]?.book?.page_count ?? 0}
-                  handle={userHandle}
-                />
-              </div>
-            </ErrorBoundary>
-          )}
-          {tab === 'import' && (
-            <ErrorBoundary>
-              <div className="bg-white rounded-2xl border border-ink-100 p-6">
-                <LibraryImport />
-              </div>
-            </ErrorBoundary>
-          )}
         </div>
       </main>
 

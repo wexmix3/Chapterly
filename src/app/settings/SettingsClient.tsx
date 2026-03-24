@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
+import LibraryImport from '@/components/books/GoodreadsImport';
+import ShareCardPreview from '@/components/share/ShareCardPreview';
 import {
   User, BookOpen, Lock, Sun, Moon, Download, Trash2,
-  Check, Loader2, ChevronRight, AlertTriangle, Bell
+  Check, Loader2, ChevronRight, AlertTriangle, Bell, Upload, Share2
 } from 'lucide-react';
 
 type Profile = {
@@ -19,7 +21,7 @@ type Profile = {
 
 type Challenge = { goal_books: number; goal_pages?: number | null } | null;
 
-type Section = 'account' | 'reading' | 'privacy' | 'appearance' | 'notifications' | 'data';
+type Section = 'account' | 'reading' | 'privacy' | 'appearance' | 'notifications' | 'data' | 'import' | 'share';
 
 function SectionButton({ id, active, icon: Icon, label, onClick }: {
   id: Section; active: boolean; icon: React.ElementType; label: string; onClick: () => void;
@@ -184,6 +186,8 @@ export default function SettingsClient({
                 { id: 'privacy', icon: Lock, label: 'Privacy' },
                 { id: 'appearance', icon: Sun, label: 'Appearance' },
                 { id: 'notifications', icon: Bell, label: 'Notifications' },
+                { id: 'import', icon: Upload, label: 'Import Library' },
+                { id: 'share', icon: Share2, label: 'Share Cards' },
                 { id: 'data', icon: Download, label: 'Data' },
               ] as { id: Section; icon: React.ElementType; label: string }[]).map(({ id, icon, label }) => (
                 <SectionButton key={id} id={id} active={active === id} icon={icon} label={label} onClick={() => setActive(id)} />
@@ -391,6 +395,24 @@ export default function SettingsClient({
                     ))}
                     <p className="text-xs text-ink-400 pt-1">Notification preferences are saved locally on this device.</p>
                   </div>
+                </>
+              )}
+
+              {/* ── Import Library ───────────────────────── */}
+              {active === 'import' && (
+                <>
+                  <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Import Library</h2>
+                  <p className="text-sm text-ink-500">Bring your reading history from other apps. Upload a CSV export to import all your books, shelves, and ratings at once.</p>
+                  <LibraryImport />
+                </>
+              )}
+
+              {/* ── Share Cards ───────────────────────────── */}
+              {active === 'share' && (
+                <>
+                  <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Share Cards</h2>
+                  <p className="text-sm text-ink-500">Create beautiful share cards for your reading milestones and social media.</p>
+                  <ShareCardPreview />
                 </>
               )}
 
