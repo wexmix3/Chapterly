@@ -45,29 +45,37 @@ interface MoodRec {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ELEMENT_STYLES: Record<string, { bg: string; ring: string; glow: string }> = {
-  fire:      { bg: 'from-orange-500 to-red-600',   ring: 'ring-orange-300',  glow: 'shadow-orange-500/30' },
-  water:     { bg: 'from-sky-500 to-blue-600',     ring: 'ring-sky-300',     glow: 'shadow-sky-500/30' },
-  earth:     { bg: 'from-emerald-500 to-teal-600', ring: 'ring-emerald-300', glow: 'shadow-emerald-500/30' },
-  air:       { bg: 'from-violet-400 to-purple-500',ring: 'ring-violet-300',  glow: 'shadow-violet-500/30' },
-  lightning: { bg: 'from-yellow-400 to-amber-500', ring: 'ring-yellow-300',  glow: 'shadow-yellow-500/30' },
-  moon:      { bg: 'from-indigo-500 to-violet-700',ring: 'ring-indigo-300',  glow: 'shadow-indigo-500/30' },
+interface ElementStyle {
+  gradient: string;
+  ring: string;
+  glow: string;
+  text: string;
+  badge: string;
+}
+
+const ELEMENT_STYLES: Record<string, ElementStyle> = {
+  fire:      { gradient: 'from-brand-100 to-brand-200',  ring: 'ring-brand-400', glow: 'shadow-brand-200',  text: 'text-brand-700', badge: 'bg-brand-500 text-white' },
+  water:     { gradient: 'from-paper-100 to-brand-50',   ring: 'ring-brand-200', glow: 'shadow-brand-100',  text: 'text-brand-600', badge: 'bg-brand-400 text-white' },
+  earth:     { gradient: 'from-brand-50 to-paper-200',   ring: 'ring-brand-300', glow: 'shadow-brand-150',  text: 'text-brand-800', badge: 'bg-brand-600 text-white' },
+  air:       { gradient: 'from-paper-50 to-brand-50',    ring: 'ring-brand-200', glow: 'shadow-paper-300',  text: 'text-brand-500', badge: 'bg-brand-300 text-ink-800' },
+  lightning: { gradient: 'from-brand-200 to-brand-300',  ring: 'ring-brand-500', glow: 'shadow-brand-300',  text: 'text-brand-900', badge: 'bg-brand-700 text-white' },
+  moon:      { gradient: 'from-ink-50 to-brand-50',      ring: 'ring-brand-200', glow: 'shadow-brand-100',  text: 'text-ink-700',   badge: 'bg-ink-700 text-white' },
 };
 
 const INSIGHT_STYLES: Record<string, { border: string; bg: string; icon: string }> = {
-  pattern:      { border: 'border-l-blue-400',    bg: 'bg-blue-50/60',    icon: 'text-blue-500' },
-  achievement:  { border: 'border-l-emerald-400', bg: 'bg-emerald-50/60', icon: 'text-emerald-500' },
-  suggestion:   { border: 'border-l-violet-400',  bg: 'bg-violet-50/60',  icon: 'text-violet-500' },
-  encouragement:{ border: 'border-l-amber-400',   bg: 'bg-amber-50/60',   icon: 'text-amber-500' },
+  pattern:      { border: 'border-l-brand-300',  bg: 'bg-brand-50',    icon: 'text-brand-600' },
+  achievement:  { border: 'border-l-brand-400',  bg: 'bg-brand-50',    icon: 'text-brand-700' },
+  suggestion:   { border: 'border-l-brand-200',  bg: 'bg-paper-100',   icon: 'text-brand-600' },
+  encouragement:{ border: 'border-l-brand-300',  bg: 'bg-paper-50',    icon: 'text-brand-500' },
 };
 
 const REC_GRADIENTS = [
-  'from-rose-400 to-pink-500',
-  'from-violet-400 to-purple-500',
-  'from-sky-400 to-blue-500',
-  'from-emerald-400 to-teal-500',
-  'from-amber-400 to-orange-500',
-  'from-indigo-400 to-violet-500',
+  'from-brand-50 to-paper-200',
+  'from-brand-100 to-paper-100',
+  'from-paper-100 to-brand-50',
+  'from-brand-50 to-brand-100',
+  'from-paper-200 to-brand-50',
+  'from-brand-100 to-paper-200',
 ];
 
 const MOODS = [
@@ -216,8 +224,8 @@ export default function AIPageClient() {
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-brand-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                <Sparkles className="w-4.5 h-4.5 text-white" />
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
+                <Sparkles className="w-4 h-4 text-white" />
               </div>
               <h1 className="font-display text-2xl font-bold text-ink-900">AI Reading Hub</h1>
             </div>
@@ -232,7 +240,7 @@ export default function AIPageClient() {
                 onClick={() => setActiveTab(id)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                   activeTab === id
-                    ? 'bg-gradient-to-r from-violet-500 to-brand-500 text-white shadow-sm'
+                    ? 'bg-brand-500 text-white shadow-sm'
                     : 'text-ink-400 hover:text-ink-700'
                 }`}
               >
@@ -307,7 +315,7 @@ export default function AIPageClient() {
                   {insights.map((insight, i) => {
                     const cfg = INSIGHT_STYLES[insight.type] ?? INSIGHT_STYLES.encouragement;
                     return (
-                      <div key={i} className={`rounded-2xl p-4 border-l-4 ${cfg.border} ${cfg.bg} border border-ink-100 bg-white`}>
+                      <div key={i} className={`rounded-2xl p-4 border-l-2 ${cfg.border} ${cfg.bg} border border-ink-100 bg-white`}>
                         <div className="flex items-start gap-3">
                           <span className="text-2xl leading-none mt-0.5 flex-shrink-0">{insight.emoji}</span>
                           <div>
@@ -369,7 +377,7 @@ export default function AIPageClient() {
                     disabled={moodLoading}
                     className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border text-center transition-all ${
                       selectedMood?.label === mood.label
-                        ? 'bg-gradient-to-br from-violet-500 to-brand-500 border-transparent text-white shadow-md shadow-violet-500/20'
+                        ? 'bg-brand-500 border-transparent text-white shadow-md shadow-brand-500/20'
                         : 'bg-white border-ink-100 text-ink-700 hover:border-brand-200 hover:bg-brand-50'
                     }`}
                   >
@@ -420,8 +428,8 @@ function LoadingCard({ message }: { message: string }) {
   return (
     <div className="bg-white rounded-2xl border border-ink-100 p-10 flex flex-col items-center gap-4">
       <div className="relative w-14 h-14">
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-400 to-brand-400 opacity-20 animate-ping" />
-        <div className="relative w-14 h-14 rounded-full bg-gradient-to-r from-violet-500 to-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 opacity-20 animate-ping" />
+        <div className="relative w-14 h-14 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
           <Sparkles className="w-6 h-6 text-white" />
         </div>
       </div>
@@ -498,7 +506,7 @@ function RecommendationCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <p className="font-semibold text-sm text-ink-900 leading-snug">{rec.title}</p>
-            <span className="text-[10px] bg-violet-50 border border-violet-100 text-violet-700 px-2 py-0.5 rounded-full flex-shrink-0 font-medium whitespace-nowrap">
+            <span className="text-[10px] bg-brand-50 border border-brand-100 text-brand-700 px-2 py-0.5 rounded-full flex-shrink-0 font-medium whitespace-nowrap">
               {rec.vibe}
             </span>
           </div>
@@ -546,17 +554,17 @@ function PersonalityCard({ personality }: { personality: Personality }) {
   return (
     <div className="space-y-4">
       {/* Main personality hero */}
-      <div className={`rounded-3xl bg-gradient-to-br ${style.bg} p-6 text-white shadow-xl ${style.glow}`}>
+      <div className={`rounded-3xl bg-gradient-to-br ${style.gradient} p-6 shadow-lg ${style.glow}`}>
         <div className="flex items-center gap-4 mb-4">
-          <div className={`w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl ring-2 ${style.ring} shadow-lg`}>
+          <div className={`w-16 h-16 rounded-2xl bg-white/60 flex items-center justify-center text-3xl ring-2 ${style.ring} shadow-md`}>
             {personality.badge}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-0.5">Your Reading Type</p>
-            <h3 className="font-display text-xl font-bold leading-tight">{personality.type}</h3>
+            <p className={`text-xs font-semibold uppercase tracking-widest mb-0.5 ${style.text} opacity-70`}>Your Reading Type</p>
+            <h3 className={`font-display text-xl font-bold leading-tight ${style.text}`}>{personality.type}</h3>
           </div>
         </div>
-        <p className="text-sm text-white/90 leading-relaxed italic">&ldquo;{personality.tagline}&rdquo;</p>
+        <p className={`text-sm leading-relaxed italic ${style.text} opacity-80`}>&ldquo;{personality.tagline}&rdquo;</p>
       </div>
 
       {/* Traits */}
@@ -567,8 +575,8 @@ function PersonalityCard({ personality }: { personality: Personality }) {
         <div className="space-y-2.5">
           {personality.traits.map((trait, i) => (
             <div key={i} className="flex items-start gap-3">
-              <div className={`w-5 h-5 rounded-lg bg-gradient-to-br ${style.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                <span className="text-[10px] text-white font-bold">{i + 1}</span>
+              <div className={`w-5 h-5 rounded-lg ${style.badge} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                <span className="text-[10px] font-bold">{i + 1}</span>
               </div>
               <p className="text-sm text-ink-700 leading-snug">{trait}</p>
             </div>
@@ -576,7 +584,7 @@ function PersonalityCard({ personality }: { personality: Personality }) {
         </div>
       </div>
 
-      {/* Element card */}
+      {/* Info card */}
       <div className="bg-paper-50 rounded-2xl border border-paper-200 p-4 flex items-center gap-3">
         <Clock className="w-4 h-4 text-ink-400 flex-shrink-0" />
         <p className="text-xs text-ink-500">

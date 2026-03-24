@@ -20,6 +20,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 
 type Tab = 'overview' | 'reading' | 'search' | 'streak' | 'share' | 'import';
 
+
 function DashboardContent() {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -58,7 +59,7 @@ function DashboardContent() {
         <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6 md:pt-10 page-enter">
           <div className="mb-8">
             <h1 className="font-display text-2xl md:text-3xl font-bold text-ink-900">
-              {tab === 'overview' && `Hey, ${user?.user_metadata?.full_name?.split(' ')[0] || 'Reader'} 👋`}
+              {tab === 'overview' && `Hey, ${user?.user_metadata?.full_name?.split(' ')[0] || 'Reader'}`}
               {tab === 'reading' && 'My Books'}
               {tab === 'search' && 'Find a Book'}
               {tab === 'streak' && 'Your Streak'}
@@ -70,7 +71,10 @@ function DashboardContent() {
           {tab === 'overview' && (
             <ErrorBoundary>
               <div className="space-y-8">
-                {/* 1 — Currently reading */}
+                {/* 1 — AI Insights */}
+                <section><AIInsights /></section>
+
+                {/* 2 — Currently reading */}
                 {currentlyReading.length > 0 && (
                   <section>
                     <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Continue Reading</h2>
@@ -109,7 +113,6 @@ function DashboardContent() {
                 {currentlyReading.length === 0 && (
                   <section>
                     <div className="bg-gradient-to-br from-brand-50 to-paper-100 dark:from-brand-950/30 dark:to-ink-900 rounded-2xl border border-brand-100 dark:border-brand-900 p-8 text-center">
-                      <div className="text-4xl mb-3">📚</div>
                       <h2 className="font-display text-lg font-bold text-ink-900 dark:text-paper-100 mb-2">Start your reading journey</h2>
                       <p className="text-sm text-ink-500 dark:text-ink-400 mb-5 max-w-xs mx-auto">
                         Search for a book to add to your shelf and start tracking your reading.
@@ -125,14 +128,11 @@ function DashboardContent() {
                   </section>
                 )}
 
-                {/* 2 — AI Insights */}
-                <section><AIInsights /></section>
-
-                {/* 3 — Social pulse */}
-                <section><SocialPulse /></section>
-
-                {/* 4 — Daily goal */}
+                {/* 3 — Daily goal */}
                 <section><DailyGoal /></section>
+
+                {/* 4 — Social pulse */}
+                <section><SocialPulse /></section>
 
                 {/* 5 — Stats */}
                 <section>
