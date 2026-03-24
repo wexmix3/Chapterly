@@ -12,6 +12,8 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { aiGuard } from '@/lib/ai-guard';
+import { getCachedAI, setCachedAI } from '@/lib/ai-cache';
+import { logAIUsage } from '@/lib/ai-usage-log';
 import Anthropic from '@anthropic-ai/sdk';
 import { format, subDays } from 'date-fns';
 
@@ -36,6 +38,14 @@ export async function POST() {
 
   const guard = await aiGuard(supabase, user.id, 'insights');
   if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
+  // Check cache before calling Claude
+  const cacheKey = `insights:${user.id}`;
+  const cached = await getCachedAI(supabase, user.id, 'insights', cacheKey);
+  if (cached !== null) {
+    logAIUsage(supabase, user.id, 'insights', 0, 0, true);
+    return NextResponse.json(cached);
+  }
 
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 
@@ -235,10 +245,19 @@ Return ONLY valid JSON, no markdown, no extra text.
       messages: [{ role: 'user', content: prompt }],
     });
 
+    logAIUsage(
+      supabase, user.id, 'insights',
+      response.usage.input_tokens,
+      response.usage.output_tokens,
+      false,
+    );
+
     const raw = response.content[0].type === 'text' ? response.content[0].text : '';
     // Strip markdown code fences if present (Claude sometimes wraps JSON in ```json ... ```)
     const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     const parsed = JSON.parse(text);
+
+    await setCachedAI(supabase, user.id, cacheKey, parsed);
     return NextResponse.json(parsed);
   } catch (err) {
     console.error('[ai/insights] Claude API failed, using computed fallback:', err);

@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
       { name: 'Jordan', action: 'started reading', book: 'Tomorrow, and Tomorrow, and Tomorrow' },
       { name: 'Sam', action: 'rated 5★', book: 'The Thursday Murder Club' },
     ],
+    unsubscribe_token: 'test-token',
   };
 
   // ── Send the email ──────────────────────────────────────────────────────────

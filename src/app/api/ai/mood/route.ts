@@ -7,6 +7,8 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { aiGuard } from '@/lib/ai-guard';
+import { getCachedAI, setCachedAI } from '@/lib/ai-cache';
+import { logAIUsage } from '@/lib/ai-usage-log';
 import Anthropic from '@anthropic-ai/sdk';
 
 let _anthropic: Anthropic | null = null;
@@ -26,6 +28,14 @@ export async function POST(req: NextRequest) {
 
   const { mood, prompt: moodPrompt } = await req.json() as { mood: string; prompt: string };
   if (!mood || !moodPrompt) return NextResponse.json({ error: 'Missing mood' }, { status: 400 });
+
+  // Cache key includes mood so different moods get different cached results
+  const cacheKey = `mood:${user.id}:${mood}`;
+  const cached = await getCachedAI(supabase, user.id, 'mood', cacheKey);
+  if (cached !== null) {
+    logAIUsage(supabase, user.id, 'mood', 0, 0, true);
+    return NextResponse.json(cached);
+  }
 
   // Get their shelf to avoid duplicates
   const { data: shelf } = await supabase
@@ -127,6 +137,13 @@ Return ONLY valid JSON, no markdown.
       messages: [{ role: 'user', content: prompt }],
     });
 
+    logAIUsage(
+      supabase, user.id, 'mood',
+      response.usage.input_tokens,
+      response.usage.output_tokens,
+      false,
+    );
+
     const raw = response.content[0].type === 'text' ? response.content[0].text : '';
     const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     const parsed = JSON.parse(text);
@@ -157,7 +174,9 @@ Return ONLY valid JSON, no markdown.
       })
     );
 
-    return NextResponse.json({ recommendations: enriched });
+    const result = { recommendations: enriched };
+    await setCachedAI(supabase, user.id, cacheKey, result);
+    return NextResponse.json(result);
   } catch (err) {
     console.error('[ai/mood] Claude API failed, using static fallback:', err);
     return NextResponse.json({ recommendations: staticRecs });

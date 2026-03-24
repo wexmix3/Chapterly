@@ -8,6 +8,8 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { aiGuard } from '@/lib/ai-guard';
+import { getCachedAI, setCachedAI } from '@/lib/ai-cache';
+import { logAIUsage } from '@/lib/ai-usage-log';
 import Anthropic from '@anthropic-ai/sdk';
 
 let _anthropic: Anthropic | null = null;
@@ -24,6 +26,14 @@ export async function POST() {
 
   const guard = await aiGuard(supabase, user.id, 'recommend');
   if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
+  // Check cache before calling Claude
+  const cacheKey = `recommend:${user.id}`;
+  const cached = await getCachedAI(supabase, user.id, 'recommend', cacheKey);
+  if (cached !== null) {
+    logAIUsage(supabase, user.id, 'recommend', 0, 0, true);
+    return NextResponse.json(cached);
+  }
 
   // Gather reading history
   const { data: shelf } = await supabase
@@ -100,6 +110,13 @@ REQUIRED FORMAT:
       messages: [{ role: 'user', content: prompt }],
     });
 
+    logAIUsage(
+      supabase, user.id, 'recommend',
+      response.usage.input_tokens,
+      response.usage.output_tokens,
+      false,
+    );
+
     const raw = response.content[0].type === 'text' ? response.content[0].text : '';
     const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     const parsed = JSON.parse(text);
@@ -133,7 +150,9 @@ REQUIRED FORMAT:
       })
     );
 
-    return NextResponse.json({ recommendations: enriched });
+    const result = { recommendations: enriched };
+    await setCachedAI(supabase, user.id, cacheKey, result);
+    return NextResponse.json(result);
   } catch (err) {
     console.error('[ai/recommend]', err);
     return NextResponse.json({

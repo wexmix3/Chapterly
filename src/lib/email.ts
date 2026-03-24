@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { createHmac } from 'crypto';
 
 // Lazy-initialize so missing env var doesn't crash at build time
 let _resend: Resend | null = null;
@@ -12,6 +13,33 @@ export function getResend(): Resend {
 
 export const FROM_EMAIL = 'Chapterly <hello@getchapterly.com>';
 
+// ── Unsubscribe token helpers ─────────────────────────────────────────────────
+
+/**
+ * Generate an HMAC-SHA256 unsubscribe token for a user.
+ * Uses CRON_SECRET as the signing key so it can be verified server-side.
+ */
+export function generateUnsubscribeToken(userId: string): string {
+  const secret = process.env.CRON_SECRET ?? '';
+  return createHmac('sha256', secret).update(userId).digest('hex');
+}
+
+/**
+ * Verify an unsubscribe token and return the matching userId, or null if invalid.
+ * We can verify because the token is deterministic for a given userId + secret.
+ * To find the userId from the token we must check against the provided userId.
+ */
+export function verifyUnsubscribeToken(userId: string, token: string): boolean {
+  const expected = generateUnsubscribeToken(userId);
+  // Constant-time comparison to prevent timing attacks
+  if (expected.length !== token.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= expected.charCodeAt(i) ^ token.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 // ─── Weekly Digest Email ────────────────────────────────────────
 export interface DigestData {
   display_name: string;
@@ -22,6 +50,7 @@ export interface DigestData {
   books_read_this_year: number;
   goal_books: number;
   friend_activity: Array<{ name: string; action: string; book: string }>;
+  unsubscribe_token: string;
 }
 
 export function buildDigestHtml(d: DigestData): string {
@@ -120,6 +149,8 @@ export function buildDigestHtml(d: DigestData): string {
     <p style="font-size:11px;color:#d1d5db;margin:0;">
       You're receiving this because you have an account at getchapterly.com &nbsp;·&nbsp;
       <a href="https://getchapterly.com/u/${d.handle}" style="color:#d1d5db;">View profile</a>
+      &nbsp;·&nbsp;
+      <a href="https://getchapterly.com/api/unsubscribe?token=${d.unsubscribe_token}" style="color:#d1d5db;">Unsubscribe from these emails</a>
     </p>
   </div>
 
@@ -129,7 +160,11 @@ export function buildDigestHtml(d: DigestData): string {
 }
 
 // ─── Streak Reminder Email ──────────────────────────────────────
-export function buildStreakReminderHtml(display_name: string, streak: number): string {
+export function buildStreakReminderHtml(
+  display_name: string,
+  streak: number,
+  unsubscribe_token: string,
+): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>Don't break your streak!</title></head>
@@ -149,6 +184,8 @@ export function buildStreakReminderHtml(display_name: string, streak: number): s
     </a>
     <p style="font-size:11px;color:#d1d5db;margin-top:24px;">
       <a href="https://getchapterly.com/dashboard" style="color:#d1d5db;">Manage notifications</a>
+      &nbsp;·&nbsp;
+      <a href="https://getchapterly.com/api/unsubscribe?token=${unsubscribe_token}" style="color:#d1d5db;">Unsubscribe from these emails</a>
     </p>
   </div>
 </div>

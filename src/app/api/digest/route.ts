@@ -5,10 +5,11 @@ export const dynamic = 'force-dynamic';
  * Called by Vercel Cron every Monday at 9am UTC.
  * Sends weekly reading digest emails to all users who have read in the last 7 days.
  * Protected by CRON_SECRET env var.
+ * Skips users who have email_notifications = false.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase-server';
-import { getResend, FROM_EMAIL, buildDigestHtml, type DigestData } from '@/lib/email';
+import { getResend, FROM_EMAIL, buildDigestHtml, generateUnsubscribeToken, type DigestData } from '@/lib/email';
 import { subDays, startOfWeek, format } from 'date-fns';
 
 export async function POST(req: NextRequest) {
@@ -44,25 +45,33 @@ export async function POST(req: NextRequest) {
 
   const activeUserIds = Object.keys(userPagesMap);
 
+  // Fetch user profiles (including email_notifications preference)
+  const { data: profiles } = await supabase
+    .from('users')
+    .select('id, handle, display_name, email_notifications')
+    .in('id', activeUserIds);
+
+  // Filter out users who have opted out of emails
+  const optedInProfiles = (profiles ?? []).filter(p => p.email_notifications !== false);
+  const optedInIds = optedInProfiles.map(p => p.id);
+
+  if (optedInIds.length === 0) {
+    return NextResponse.json({ sent: 0 });
+  }
+
   // Fetch user profiles + emails in batches
   const { data: users } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   const authUserMap = new Map(
     (users?.users ?? []).map(u => [u.id, u.email ?? ''])
   );
 
-  // Fetch Chapterly profiles
-  const { data: profiles } = await supabase
-    .from('users')
-    .select('id, handle, display_name')
-    .in('id', activeUserIds);
-
-  const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+  const profileMap = new Map(optedInProfiles.map(p => [p.id, p]));
 
   // Fetch books finished this year per user
   const { data: finishedBooks } = await supabase
     .from('user_books')
     .select('user_id, finished_at, book:books(title)')
-    .in('user_id', activeUserIds)
+    .in('user_id', optedInIds)
     .eq('status', 'read')
     .gte('finished_at', yearStart);
 
@@ -80,7 +89,7 @@ export async function POST(req: NextRequest) {
   const { data: streakData } = await supabase
     .from('stats_daily')
     .select('user_id, date, is_streak_day')
-    .in('user_id', activeUserIds)
+    .in('user_id', optedInIds)
     .eq('is_streak_day', true)
     .order('date', { ascending: false });
 
@@ -93,7 +102,7 @@ export async function POST(req: NextRequest) {
   const { data: challenges } = await supabase
     .from('reading_challenges')
     .select('user_id, goal_books')
-    .in('user_id', activeUserIds)
+    .in('user_id', optedInIds)
     .eq('year', now.getFullYear());
 
   const challengeMap = new Map((challenges ?? []).map(c => [c.user_id, c.goal_books]));
@@ -106,10 +115,12 @@ export async function POST(req: NextRequest) {
   let sent = 0;
   const errors: string[] = [];
 
-  for (const userId of activeUserIds.slice(0, MAX_EMAILS_PER_RUN)) {
+  for (const userId of optedInIds.slice(0, MAX_EMAILS_PER_RUN)) {
     const email = authUserMap.get(userId);
     const profile = profileMap.get(userId);
     if (!email || !profile) continue;
+
+    const unsubscribeToken = generateUnsubscribeToken(userId);
 
     const digestData: DigestData = {
       display_name: profile.display_name,
@@ -120,6 +131,7 @@ export async function POST(req: NextRequest) {
       books_read_this_year: finishedByUser[userId]?.count ?? 0,
       goal_books: challengeMap.get(userId) ?? 0,
       friend_activity: [], // TODO: pull from social feed in a future pass
+      unsubscribe_token: `${unsubscribeToken}&uid=${userId}`,
     };
 
     try {
