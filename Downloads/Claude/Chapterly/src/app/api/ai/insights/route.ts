@@ -78,14 +78,35 @@ export async function GET(req: import('next/server').NextRequest) {
     .order('date', { ascending: true });
 
   if (!sessions || sessions.length < 3) {
-    return NextResponse.json({
-      insights: [{
-        emoji: '📖',
-        title: 'Keep reading!',
-        body: 'Log at least 3 reading sessions to unlock your personalized reading insights.',
+    // Return computed fallback insights based on whatever shelf data exists
+    const fallback: Insight[] = [];
+    const booksOnShelf = (booksRead ?? []).length;
+    const booksFinishedEarly = (booksRead ?? []).filter(b => b.status === 'read').length;
+
+    if (booksFinishedEarly > 0) {
+      fallback.push({
+        emoji: '✅',
+        title: `${booksFinishedEarly} book${booksFinishedEarly === 1 ? '' : 's'} finished so far`,
+        body: `You've already completed ${booksFinishedEarly} book${booksFinishedEarly === 1 ? '' : 's'} this year. Keep logging your sessions and you'll unlock deeper reading pattern insights.`,
+        type: 'achievement',
+      });
+    } else if (booksOnShelf > 0) {
+      fallback.push({
+        emoji: '📚',
+        title: `${booksOnShelf} book${booksOnShelf === 1 ? '' : 's'} on your shelf`,
+        body: `You've got ${booksOnShelf} book${booksOnShelf === 1 ? '' : 's'} tracked. Start logging reading sessions to unlock personalized insights about your reading habits.`,
         type: 'encouragement',
-      }],
+      });
+    }
+
+    fallback.push({
+      emoji: '📖',
+      title: 'Build your reading history',
+      body: `Log ${3 - (sessions?.length ?? 0)} more session${(3 - (sessions?.length ?? 0)) === 1 ? '' : 's'} to unlock AI-powered insights about your reading speed, best times, and patterns.`,
+      type: 'suggestion',
     });
+
+    return NextResponse.json({ insights: fallback });
   }
 
   // Compute session stats

@@ -49,16 +49,16 @@ export default function AIInsights() {
     setError(false);
     try {
       const [insightsRes, recsRes] = await Promise.all([
-        fetch('/api/ai/insights', { method: 'POST' }),
-        fetch('/api/ai/recommend', { method: 'POST' }),
+        fetch('/api/ai/insights'),
+        fetch('/api/ai/recommend'),
       ]);
       if (!insightsRes.ok || !recsRes.ok) throw new Error('API error');
       const [insightsData, recsData] = await Promise.all([
         insightsRes.json(),
         recsRes.json(),
       ]);
-      setInsights(insightsData.insights ?? []);
-      setRecs(recsData.recommendations ?? []);
+      setInsights(insightsData.data ?? insightsData.insights ?? []);
+      setRecs(recsData.data ?? recsData.recommendations ?? []);
       if (recsData.message) setMessage(recsData.message);
       setLoaded(true);
     } catch {

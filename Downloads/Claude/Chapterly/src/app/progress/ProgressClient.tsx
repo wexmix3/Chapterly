@@ -362,7 +362,7 @@ export default function ProgressClient() {
               </button>
 
               <div
-                className={`overflow-hidden transition-all duration-300 ${richOpen ? 'max-h-[600px]' : 'max-h-0'}`}
+                className={`overflow-hidden transition-all duration-300 ${richOpen ? 'max-h-[1200px]' : 'max-h-0'}`}
               >
                 <div className="px-6 pb-6 pt-2 space-y-5 border-t border-paper-100">
 
@@ -430,6 +430,47 @@ export default function ProgressClient() {
                       <p className="text-[10px] text-brand-500 font-semibold uppercase tracking-wide mb-0.5">Best month ever</p>
                       <p className="font-display text-base font-bold text-brand-700">{richStats.most_productive_month.month}</p>
                       <p className="text-xs text-brand-600">{richStats.most_productive_month.books} books finished</p>
+                    </div>
+                  )}
+
+                  {/* Genre Breakdown */}
+                  {richStats.genre_breakdown && richStats.genre_breakdown.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Top Genres</p>
+                      <div className="space-y-2">
+                        {richStats.genre_breakdown.slice(0, 6).map(g => (
+                          <div key={g.genre}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-ink-700 font-medium">{g.genre}</span>
+                              <span className="text-ink-400">{g.count} book{g.count !== 1 ? 's' : ''} · {g.pct}%</span>
+                            </div>
+                            <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand-400 rounded-full" style={{ width: `${g.pct}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Author Breakdown */}
+                  {richStats.author_breakdown && richStats.author_breakdown.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Authors You&apos;ve Read</p>
+                      <div className="space-y-2">
+                        {richStats.author_breakdown.slice(0, 6).map((a, i) => (
+                          <div key={a.author} className="flex items-center justify-between py-1.5 border-b border-ink-50 last:border-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-ink-300 w-4">{i + 1}</span>
+                              <span className="text-sm text-ink-800 font-medium">{a.author}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-ink-400">
+                              <span>{a.count} book{a.count !== 1 ? 's' : ''}</span>
+                              {a.avg_rating && <span className="text-brand-500">&#9733; {a.avg_rating}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 

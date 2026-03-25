@@ -13,6 +13,8 @@ export interface RichStats {
   dnf_rate: number | null;
   total_books: number;
   books_read: number;
+  genre_breakdown: { genre: string; count: number; pct: number }[];
+  author_breakdown: { author: string; count: number; avg_rating: number | null }[];
 }
 
 export async function GET() {
@@ -25,7 +27,7 @@ export async function GET() {
     .from('user_books')
     .select(`
       status, rating, format, started_at, finished_at,
-      books(title, authors, page_count)
+      books(title, authors, subjects, page_count)
     `)
     .eq('user_id', user.id);
 
@@ -39,7 +41,7 @@ export async function GET() {
     format: string | null;
     started_at: string | null;
     finished_at: string | null;
-    books: { title: string; authors: string[]; page_count: number | null } | null;
+    books: { title: string; authors: string[]; subjects: string[] | null; page_count: number | null } | null;
   };
 
   const rows = shelf as unknown as ShelfRow[];
@@ -123,6 +125,46 @@ export async function GET() {
   const started = rows.filter(r => ['read', 'dnf', 'reading'].includes(r.status)).length;
   const dnf_rate = started > 0 ? Math.round((dnf / started) * 100) : null;
 
+  // Genre breakdown
+  const genreCount: Record<string, number> = {};
+  for (const row of readRows) {
+    const subjects = (row.books?.subjects ?? []) as string[];
+    for (const s of subjects.slice(0, 3)) {
+      const genre = s.trim();
+      if (genre) genreCount[genre] = (genreCount[genre] ?? 0) + 1;
+    }
+  }
+  const genre_breakdown = Object.entries(genreCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([genre, count]) => ({
+      genre,
+      count,
+      pct: readRows.length > 0 ? Math.round((count / readRows.length) * 100) : 0,
+    }));
+
+  // Author breakdown
+  const authorStats: Record<string, { count: number; ratings: number[] }> = {};
+  for (const row of readRows) {
+    const authors = (row.books?.authors ?? []) as string[];
+    const rating = row.rating ? Number(row.rating) : null;
+    for (const author of authors.slice(0, 2)) {
+      if (!authorStats[author]) authorStats[author] = { count: 0, ratings: [] };
+      authorStats[author].count++;
+      if (rating) authorStats[author].ratings.push(rating);
+    }
+  }
+  const author_breakdown = Object.entries(authorStats)
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 8)
+    .map(([author, s]) => ({
+      author,
+      count: s.count,
+      avg_rating: s.ratings.length
+        ? Math.round((s.ratings.reduce((a, b) => a + b, 0) / s.ratings.length) * 10) / 10
+        : null,
+    }));
+
   const result: RichStats = {
     format_breakdown,
     avg_days_to_finish,
@@ -133,6 +175,8 @@ export async function GET() {
     dnf_rate,
     total_books: totalBooks,
     books_read: booksRead,
+    genre_breakdown,
+    author_breakdown,
   };
 
   return NextResponse.json({ data: result });
