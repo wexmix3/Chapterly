@@ -9,6 +9,7 @@ import {
   TrendingUp, Target, Users, Compass, ChevronDown,
   Book, Lock, Check, Loader2,
 } from 'lucide-react';
+import BookCover from '@/components/ui/BookCover';
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
 
@@ -317,8 +318,8 @@ export default function DemoPage() {
                     const displayPct = Math.round((displayPage / b.pages) * 100);
                     return (
                       <div key={b.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-ink-100 hover:border-brand-200 transition-colors">
-                        <div className="w-12 h-16 bg-paper-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
-                          <img src={b.cover} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                        <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-sm relative">
+                          <BookCover src={b.cover} title={b.title} authors={[b.author]} fill className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-display font-semibold text-ink-900 truncate">{b.title}</p>
@@ -454,13 +455,8 @@ export default function DemoPage() {
                     className="group text-left cursor-pointer"
                     onClick={() => setSelectedBook(b)}
                   >
-                    <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm relative">
-                      <img
-                        src={b.cover}
-                        alt={b.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
-                      />
+                    <div className="aspect-[2/3] rounded-xl overflow-hidden mb-2 shadow-sm relative">
+                      <BookCover src={b.cover} title={b.title} authors={[b.author]} fill className="object-cover group-hover:scale-105 transition-transform duration-200" />
                       {b.status === 'reading' && b.page > 0 && (
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
                           <div className="h-1 bg-white/30 rounded-full overflow-hidden">
@@ -648,8 +644,8 @@ export default function DemoPage() {
                       )}
                       <p className="text-[11px] text-ink-300 mt-0.5">{a.time}</p>
                     </div>
-                    <div className="w-10 flex-shrink-0 rounded-lg overflow-hidden shadow-sm" style={{ aspectRatio: '2/3' }}>
-                      <img src={a.cover} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                    <div className="w-10 flex-shrink-0 rounded-lg overflow-hidden shadow-sm relative" style={{ aspectRatio: '2/3' }}>
+                      <BookCover src={a.cover} title={a.book} fill className="object-cover" />
                     </div>
                   </div>
                 ))}
@@ -796,13 +792,8 @@ export default function DemoPage() {
           <div className="relative z-10 w-full max-w-md bg-white rounded-t-2xl shadow-2xl p-6">
             <div className="flex gap-5 mb-5">
               <div className="w-20 flex-shrink-0">
-                <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-md">
-                  <img
-                    src={selectedBook.cover}
-                    alt={selectedBook.title}
-                    className="w-full h-full object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
-                  />
+                <div className="aspect-[2/3] rounded-xl overflow-hidden shadow-md relative">
+                  <BookCover src={selectedBook.cover} title={selectedBook.title} authors={[selectedBook.author]} fill className="object-cover" />
                 </div>
               </div>
               <div className="flex-1 min-w-0">
