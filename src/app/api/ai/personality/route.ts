@@ -35,9 +35,6 @@ export async function GET(req: import('next/server').NextRequest) {
     }
   }
 
-  const guard = await aiGuard(supabase, user.id, 'personality');
-  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 
   const [{ data: sessions }, { data: shelf }, { data: stats }] = await Promise.all([
@@ -177,6 +174,10 @@ Return ONLY valid JSON, no markdown.
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(computedPersonality());
   }
+
+  // Only gate actual Claude calls
+  const guard = await aiGuard(supabase, user.id, 'personality');
+  if (!guard.allowed) return NextResponse.json(computedPersonality());
 
   try {
     const anthropic = getAnthropic();

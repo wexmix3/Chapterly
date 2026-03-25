@@ -48,10 +48,6 @@ export async function GET(req: import('next/server').NextRequest) {
     }
   }
 
-  // Apply rate limiting (only when actually calling Claude)
-  const guard = await aiGuard(supabase, user.id, 'dna');
-  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
   // Fetch all read/reading books with ratings and subjects
   const { data: shelf } = await supabase
     .from('user_books')
@@ -132,6 +128,10 @@ export async function GET(req: import('next/server').NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY || books.length < 3) {
     return NextResponse.json(computedDNA());
   }
+
+  // Only gate actual Claude calls
+  const guard = await aiGuard(supabase, user.id, 'dna');
+  if (!guard.allowed) return NextResponse.json(computedDNA());
 
   const prompt = `You are a literary analyst identifying reading patterns. Analyze this reader's book collection and identify themes and author patterns.
 

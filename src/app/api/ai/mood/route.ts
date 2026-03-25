@@ -52,9 +52,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const guard = await aiGuard(supabase, user.id, 'mood');
-  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
   // Get their shelf to avoid duplicates
   const { data: shelf } = await supabase
     .from('user_books')
@@ -146,6 +143,10 @@ Return ONLY valid JSON, no markdown.
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ recommendations: staticRecs });
   }
+
+  // Only gate actual Claude calls
+  const guard = await aiGuard(supabase, user.id, 'mood');
+  if (!guard.allowed) return NextResponse.json({ recommendations: staticRecs });
 
   try {
     const anthropic = getAnthropic();
