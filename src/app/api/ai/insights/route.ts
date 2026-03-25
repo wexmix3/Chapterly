@@ -48,9 +48,6 @@ export async function GET(req: import('next/server').NextRequest) {
     }
   }
 
-  const guard = await aiGuard(supabase, user.id, 'insights');
-  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 
   // Sessions from last 30 days
@@ -257,8 +254,15 @@ Return ONLY valid JSON, no markdown, no extra text.
   ]
 }`;
 
-  // If no API key, return computed insights immediately
+  // If no API key, return computed insights immediately (no rate limit needed)
   if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ insights: computedInsights() });
+  }
+
+  // Only gate Claude calls — computed fallbacks are free
+  const guard = await aiGuard(supabase, user.id, 'insights');
+  if (!guard.allowed) {
+    // Soft-degrade: return computed insights instead of hard error
     return NextResponse.json({ insights: computedInsights() });
   }
 

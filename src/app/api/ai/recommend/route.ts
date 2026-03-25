@@ -39,9 +39,6 @@ export async function GET(req: import('next/server').NextRequest) {
     }
   }
 
-  const guard = await aiGuard(supabase, user.id, 'recommend');
-  if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
   // Gather reading history
   const { data: shelf } = await supabase
     .from('user_books')
@@ -101,12 +98,18 @@ REQUIRED FORMAT:
   ]
 }`;
 
-  // If no API key, return a prompt to configure it
+  // If no API key, skip rate limit and return empty state
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({
       recommendations: [],
       message: 'AI recommendations require an Anthropic API key. Add ANTHROPIC_API_KEY to your environment variables to enable this feature.',
     });
+  }
+
+  // Only gate actual Claude calls — not fallbacks
+  const guard = await aiGuard(supabase, user.id, 'recommend');
+  if (!guard.allowed) {
+    return NextResponse.json({ recommendations: [], message: guard.error });
   }
 
   try {
