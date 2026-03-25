@@ -122,37 +122,26 @@ export default function Navigation() {
 
   const [personalOpen, setPersonalOpen] = useState(false);
   const [socialOpen,   setSocialOpen]   = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const name = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ?? 'Reader';
 
-  // Fetch XP/level for the level badge
+  // Fetch XP/level and handle for avatar link
   const [readerLevel, setReaderLevel] = useState<number | null>(null);
+  const [userHandle, setUserHandle] = useState<string | null>(null);
   useEffect(() => {
     fetch('/api/profile')
       .then(r => r.ok ? r.json() : null)
       .then(j => {
         if (j?.data?.reader_level) setReaderLevel(j.data.reader_level as number);
+        if (j?.data?.handle) setUserHandle(j.data.handle as string);
       })
       .catch(() => {});
   }, []);
 
   const isAIActive     = pathname === '/ai' || pathname.startsWith('/ai/');
   const isDiscoverActive = pathname === '/discover' || pathname.startsWith('/discover/');
-
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!userMenuOpen) return;
-    function handle(e: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
-  }, [userMenuOpen]);
 
   return (
     <>
@@ -236,53 +225,33 @@ export default function Navigation() {
               <ThemeToggle />
             </div>
 
-            {/* User avatar + dropdown (desktop) */}
-            <div className="relative hidden md:block" ref={userMenuRef}>
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="relative flex items-center"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-ink-100 dark:ring-ink-800" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-700 dark:text-brand-400 text-sm font-bold ring-2 ring-ink-100 dark:ring-ink-800">
-                    {name[0]}
-                  </div>
-                )}
-                {readerLevel !== null && (
-                  <span className="absolute -bottom-1 -right-1 bg-brand-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-                    {readerLevel}
-                  </span>
-                )}
-              </button>
+            {/* Settings icon (desktop) */}
+            <Link
+              href="/settings"
+              className="hidden md:flex p-2 rounded-lg hover:bg-ink-50 dark:hover:bg-ink-900 transition-colors"
+              aria-label="Settings"
+            >
+              <Settings className="w-[18px] h-[18px] text-ink-400 hover:text-ink-700 dark:hover:text-ink-200 transition-colors" />
+            </Link>
 
-              {userMenuOpen && (
-                <div className="absolute right-0 top-10 z-50 w-48 bg-white dark:bg-ink-900 rounded-xl border border-ink-100 dark:border-ink-800 shadow-lg shadow-ink-900/10 overflow-hidden">
-                  <div className="px-3 py-2.5 border-b border-ink-100 dark:border-ink-800">
-                    <p className="text-sm font-semibold text-ink-900 dark:text-paper-100 truncate">{name}</p>
-                    <p className="text-xs text-ink-400 truncate">{user?.email}</p>
-                  </div>
-                  <div className="p-1">
-                    <Link
-                      href="/settings"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2.5 text-sm text-ink-600 dark:text-ink-400 hover:bg-ink-50 dark:hover:bg-ink-800 hover:text-ink-900 dark:hover:text-ink-100 transition-colors rounded-lg"
-                    >
-                      <Settings className="w-4 h-4" /> Settings
-                    </Link>
-                    <div className="px-3 py-1.5">
-                      <ThemeToggle />
-                    </div>
-                    <button
-                      onClick={() => { setUserMenuOpen(false); void signOut(); }}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-ink-600 dark:text-ink-400 hover:bg-ink-50 dark:hover:bg-ink-800 hover:text-ink-900 dark:hover:text-ink-100 transition-colors rounded-lg"
-                    >
-                      <LogOut className="w-4 h-4" /> Sign out
-                    </button>
-                  </div>
+            {/* User avatar → direct profile link (desktop) */}
+            <Link
+              href={userHandle ? `/u/${userHandle}` : '/settings'}
+              className="relative hidden md:flex items-center"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-ink-100 dark:ring-ink-800" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-700 dark:text-brand-400 text-sm font-bold ring-2 ring-ink-100 dark:ring-ink-800">
+                  {name[0]}
                 </div>
               )}
-            </div>
+              {readerLevel !== null && (
+                <span className="absolute -bottom-1 -right-1 bg-brand-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+                  {readerLevel}
+                </span>
+              )}
+            </Link>
 
             {/* Hamburger (mobile only) */}
             <button

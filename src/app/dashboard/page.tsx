@@ -8,7 +8,6 @@ import StatsOverview from '@/components/dashboard/StatsOverview';
 import BookSearch from '@/components/books/BookSearch';
 import BookShelf from '@/components/books/BookShelf';
 import QuickLog from '@/components/sessions/QuickLog';
-import ReadNext from '@/components/books/ReadNext';
 import DailyGoal from '@/components/dashboard/DailyGoal';
 import { BookOpen, Loader2, X, Search as SearchIcon } from 'lucide-react';
 import AIInsights from '@/components/dashboard/AIInsights';
@@ -125,11 +124,6 @@ function DashboardContent() {
                   <StatsOverview />
                 </section>
 
-                {/* 6 — Read next */}
-                <section>
-                  <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Read Next</h2>
-                  <ReadNext />
-                </section>
               </div>
             </ErrorBoundary>
           )}
