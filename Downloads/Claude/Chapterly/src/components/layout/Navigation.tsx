@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   BookOpen, TrendingUp, Trophy, Target, Sparkles, Users, Search,
   BookMarked, BarChart2, Compass, Bell, Settings, LogOut, Menu, X,
-  ChevronDown,
+  ChevronDown, Quote,
 } from 'lucide-react';
 import { useAuth, useNotifications } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -18,6 +18,7 @@ const PERSONAL_ITEMS = [
   { href: '/progress',              label: 'Progress',       icon: TrendingUp },
   { href: '/achievements',          label: 'Achievements',   icon: Trophy },
   { href: '/challenge',             label: 'Reading Goals',  icon: Target },
+  { href: '/quotes',                label: 'My Quotes',      icon: Quote },
 ];
 
 const SOCIAL_ITEMS = [
@@ -29,7 +30,7 @@ const SOCIAL_ITEMS = [
 
 // Which paths make each top-level item "active"
 function isPersonalActive(pathname: string): boolean {
-  return ['/dashboard', '/progress', '/achievements', '/challenge'].some(p =>
+  return ['/dashboard', '/progress', '/achievements', '/challenge', '/quotes'].some(p =>
     pathname === p || pathname.startsWith(p + '/')
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle, ShoppingBag, ExternalLink } from 'lucide-react';
+import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle, ShoppingBag, ExternalLink, MessageSquare, Trash2 } from 'lucide-react';
+import BookCover from '@/components/ui/BookCover';
 import Link from 'next/link';
 
 function buildAffiliateLinks(title: string, authors: string[]) {
@@ -62,6 +63,13 @@ interface Props {
   userId: string;
 }
 
+interface QuoteEntry {
+  id: string;
+  text: string;
+  page_number?: number | null;
+  created_at: string;
+}
+
 export default function BookDetailClient({ book, userBook, reviews, userId }: Props) {
   const [shelfStatus, setShelfStatus] = useState(userBook?.status ?? '');
   const [userRating, setUserRating] = useState<number>(userBook?.rating ?? 0);
@@ -72,6 +80,22 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
   const [saved, setSaved] = useState(false);
   const [showSpoilers, setShowSpoilers] = useState(false);
   const [error, setError] = useState('');
+
+  // Quotes state
+  const [quotes, setQuotes] = useState<QuoteEntry[]>([]);
+  const [quoteText, setQuoteText] = useState('');
+  const [quotePage, setQuotePage] = useState('');
+  const [savingQuote, setSavingQuote] = useState(false);
+
+  // Load quotes once if book is on shelf
+  useEffect(() => {
+    if (!userBook) return;
+    fetch(`/api/quotes?book_id=${book.id}`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => setQuotes(j.data ?? []))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addToShelf = async (status: string) => {
     setSaving(true);
@@ -143,6 +167,35 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
     );
   };
 
+  const saveQuote = async () => {
+    if (!quoteText.trim()) return;
+    setSavingQuote(true);
+    try {
+      const res = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: book.id,
+          text: quoteText.trim(),
+          page_number: quotePage ? parseInt(quotePage, 10) : null,
+        }),
+      });
+      if (res.ok) {
+        const j = await res.json();
+        setQuotes(prev => [j.data, ...prev]);
+        setQuoteText('');
+        setQuotePage('');
+      }
+    } finally {
+      setSavingQuote(false);
+    }
+  };
+
+  const deleteQuote = async (id: string) => {
+    const res = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
+    if (res.ok) setQuotes(prev => prev.filter(q => q.id !== id));
+  };
+
   // Compute community avg
   const communityRatings = reviews.filter(r => r.rating > 0);
   const avgRating = communityRatings.length
@@ -172,14 +225,14 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
           {/* Book header */}
           <div className="flex gap-6 mb-8">
             <div className="w-28 md:w-36 flex-shrink-0">
-              <div className="aspect-[2/3] bg-paper-200 rounded-2xl overflow-hidden shadow-lg">
-                {book.cover_url ? (
-                  <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <BookOpen className="w-8 h-8 text-ink-300" />
-                  </div>
-                )}
+              <div className="aspect-[2/3] bg-paper-200 rounded-2xl overflow-hidden shadow-lg relative">
+                <BookCover
+                  src={book.cover_url}
+                  title={book.title}
+                  authors={book.authors}
+                  fill
+                  className="object-cover"
+                />
               </div>
             </div>
             <div className="flex-1 min-w-0">
@@ -357,6 +410,68 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
             </button>
           </section>
 
+          {/* Quotes — only shown when book is on shelf */}
+          {userBook && (
+            <section className="bg-white rounded-2xl border border-ink-100 p-6 mb-8">
+              <h2 className="font-display text-lg font-semibold text-ink-800 mb-4 flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-brand-400" /> My Quotes
+              </h2>
+
+              {/* Input */}
+              <div className="space-y-2 mb-5">
+                <textarea
+                  value={quoteText}
+                  onChange={e => setQuoteText(e.target.value)}
+                  placeholder="Paste a quote you want to remember…"
+                  rows={3}
+                  className="w-full px-4 py-3 border border-ink-200 rounded-xl text-sm text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={quotePage}
+                    onChange={e => setQuotePage(e.target.value)}
+                    placeholder="Page # (optional)"
+                    min={1}
+                    className="w-36 px-3 py-2 border border-ink-200 rounded-xl text-sm text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                  />
+                  <button
+                    onClick={saveQuote}
+                    disabled={savingQuote || !quoteText.trim()}
+                    className="px-4 py-2 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 disabled:opacity-50 transition-colors"
+                  >
+                    {savingQuote ? 'Saving…' : 'Save quote'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Saved quotes list */}
+              {quotes.length === 0 ? (
+                <p className="text-sm text-ink-400 italic">No quotes saved yet.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {quotes.map(q => (
+                    <li key={q.id} className="flex items-start gap-3 bg-paper-50 rounded-xl px-4 py-3">
+                      <blockquote className="flex-1 text-sm text-ink-700 italic leading-relaxed">
+                        &ldquo;{q.text}&rdquo;
+                        {q.page_number && (
+                          <span className="not-italic text-ink-400 text-xs ml-2">— p.{q.page_number}</span>
+                        )}
+                      </blockquote>
+                      <button
+                        onClick={() => deleteQuote(q.id)}
+                        className="flex-shrink-0 text-ink-300 hover:text-red-400 transition-colors mt-0.5"
+                        title="Delete quote"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+
           {/* Community reviews */}
           <section>
             <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">
@@ -427,11 +542,4 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
   );
 }
 
-function timeAgo(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 30) return `${days}d ago`;
-  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+

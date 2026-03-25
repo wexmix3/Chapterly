@@ -7,10 +7,11 @@ import {
   BarChart, Bar,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { Flame, BookOpen, FileText, Star, Loader2 } from 'lucide-react';
+import { Flame, BookOpen, FileText, Star, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import Navigation from '@/components/layout/Navigation';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import type { UserStats } from '@/types';
+import type { RichStats } from '@/app/api/stats/rich/route';
 
 interface DailyCalendarStat {
   date: string;
@@ -105,6 +106,8 @@ export default function ProgressClient() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [dailyData, setDailyData] = useState<DailyCalendarStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [richStats, setRichStats] = useState<RichStats | null>(null);
+  const [richOpen, setRichOpen] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -131,6 +134,12 @@ export default function ProgressClient() {
           ...(curMonth.status === 'fulfilled' ? curMonth.value.data ?? [] : []),
         ];
         setDailyData(combined);
+
+        // Rich stats (non-blocking)
+        fetch('/api/stats/rich')
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (j?.data) setRichStats(j.data); })
+          .catch(() => {});
       } finally {
         setLoading(false);
       }
@@ -334,6 +343,100 @@ export default function ProgressClient() {
             <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Reading Calendar</h2>
             <ReadingCalendar />
           </div>
+
+          {/* Reading Profile Accordion */}
+          {richStats && (
+            <div className="bg-white rounded-2xl border border-ink-100 overflow-hidden">
+              <button
+                onClick={() => setRichOpen(o => !o)}
+                className="w-full flex items-center justify-between px-6 py-4 hover:bg-paper-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-brand-500" />
+                  <span className="font-display font-semibold text-ink-800">Reading Profile</span>
+                </div>
+                {richOpen
+                  ? <ChevronUp className="w-4 h-4 text-ink-400" />
+                  : <ChevronDown className="w-4 h-4 text-ink-400" />
+                }
+              </button>
+
+              <div
+                className={`overflow-hidden transition-all duration-300 ${richOpen ? 'max-h-[600px]' : 'max-h-0'}`}
+              >
+                <div className="px-6 pb-6 pt-2 space-y-5 border-t border-paper-100">
+
+                  {/* Format breakdown */}
+                  {richStats.format_breakdown.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">How you read</p>
+                      <div className="flex gap-3 flex-wrap">
+                        {richStats.format_breakdown.map(f => (
+                          <div key={f.format} className="flex items-center gap-2 bg-paper-50 border border-paper-200 rounded-xl px-3 py-2">
+                            <span className="text-lg">
+                              {f.format === 'physical' ? '📖' : f.format === 'ebook' ? '📱' : '🎧'}
+                            </span>
+                            <div>
+                              <p className="text-xs font-semibold text-ink-700 capitalize">{f.format}</p>
+                              <p className="text-[10px] text-ink-400">{f.count} book{f.count !== 1 ? 's' : ''} · {f.pct}%</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Finishing stats */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {richStats.avg_days_to_finish !== null && (
+                      <div className="bg-paper-50 rounded-xl p-3">
+                        <p className="text-[10px] text-ink-400 mb-1">Avg days to finish</p>
+                        <p className="font-display text-2xl font-bold text-brand-600">{richStats.avg_days_to_finish}</p>
+                        <p className="text-[10px] text-ink-400">days per book</p>
+                      </div>
+                    )}
+                    {richStats.dnf_rate !== null && (
+                      <div className="bg-paper-50 rounded-xl p-3">
+                        <p className="text-[10px] text-ink-400 mb-1">DNF rate</p>
+                        <p className="font-display text-2xl font-bold text-brand-600">{richStats.dnf_rate}%</p>
+                        <p className="text-[10px] text-ink-400">of started books</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Longest / shortest book */}
+                  {(richStats.longest_book_read || richStats.shortest_book_read) && (
+                    <div className="space-y-2">
+                      {richStats.longest_book_read && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-ink-400 text-xs w-24 flex-shrink-0">Longest read</span>
+                          <span className="font-medium text-ink-800 truncate">{richStats.longest_book_read.title}</span>
+                          <span className="text-xs text-ink-400 flex-shrink-0">{richStats.longest_book_read.page_count}p</span>
+                        </div>
+                      )}
+                      {richStats.shortest_book_read && richStats.books_read > 1 && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-ink-400 text-xs w-24 flex-shrink-0">Shortest read</span>
+                          <span className="font-medium text-ink-800 truncate">{richStats.shortest_book_read.title}</span>
+                          <span className="text-xs text-ink-400 flex-shrink-0">{richStats.shortest_book_read.page_count}p</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Most productive month */}
+                  {richStats.most_productive_month && (
+                    <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
+                      <p className="text-[10px] text-brand-500 font-semibold uppercase tracking-wide mb-0.5">Best month ever</p>
+                      <p className="font-display text-base font-bold text-brand-700">{richStats.most_productive_month.month}</p>
+                      <p className="text-xs text-brand-600">{richStats.most_productive_month.books} books finished</p>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </main>

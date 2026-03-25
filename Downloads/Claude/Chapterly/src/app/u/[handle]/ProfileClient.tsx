@@ -8,6 +8,7 @@ import {
   Lock, ChevronRight, MessageSquare, Loader2, BarChart3,
   Calendar, Award, BadgeCheck, Share2, Check
 } from 'lucide-react';
+import { getArchetype, type Archetype } from '@/lib/archetype';
 
 interface BookEntry {
   status: string;
@@ -102,6 +103,7 @@ export default function ProfileClient({
   const [followLoading, setFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'reading' | 'reviews'>('reading');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [archetype, setArchetype] = useState<Archetype | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +114,13 @@ export default function ProfileClient({
       if (!res.ok) { setError('error'); return; }
       const json = await res.json();
       setData(json);
+      // Fetch archetype for own profile only
+      if (json.is_own_profile) {
+        fetch('/api/ai/archetype')
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (j?.data) setArchetype(j.data); else setArchetype(getArchetype('slow_savorer')); })
+          .catch(() => setArchetype(getArchetype('slow_savorer')));
+      }
     } catch {
       setError('error');
     } finally {
@@ -226,6 +235,14 @@ export default function ProfileClient({
                   {profile.is_creator && (
                     <span title="Verified Creator" className="flex items-center gap-1 bg-brand-50 text-brand-600 border border-brand-100 rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0">
                       <BadgeCheck className="w-3 h-3" /> Creator
+                    </span>
+                  )}
+                  {archetype && (
+                    <span
+                      title={archetype.description}
+                      className={`flex items-center gap-1 border rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${archetype.color} ${archetype.textColor} ${archetype.borderColor}`}
+                    >
+                      <span>{archetype.emoji}</span> {archetype.name}
                     </span>
                   )}
                 </div>

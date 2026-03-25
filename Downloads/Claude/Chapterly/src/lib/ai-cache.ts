@@ -1,11 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const TTL_HOURS: Record<string, number> = {
-  insights: 24,
-  personality: 72,  // personality changes rarely
-  mood: 6,          // mood recs can refresh more often
-  recommend: 24,
-  dna: 48,
+  insights:    48,
+  personality: 168,  // ~7 days — personality changes rarely
+  mood:        24,
+  recommend:   48,
+  dna:         168,  // ~7 days
+  archetype:   168,  // ~7 days
 };
 
 export async function getCachedAI(

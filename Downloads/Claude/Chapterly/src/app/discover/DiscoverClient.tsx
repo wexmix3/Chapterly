@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
-import { TrendingUp, BookOpen, Plus, Loader2, Star, Sparkles } from 'lucide-react';
+import { TrendingUp, Plus, Loader2, Star, Sparkles } from 'lucide-react';
 import type { BookSearchResult } from '@/types';
+import BookCover from '@/components/ui/BookCover';
 
 const GENRES = [
   'Fantasy', 'Romance', 'Thriller', 'Sci-Fi', 'Literary Fiction',
@@ -224,10 +225,8 @@ export default function DiscoverClient() {
               {MUST_READS_2026.map(book => (
                 <button key={book.title} onClick={() => toPreview(book.title, book.author, book.cover)}
                   className="group text-left">
-                  <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow">
-                    <img src={book.cover} alt={book.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow relative">
+                    <BookCover src={book.cover} title={book.title} authors={[book.author]} fill className="object-cover group-hover:scale-105 transition-transform duration-200" />
                   </div>
                   <p className="text-[10px] font-medium text-ink-800 truncate">{book.title}</p>
                   <p className="text-[9px] text-ink-400 truncate">{book.author}</p>
@@ -267,9 +266,7 @@ function BookCard({ title, author, cover, label, badge, badgeClass, creator, onC
   return (
     <button onClick={onClick} className="group text-left w-full">
       <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow relative">
-        <img src={cover} alt={title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        <BookCover src={cover} title={title} authors={[author]} fill className="object-cover group-hover:scale-105 transition-transform duration-200" />
         {badge && (
           <div className={`absolute top-2 left-2 text-[9px] px-2 py-0.5 rounded-full font-medium backdrop-blur-sm ${badgeClass ?? 'bg-black/70 text-white'}`}>
             {badge}
@@ -293,15 +290,8 @@ function ShelfableBook({ book, onAdd, isAdded, isAdding, onNavigate }: {
   return (
     <div className="flex-shrink-0 w-28">
       <button onClick={onNavigate}
-        className="w-full aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm mb-2 hover:shadow-md transition-shadow block">
-        {book.cover_url ? (
-          <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-            <BookOpen className="w-6 h-6 text-ink-300 mb-1" />
-            <span className="text-[9px] text-ink-400 leading-tight line-clamp-3">{book.title}</span>
-          </div>
-        )}
+        className="w-full aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm mb-2 hover:shadow-md transition-shadow block relative">
+        <BookCover src={book.cover_url} title={book.title} authors={book.authors} fill className="object-cover hover:scale-105 transition-transform duration-200" />
       </button>
       <p className="text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight mb-0.5">{book.title}</p>
       <p className="text-[9px] text-ink-400 mb-1.5 line-clamp-1 italic">{book.authors[0]}</p>

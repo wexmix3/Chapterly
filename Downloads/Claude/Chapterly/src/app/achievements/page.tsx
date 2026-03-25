@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import Navigation from '@/components/layout/Navigation';
 import {
-  Trophy, Lock, BookOpen, Flame, Users, Star,
-  Book, Coffee, Moon, Zap, Leaf, Target, Check, Loader2,
+  Trophy, Lock, BookOpen, Flame, Users, Star, Loader2, Check,
 } from 'lucide-react';
 import type { Achievement } from '@/app/api/achievements/route';
 import { levelFromXP, levelTitle, progressToNextLevel, xpForNextLevel, xpForLevel } from '@/lib/xp';
+import { getArchetype, type Archetype } from '@/lib/archetype';
 
 // ── Achievement XP rewards (display only — awards happen server-side) ──────────
 const ACHIEVEMENT_XP: Record<string, number> = {
@@ -37,17 +37,6 @@ const ACHIEVEMENT_XP: Record<string, number> = {
   genre_explorer:  50,
 };
 
-// ── Avatar options ─────────────────────────────────────────────────────────────
-const AVATAR_OPTIONS: { key: string; icon: React.ElementType; label: string; color: string }[] = [
-  { key: 'book',   icon: Book,   label: 'Book',    color: 'bg-brand-100 text-brand-600' },
-  { key: 'coffee', icon: Coffee, label: 'Coffee',  color: 'bg-amber-100 text-amber-600' },
-  { key: 'moon',   icon: Moon,   label: 'Moon',    color: 'bg-indigo-100 text-indigo-600' },
-  { key: 'zap',    icon: Zap,    label: 'Zap',     color: 'bg-yellow-100 text-yellow-600' },
-  { key: 'leaf',   icon: Leaf,   label: 'Leaf',    color: 'bg-emerald-100 text-emerald-600' },
-  { key: 'flame',  icon: Flame,  label: 'Flame',   color: 'bg-orange-100 text-orange-600' },
-  { key: 'star',   icon: Star,   label: 'Star',    color: 'bg-violet-100 text-violet-600' },
-  { key: 'target', icon: Target, label: 'Target',  color: 'bg-rose-100 text-rose-600' },
-];
 
 const CATEGORY_META = {
   reading:   { label: 'Reading',    icon: BookOpen, color: 'text-brand-600' },
@@ -66,38 +55,31 @@ export default function AchievementsPage() {
   // XP / level
   const [totalXP, setTotalXP]       = useState(0);
   const [currentLevel, setCurrentLevel] = useState(1);
-  const [avatarType, setAvatarType] = useState('book');
-  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [archetype, setArchetype] = useState<Archetype | null>(null);
 
   const fetchData = useCallback(() => {
     setLoading(true);
     Promise.all([
       fetch('/api/achievements').then(r => r.ok ? r.json() : { data: [] }),
       fetch('/api/profile').then(r => r.ok ? r.json() : null),
-    ]).then(([achJson, profileJson]) => {
+      fetch('/api/ai/archetype').then(r => r.ok ? r.json() : null),
+    ]).then(([achJson, profileJson, archetypeJson]) => {
       setAchievements(achJson.data ?? []);
       if (profileJson?.data) {
         const xp = (profileJson.data.total_xp as number | null) ?? 0;
         setTotalXP(xp);
         setCurrentLevel(levelFromXP(xp));
-        setAvatarType((profileJson.data.avatar_type as string | null) ?? 'book');
+      }
+      if (archetypeJson?.data) {
+        setArchetype(archetypeJson.data);
+      } else {
+        setArchetype(getArchetype('slow_savorer'));
       }
       setLoading(false);
     });
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleAvatarSelect = async (key: string) => {
-    setSavingAvatar(true);
-    setAvatarType(key);
-    await fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ avatar_type: key }),
-    }).catch(() => {});
-    setSavingAvatar(false);
-  };
 
   const unlocked = achievements.filter(a => a.unlocked).length;
   const total = achievements.length;
@@ -149,30 +131,25 @@ export default function AchievementsPage() {
             </div>
           </div>
 
-          {/* ── Avatar selector ── */}
-          <div className="bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 dark:border-ink-800 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Reader Avatar</h2>
-              {savingAvatar && <Loader2 className="w-4 h-4 animate-spin text-ink-400" />}
-              {!savingAvatar && <Check className="w-4 h-4 text-emerald-500" />}
+          {/* ── Reader Archetype card ── */}
+          {archetype && (
+            <div className={`rounded-2xl border p-5 shadow-sm ${archetype.color} ${archetype.borderColor}`}>
+              <p className="text-[10px] uppercase tracking-wider font-semibold opacity-60 mb-2">Your Reader Archetype</p>
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">{archetype.emoji}</span>
+                <div>
+                  <h2 className={`font-display text-xl font-bold ${archetype.textColor}`}>{archetype.name}</h2>
+                  <p className={`text-sm mt-0.5 ${archetype.textColor} opacity-80`}>{archetype.description}</p>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-8 gap-2">
-              {AVATAR_OPTIONS.map(({ key, icon: Icon, label, color }) => (
-                <button
-                  key={key}
-                  onClick={() => void handleAvatarSelect(key)}
-                  title={label}
-                  className={`aspect-square rounded-xl flex items-center justify-center transition-all ${color} ${
-                    avatarType === key
-                      ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-ink-900 scale-110'
-                      : 'hover:scale-105 opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                </button>
-              ))}
+          )}
+          {!archetype && loading && (
+            <div className="bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 p-5 flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-brand-400" />
+              <span className="text-sm text-ink-500">Computing your archetype…</span>
             </div>
-          </div>
+          )}
 
           {/* ── Overall progress bar ── */}
           <div className="bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 dark:border-ink-800 p-4 shadow-sm">

@@ -18,24 +18,42 @@ function getAnthropic() {
 }
 
 export async function POST(req: NextRequest) {
+  return GET(req);
+}
+
+export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const refresh = req.nextUrl.searchParams.get('refresh') === 'true';
+
+  // Support mood from query param (GET) or body (POST legacy)
+  let mood: string | undefined;
+  let moodPrompt: string | undefined;
+  if (req.method === 'POST') {
+    const body = await req.json().catch(() => ({})) as { mood?: string; prompt?: string };
+    mood = body.mood;
+    moodPrompt = body.prompt;
+  } else {
+    mood = req.nextUrl.searchParams.get('mood') ?? undefined;
+    moodPrompt = req.nextUrl.searchParams.get('prompt') ?? mood;
+  }
+  if (!mood) return NextResponse.json({ error: 'Missing mood' }, { status: 400 });
+  if (!moodPrompt) moodPrompt = mood;
+
+  const cacheKey = `mood:${user.id}:${mood}`;
+  if (!refresh) {
+    const cached = await getCachedAI(supabase, user.id, 'mood', cacheKey);
+    if (cached !== null) {
+      logAIUsage(supabase, user.id, 'mood', 0, 0, true);
+      return NextResponse.json({ ...cached as object, _cached: true });
+    }
+  }
+
   const guard = await aiGuard(supabase, user.id, 'mood');
   if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
-  const { mood, prompt: moodPrompt } = await req.json() as { mood: string; prompt: string };
-  if (!mood || !moodPrompt) return NextResponse.json({ error: 'Missing mood' }, { status: 400 });
-
-  // Cache key includes mood so different moods get different cached results
-  const cacheKey = `mood:${user.id}:${mood}`;
-  const cached = await getCachedAI(supabase, user.id, 'mood', cacheKey);
-  if (cached !== null) {
-    logAIUsage(supabase, user.id, 'mood', 0, 0, true);
-    return NextResponse.json(cached);
-  }
 
   // Get their shelf to avoid duplicates
   const { data: shelf } = await supabase

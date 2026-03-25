@@ -18,22 +18,25 @@ function getAnthropic() {
   return _anthropic;
 }
 
-export async function POST() {
+export async function GET(req: import('next/server').NextRequest) {
   const supabase = createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const refresh = req.nextUrl.searchParams.get('refresh') === 'true';
+
+  const cacheKey = `personality:${user.id}`;
+  if (!refresh) {
+    const cached = await getCachedAI(supabase, user.id, 'personality', cacheKey);
+    if (cached !== null) {
+      logAIUsage(supabase, user.id, 'personality', 0, 0, true);
+      return NextResponse.json({ ...cached as object, _cached: true });
+    }
+  }
+
   const guard = await aiGuard(supabase, user.id, 'personality');
   if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
-  // Check cache before calling Claude (personality TTL = 72h)
-  const cacheKey = `personality:${user.id}`;
-  const cached = await getCachedAI(supabase, user.id, 'personality', cacheKey);
-  if (cached !== null) {
-    logAIUsage(supabase, user.id, 'personality', 0, 0, true);
-    return NextResponse.json(cached);
-  }
 
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 
