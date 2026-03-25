@@ -17,10 +17,9 @@ interface BookCoverProps {
 // Fallback 2: If both fail, show generated placeholder with gradient + initial
 
 export default function BookCover({ src, title, authors, className, width, height, fill, sizes }: BookCoverProps) {
-  const [imgSrc, setImgSrc] = useState<string | null>(src ?? null);
-  const [failed, setFailed] = useState(false);
-
   const googleFallback = `https://covers.openlibrary.org/b/title/${encodeURIComponent(title)}-M.jpg`;
+  const [imgSrc, setImgSrc] = useState<string | null>(src ?? googleFallback);
+  const [failed, setFailed] = useState(false);
 
   const handleError = () => {
     if (imgSrc && imgSrc !== googleFallback) {
