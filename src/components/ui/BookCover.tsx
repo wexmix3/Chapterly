@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Image from 'next/image';
+import Image, { type ImageProps } from 'next/image';
 
 interface BookCoverProps {
   src?: string | null;
@@ -27,6 +27,13 @@ export default function BookCover({ src, title, authors, className, width, heigh
     } else {
       setFailed(true);
     }
+  };
+
+  // Open Library returns a 1×1px GIF for missing covers — no HTTP error fires.
+  // Detect it on load and treat as failure.
+  const handleLoad: ImageProps['onLoad'] = (e) => {
+    const img = e.currentTarget as HTMLImageElement;
+    if (img.naturalWidth <= 1) handleError();
   };
 
   // Deterministic color from title (cycles through 5 brand-adjacent colors)
@@ -71,6 +78,7 @@ export default function BookCover({ src, title, authors, className, width, heigh
     src: imgSrc,
     alt: title,
     onError: handleError,
+    onLoad: handleLoad,
     className,
     unoptimized: true,
   };
