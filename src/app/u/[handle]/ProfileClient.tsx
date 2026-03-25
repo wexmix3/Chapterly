@@ -456,10 +456,10 @@ export default function ProfileClient({
 
           {/* Achievement strip */}
           {profile.books_read_count > 0 && (
-            <section className="bg-gradient-to-r from-brand-50 to-amber-50 rounded-2xl p-4 border border-brand-100">
+            <section className="bg-white rounded-2xl p-4 border border-ink-100">
               <div className="flex items-center gap-2 mb-3">
                 <Award className="w-4 h-4 text-brand-500" />
-                <h2 className="font-display text-sm font-semibold text-ink-800">Reading milestones</h2>
+                <h2 className="font-display text-sm font-semibold text-ink-800">Reading Milestones</h2>
               </div>
               <div className="flex gap-2 flex-wrap">
                 {profile.books_read_count >= 1 && <Badge label="First Book" emoji="📖" />}
@@ -502,7 +502,7 @@ export default function ProfileClient({
 
 function Badge({ label, emoji }: { label: string; emoji: string }) {
   return (
-    <div className="flex items-center gap-1.5 bg-white rounded-lg px-3 py-1.5 shadow-sm border border-paper-200 text-xs font-medium text-ink-700">
+    <div className="flex items-center gap-1.5 bg-ink-50 rounded-lg px-3 py-1.5 border border-ink-100 text-xs font-semibold text-ink-700">
       <span>{emoji}</span>
       <span>{label}</span>
     </div>
