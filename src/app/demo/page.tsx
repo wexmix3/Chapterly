@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   BookOpen, Search, BarChart3, Flame, Star,
   BookMarked, Rss, ArrowRight,
   Sparkles, RefreshCw, ChevronRight, Trophy,
   TrendingUp, Target, Users, Compass, ChevronDown,
-  Book, Lock, Check,
+  Book, Lock, Check, Loader2,
 } from 'lucide-react';
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
@@ -36,6 +36,13 @@ const MOCK_INSIGHTS = [
   { emoji: '🏆', title: '18-day streak — your personal best', body: "You've now read every single day in March. That puts you in the top 12% of Chapterly readers this month.", type: 'achievement' },
   { emoji: '💡', title: 'A 15-min session keeps your streak alive', body: "You haven't logged today yet. Based on your patterns, reading just one chapter tonight keeps your 24-book goal on track.", type: 'suggestion' },
   { emoji: '📈', title: 'Your pace is up 18% this month', body: "At your current speed you'll finish Fourth Wing by March 31 — right on schedule.", type: 'encouragement' },
+];
+
+const MOCK_INSIGHTS_2 = [
+  { emoji: '📚', title: 'Fantasy is your power genre', body: 'You finish 92% of Fantasy books you start — far above your 74% overall rate. Your brain is wired for world-building.', type: 'pattern' },
+  { emoji: '⏱️', title: 'You average 42 pages per session', body: 'That puts you comfortably in the top 25% of readers your age. At this pace you can finish 2 more books before April.', type: 'achievement' },
+  { emoji: '🎯', title: 'Sunday is your best reading day', body: 'Your longest sessions consistently happen on Sunday mornings. Protecting that window could add 3+ books to your year.', type: 'suggestion' },
+  { emoji: '🌟', title: '12 books — you\'re ahead of schedule', body: 'With 9 months left in the year you\'re on pace for 24 books — right at your goal. Keep this momentum.', type: 'encouragement' },
 ];
 
 const MOCK_DNA = [
@@ -73,6 +80,8 @@ const MOCK_ACHIEVEMENTS = [
 
 type Tab = 'overview' | 'books' | 'ai' | 'social' | 'stats' | 'achievements';
 
+type MockBook = typeof MOCK_BOOKS[number];
+
 const TYPE_CONFIG: Record<string, { border: string; bg: string }> = {
   pattern:       { border: 'border-l-blue-400',    bg: 'bg-blue-50/60' },
   achievement:   { border: 'border-l-emerald-400', bg: 'bg-emerald-50/60' },
@@ -103,13 +112,52 @@ export default function DemoPage() {
   const [personalOpen, setPersonalOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
 
+  // Toast state
+  const [demoToast, setDemoToast] = useState('');
+  useEffect(() => {
+    if (!demoToast) return;
+    const t = setTimeout(() => setDemoToast(''), 2000);
+    return () => clearTimeout(t);
+  }, [demoToast]);
+
+  // Log buttons state: bookId -> { logged, pages }
+  const [loggedBooks, setLoggedBooks] = useState<Record<string, { logged: boolean; pages: number }>>({});
+
+  // AI insights refresh state
+  const [insightsSet, setInsightsSet] = useState<1 | 2>(1);
+  const [insightsRefreshing, setInsightsRefreshing] = useState(false);
+
+  // Selected book for bottom sheet
+  const [selectedBook, setSelectedBook] = useState<MockBook | null>(null);
+
   const reading  = MOCK_BOOKS.filter(b => b.status === 'reading');
   const filtered = shelfFilter === 'all' ? MOCK_BOOKS : MOCK_BOOKS.filter(b => b.status === shelfFilter);
+
+  const activeInsights = insightsSet === 1 ? MOCK_INSIGHTS : MOCK_INSIGHTS_2;
 
   // Progress bar widths for XP level
   const xpMin = 1250; // Lv 6
   const xpMax = 1800; // Lv 7 → 8 threshold approximation
   const xpPct = Math.round(((MOCK_USER.xp - xpMin) / (xpMax - xpMin)) * 100);
+
+  const handleLog = (bookId: string, bookPages: number, currentPage: number) => {
+    const already = loggedBooks[bookId];
+    if (already?.logged) return;
+    const delta = Math.floor(Math.random() * 21) + 15; // 15-35
+    const newPage = Math.min(currentPage + delta, bookPages);
+    setLoggedBooks(prev => ({ ...prev, [bookId]: { logged: true, pages: newPage } }));
+    setTimeout(() => {
+      setLoggedBooks(prev => ({ ...prev, [bookId]: { logged: false, pages: newPage } }));
+    }, 3000);
+  };
+
+  const handleRefreshInsights = () => {
+    setInsightsRefreshing(true);
+    setTimeout(() => {
+      setInsightsSet(prev => prev === 1 ? 2 : 1);
+      setInsightsRefreshing(false);
+    }, 1500);
+  };
 
   return (
     <div className="min-h-screen bg-paper-50">
@@ -122,7 +170,7 @@ export default function DemoPage() {
         </Link>
       </div>
 
-      {/* ── Demo top nav (matches live product, non-functional) ── */}
+      {/* ── Demo top nav ── */}
       <header className="sticky top-10 z-40 h-[52px] bg-white/90 backdrop-blur-xl border-b border-ink-100 flex items-center justify-between px-6">
         {/* Logo */}
         <div className="flex items-center gap-2">
@@ -193,7 +241,8 @@ export default function DemoPage() {
           </div>
 
           {/* Discover direct */}
-          <button onClick={() => {}}
+          <button
+            onClick={() => { setTab('overview'); setDemoToast('Full browse experience in the app →'); }}
             className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg text-ink-600 hover:bg-ink-50 transition-colors">
             <Compass className="w-3.5 h-3.5" /> Discover
           </button>
@@ -240,6 +289,14 @@ export default function DemoPage() {
       <main className="pb-24 md:pb-8">
         <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6 md:pt-10">
 
+          {/* Toast */}
+          {demoToast && (
+            <div className="mb-4 px-4 py-2.5 bg-ink-900 text-white text-sm rounded-xl flex items-center justify-between animate-fade-in">
+              <span>{demoToast}</span>
+              <Link href="/login" className="ml-3 text-brand-300 font-semibold hover:text-brand-200 text-xs whitespace-nowrap">Sign up free</Link>
+            </div>
+          )}
+
           {/* ══ OVERVIEW ══ */}
           {tab === 'overview' && (
             <div className="space-y-8">
@@ -254,24 +311,38 @@ export default function DemoPage() {
               <section>
                 <h2 className="font-display text-lg font-semibold text-ink-800 mb-3">Continue Reading</h2>
                 <div className="space-y-3">
-                  {reading.map(b => (
-                    <div key={b.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-ink-100 hover:border-brand-200 transition-colors cursor-default">
-                      <div className="w-12 h-16 bg-paper-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
-                        <img src={b.cover} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-display font-semibold text-ink-900 truncate">{b.title}</p>
-                        <p className="text-xs text-ink-400 truncate">{b.author}</p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-ink-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-brand-400 rounded-full transition-all" style={{ width: `${Math.round((b.page / b.pages) * 100)}%` }} />
-                          </div>
-                          <span className="text-[10px] text-ink-400 flex-shrink-0">p. {b.page} / {b.pages}</span>
+                  {reading.map(b => {
+                    const logState = loggedBooks[b.id];
+                    const displayPage = logState?.pages ?? b.page;
+                    const displayPct = Math.round((displayPage / b.pages) * 100);
+                    return (
+                      <div key={b.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-ink-100 hover:border-brand-200 transition-colors">
+                        <div className="w-12 h-16 bg-paper-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
+                          <img src={b.cover} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-display font-semibold text-ink-900 truncate">{b.title}</p>
+                          <p className="text-xs text-ink-400 truncate">{b.author}</p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-ink-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand-400 rounded-full transition-all duration-500" style={{ width: `${displayPct}%` }} />
+                            </div>
+                            <span className="text-[10px] text-ink-400 flex-shrink-0">p. {displayPage} / {b.pages}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleLog(b.id, b.pages, displayPage)}
+                          className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                            logState?.logged
+                              ? 'bg-brand-100 text-brand-700'
+                              : 'bg-brand-50 text-brand-600 hover:bg-brand-100 cursor-pointer'
+                          }`}
+                        >
+                          {logState?.logged ? 'Logged ✓' : 'Log'}
+                        </button>
                       </div>
-                      <div className="flex-shrink-0 px-3 py-2 bg-brand-50 text-brand-600 rounded-xl text-xs font-semibold">Log</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
 
@@ -378,7 +449,11 @@ export default function DemoPage() {
 
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                 {filtered.map(b => (
-                  <div key={b.id} className="group cursor-default">
+                  <button
+                    key={b.id}
+                    className="group text-left cursor-pointer"
+                    onClick={() => setSelectedBook(b)}
+                  >
                     <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm relative">
                       <img
                         src={b.cover}
@@ -402,7 +477,7 @@ export default function DemoPage() {
                     </div>
                     <p className="text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight">{b.title}</p>
                     <p className="text-[10px] text-ink-400 truncate mt-0.5">{b.author}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -428,8 +503,12 @@ export default function DemoPage() {
                         <p className="text-[10px] text-white/60 mt-0.5 tracking-wide">Powered by Claude · Updated today</p>
                       </div>
                     </div>
-                    <button className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
-                      <RefreshCw className="w-3.5 h-3.5 text-white" />
+                    <button
+                      onClick={handleRefreshInsights}
+                      disabled={insightsRefreshing}
+                      className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 text-white ${insightsRefreshing ? 'animate-spin' : ''}`} />
                     </button>
                   </div>
                 </div>
@@ -449,20 +528,30 @@ export default function DemoPage() {
                   </div>
 
                   <div className="p-4 pt-3 space-y-2.5">
-                    {aiTab === 'insights' && MOCK_INSIGHTS.map((insight, i) => {
-                      const cfg = TYPE_CONFIG[insight.type] ?? TYPE_CONFIG.encouragement;
-                      return (
-                        <div key={i} className={`rounded-xl p-4 border-l-[3px] ${cfg.border} ${cfg.bg} border border-ink-100`}>
-                          <div className="flex items-start gap-3">
-                            <span className="text-2xl leading-none mt-0.5 flex-shrink-0">{insight.emoji}</span>
-                            <div>
-                              <p className="font-semibold text-sm text-ink-900 leading-snug">{insight.title}</p>
-                              <p className="text-xs text-ink-500 leading-relaxed mt-1">{insight.body}</p>
-                            </div>
-                          </div>
+                    {aiTab === 'insights' && (
+                      insightsRefreshing ? (
+                        <div className="space-y-2.5">
+                          {[1,2,3].map(i => (
+                            <div key={i} className="h-20 bg-ink-100 rounded-xl animate-pulse" />
+                          ))}
                         </div>
-                      );
-                    })}
+                      ) : (
+                        activeInsights.map((insight, i) => {
+                          const cfg = TYPE_CONFIG[insight.type] ?? TYPE_CONFIG.encouragement;
+                          return (
+                            <div key={i} className={`rounded-xl p-4 border-l-[3px] ${cfg.border} ${cfg.bg} border border-ink-100`}>
+                              <div className="flex items-start gap-3">
+                                <span className="text-2xl leading-none mt-0.5 flex-shrink-0">{insight.emoji}</span>
+                                <div>
+                                  <p className="font-semibold text-sm text-ink-900 leading-snug">{insight.title}</p>
+                                  <p className="text-xs text-ink-500 leading-relaxed mt-1">{insight.body}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )
+                    )}
 
                     {aiTab === 'dna' && (
                       <div className="space-y-4">
@@ -699,6 +788,52 @@ export default function DemoPage() {
           )}
         </div>
       </main>
+
+      {/* ── Book bottom sheet ── */}
+      {selectedBook && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedBook(null)} />
+          <div className="relative z-10 w-full max-w-md bg-white rounded-t-2xl shadow-2xl p-6">
+            <div className="flex gap-5 mb-5">
+              <div className="w-20 flex-shrink-0">
+                <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-md">
+                  <img
+                    src={selectedBook.cover}
+                    alt={selectedBook.title}
+                    className="w-full h-full object-cover"
+                    onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
+                  />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display text-lg font-bold text-ink-900 leading-tight mb-1">{selectedBook.title}</h3>
+                <p className="text-sm text-ink-500 mb-2">{selectedBook.author}</p>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  selectedBook.status === 'reading' ? 'bg-brand-100 text-brand-700' :
+                  selectedBook.status === 'read' ? 'bg-emerald-100 text-emerald-700' :
+                  'bg-ink-100 text-ink-600'
+                }`}>
+                  {selectedBook.status === 'reading' ? 'Currently Reading' :
+                   selectedBook.status === 'read' ? 'Read' : 'Want to Read'}
+                </span>
+                {selectedBook.rating && (
+                  <div className="flex items-center gap-0.5 mt-2">
+                    {Array.from({ length: selectedBook.rating }).map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Link
+              href="/login"
+              className="flex items-center justify-center gap-2 w-full py-3 bg-brand-500 text-white rounded-xl font-semibold text-sm hover:bg-brand-600 transition-colors"
+            >
+              Track this in Chapterly <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -786,8 +921,8 @@ function MonthChart() {
   );
 }
 
-// ── Needed for Book icon in achievements tab ───────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// Suppress unused import warnings for icons used in type position
 const _Book = Book;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _Target = Target;
+const _Loader2 = Loader2;
+void _Book; void _Target; void _Loader2;

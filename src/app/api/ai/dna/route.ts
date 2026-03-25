@@ -31,23 +31,26 @@ interface DNAResult {
   summary: string;
 }
 
-export async function GET() {
+export async function GET(req: import('next/server').NextRequest) {
   const supabase = createServerSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Apply rate limiting
+  const refresh = req.nextUrl.searchParams.get('refresh') === 'true';
+
+  const cacheKey = `dna:${user.id}`;
+  if (!refresh) {
+    const cached = await getCachedAI(supabase, user.id, 'dna', cacheKey);
+    if (cached !== null) {
+      logAIUsage(supabase, user.id, 'dna', 0, 0, true);
+      return NextResponse.json({ ...cached as object, _cached: true });
+    }
+  }
+
+  // Apply rate limiting (only when actually calling Claude)
   const guard = await aiGuard(supabase, user.id, 'dna');
   if (!guard.allowed) return NextResponse.json({ error: guard.error }, { status: guard.status });
-
-  // Check cache before calling Claude (dna TTL = 48h)
-  const cacheKey = `dna:${user.id}`;
-  const cached = await getCachedAI(supabase, user.id, 'dna', cacheKey);
-  if (cached !== null) {
-    logAIUsage(supabase, user.id, 'dna', 0, 0, true);
-    return NextResponse.json(cached);
-  }
 
   // Fetch all read/reading books with ratings and subjects
   const { data: shelf } = await supabase

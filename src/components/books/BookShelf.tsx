@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { BookOpen, Star, Loader2, X, Check, AlertCircle, Pencil, Search, Library, Bookmark, CheckCircle, Plus } from 'lucide-react';
+import { BookOpen, Star, Loader2, X, Check, AlertCircle, Pencil, Search, Library, Bookmark, CheckCircle, Plus, XCircle } from 'lucide-react';
+import BookCover from '@/components/ui/BookCover';
 import { BookCardSkeleton } from '@/components/ui/Skeleton';
 import { useShelf } from '@/hooks';
 import type { ShelfStatus, UserBook, BookSearchResult } from '@/types';
@@ -12,12 +13,14 @@ const TABS: { value: ShelfStatus | 'all'; label: string; icon: React.ReactNode }
   { value: 'reading', label: 'Reading', icon: <BookOpen className="w-3.5 h-3.5" /> },
   { value: 'to_read', label: 'Want to Read', icon: <Bookmark className="w-3.5 h-3.5" /> },
   { value: 'read', label: 'Read', icon: <CheckCircle className="w-3.5 h-3.5" /> },
+  { value: 'dnf', label: 'Did Not Finish', icon: <XCircle className="w-3.5 h-3.5" /> },
 ];
 
 const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
   { value: 'to_read', label: 'Want to Read' },
   { value: 'reading', label: 'Currently Reading' },
   { value: 'read', label: 'Read' },
+  { value: 'dnf', label: 'Did Not Finish' },
 ];
 
 export default function BookShelf() {
@@ -258,15 +261,14 @@ function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void
     <div className="group relative block text-left w-full">
       {/* Cover — links to book detail */}
       <Link href={`/book/${userBook.id}`} className="block">
-        <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all">
-          {book?.cover_url ? (
-            <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-              <BookOpen className="w-6 h-6 text-ink-300 mb-1" />
-              <span className="text-[9px] text-ink-400 leading-tight line-clamp-3">{book?.title}</span>
-            </div>
-          )}
+        <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all relative">
+          <BookCover
+            src={book?.cover_url}
+            title={book?.title ?? ''}
+            authors={book?.authors}
+            fill
+            className="object-cover"
+          />
 
           {/* Progress overlay for reading */}
           {userBook.status === 'reading' && progress !== null && (
@@ -327,6 +329,9 @@ function BookEditModal({
   const [finishedAt, setFinishedAt] = useState(
     userBook.finished_at ? userBook.finished_at.slice(0, 10) : '',
   );
+  const [format, setFormat] = useState<'physical' | 'ebook' | 'audiobook'>(
+    ((userBook as unknown as Record<string, unknown>).format as 'physical' | 'ebook' | 'audiobook') ?? 'ebook'
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -341,6 +346,7 @@ function BookEditModal({
         review_text: reviewText.trim() || null,
         started_at: startedAt ? new Date(startedAt).toISOString() : null,
         finished_at: finishedAt ? new Date(finishedAt).toISOString() : null,
+        format,
       };
       const res = await fetch(`/api/user-books/${userBook.id}`, {
         method: 'PATCH',
@@ -374,14 +380,14 @@ function BookEditModal({
         <div className="flex items-start gap-4 p-5 border-b border-paper-100">
           {/* Cover thumbnail */}
           <div className="w-12 flex-shrink-0">
-            <div className="aspect-[2/3] bg-paper-200 rounded-lg overflow-hidden shadow-sm">
-              {book?.cover_url ? (
-                <img src={book.cover_url} alt={book?.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-ink-300" />
-                </div>
-              )}
+            <div className="aspect-[2/3] bg-paper-200 rounded-lg overflow-hidden shadow-sm relative">
+              <BookCover
+                src={book?.cover_url}
+                title={book?.title ?? ''}
+                authors={book?.authors}
+                fill
+                className="object-cover"
+              />
             </div>
           </div>
           <div className="flex-1 min-w-0">
@@ -519,6 +525,28 @@ function BookEditModal({
             />
           </div>
 
+          {/* Format */}
+          <div>
+            <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2 block">
+              Format
+            </label>
+            <div className="flex gap-2">
+              {(['physical', 'ebook', 'audiobook'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFormat(f)}
+                  className={`flex-1 px-2 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    format === f
+                      ? 'bg-brand-500 text-white border-brand-500'
+                      : 'bg-white border-ink-200 text-ink-600 hover:border-brand-300'
+                  }`}
+                >
+                  {f === 'physical' ? 'Physical' : f === 'ebook' ? 'E-book' : 'Audiobook'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -636,14 +664,14 @@ function InlineBookSearch({ query, setQuery, results, loading, addingId, addedId
             return (
               <div key={key} className="flex items-center gap-3 py-2 border-b border-ink-50 last:border-0">
                 {/* Cover thumbnail */}
-                <div className="w-8 h-12 bg-paper-200 rounded-md overflow-hidden flex-shrink-0">
-                  {result.cover_url ? (
-                    <img src={result.cover_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="w-3 h-3 text-ink-300" />
-                    </div>
-                  )}
+                <div className="w-8 h-12 bg-paper-200 rounded-md overflow-hidden flex-shrink-0 relative">
+                  <BookCover
+                    src={result.cover_url}
+                    title={result.title}
+                    authors={result.authors}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
                 {/* Title + author */}
                 <div className="flex-1 min-w-0">

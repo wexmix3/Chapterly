@@ -135,12 +135,15 @@ export default function AIPageClient() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsLoaded, setInsightsLoaded] = useState(false);
   const [insightsError, setInsightsError] = useState('');
+  const [insightsCached, setInsightsCached] = useState(false);
+  const [insightsLoadedAt, setInsightsLoadedAt] = useState<Date | null>(null);
 
   // Personality
   const [personality, setPersonality] = useState<Personality | null>(null);
   const [personalityLoading, setPersonalityLoading] = useState(false);
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
   const [personalityError, setPersonalityError] = useState('');
+  const [personalityCached, setPersonalityCached] = useState(false);
 
   // Mood
   const [selectedMood, setSelectedMood] = useState<typeof MOODS[number] | null>(null);
@@ -169,10 +172,11 @@ export default function AIPageClient() {
     if (activeTab === 'personality' && !personalityLoaded) loadPersonality();
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadRecs = async () => {
+  const loadRecs = async (refresh = false) => {
     setRecsLoading(true); setRecsError('');
     try {
-      const res = await fetch('/api/ai/recommend', { method: 'POST' });
+      const url = refresh ? '/api/ai/recommend?refresh=true' : '/api/ai/recommend';
+      const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setRecs(data.recommendations ?? []);
@@ -185,13 +189,16 @@ export default function AIPageClient() {
     }
   };
 
-  const loadInsights = async () => {
+  const loadInsights = async (refresh = false) => {
     setInsightsLoading(true); setInsightsError('');
     try {
-      const res = await fetch('/api/ai/insights', { method: 'POST' });
+      const url = refresh ? '/api/ai/insights?refresh=true' : '/api/ai/insights';
+      const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setInsights(data.insights ?? []);
+      setInsightsCached(!!data._cached);
+      setInsightsLoadedAt(new Date());
       setInsightsLoaded(true);
     } catch (e) {
       setInsightsError(e instanceof Error ? e.message : 'Failed to load');
@@ -200,13 +207,15 @@ export default function AIPageClient() {
     }
   };
 
-  const loadPersonality = async () => {
+  const loadPersonality = async (refresh = false) => {
     setPersonalityLoading(true); setPersonalityError('');
     try {
-      const res = await fetch('/api/ai/personality', { method: 'POST' });
+      const url = refresh ? '/api/ai/personality?refresh=true' : '/api/ai/personality';
+      const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setPersonality(data);
+      setPersonalityCached(!!data._cached);
       setPersonalityLoaded(true);
     } catch (e) {
       setPersonalityError(e instanceof Error ? e.message : 'Failed to load');
@@ -218,11 +227,7 @@ export default function AIPageClient() {
   const loadMoodRecs = async (mood: typeof MOODS[number]) => {
     setSelectedMood(mood); setMoodLoading(true); setMoodError(''); setMoodRecs([]);
     try {
-      const res = await fetch('/api/ai/mood', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mood: mood.label, prompt: mood.prompt }),
-      });
+      const res = await fetch(`/api/ai/mood?mood=${encodeURIComponent(mood.label)}&prompt=${encodeURIComponent(mood.prompt)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setMoodRecs(data.recommendations ?? []);
@@ -329,8 +334,9 @@ export default function AIPageClient() {
                   <p className="text-xs text-ink-400">Claude analyzed your shelf to find these</p>
                 </div>
                 {recsLoaded && (
-                  <button onClick={() => { setRecsLoaded(false); loadRecs(); }}
+                  <button onClick={() => loadRecs(true)}
                     disabled={recsLoading}
+                    title="Refresh recommendations"
                     className="w-8 h-8 rounded-xl bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
                     <RefreshCw className={`w-3.5 h-3.5 text-ink-500 ${recsLoading ? 'animate-spin' : ''}`} />
                   </button>
@@ -369,12 +375,18 @@ export default function AIPageClient() {
                     <h2 className="font-display text-lg font-semibold text-ink-800">Reading Insights</h2>
                     <p className="text-xs text-ink-400">Patterns and coaching from your last 30 days</p>
                   </div>
-                  {insightsLoaded && (
-                    <button onClick={() => { setInsightsLoaded(false); loadInsights(); }}
-                      disabled={insightsLoading}
-                      className="w-8 h-8 rounded-xl bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
-                      <RefreshCw className={`w-3.5 h-3.5 text-ink-500 ${insightsLoading ? 'animate-spin' : ''}`} />
-                    </button>
+                    {insightsLoaded && (
+                    <div className="flex items-center gap-2">
+                      {insightsCached && insightsLoadedAt && (
+                        <span className="text-[10px] text-ink-400">Updated just now</span>
+                      )}
+                      <button onClick={() => loadInsights(true)}
+                        disabled={insightsLoading}
+                        title="Refresh insights"
+                        className="w-8 h-8 rounded-xl bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
+                        <RefreshCw className={`w-3.5 h-3.5 text-ink-500 ${insightsLoading ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -461,11 +473,15 @@ export default function AIPageClient() {
                   <p className="text-xs text-ink-400">Claude&apos;s take on what kind of reader you are</p>
                 </div>
                 {personalityLoaded && (
-                  <button onClick={() => { setPersonalityLoaded(false); loadPersonality(); }}
-                    disabled={personalityLoading}
-                    className="w-8 h-8 rounded-xl bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
-                    <RefreshCw className={`w-3.5 h-3.5 text-ink-500 ${personalityLoading ? 'animate-spin' : ''}`} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {personalityCached && <span className="text-[10px] text-ink-400">From cache</span>}
+                    <button onClick={() => loadPersonality(true)}
+                      disabled={personalityLoading}
+                      title="Refresh personality"
+                      className="w-8 h-8 rounded-xl bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
+                      <RefreshCw className={`w-3.5 h-3.5 text-ink-500 ${personalityLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
                 )}
               </div>
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, BookOpen, Plus, Check, Loader2, Camera, AlertCircle } from 'lucide-react';
+import BookCover from '@/components/ui/BookCover';
 import { useBookSearch, useShelf } from '@/hooks';
 import type { BookSearchResult, ShelfStatus } from '@/types';
 import dynamic from 'next/dynamic';
@@ -13,6 +14,7 @@ const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
   { value: 'to_read', label: 'Want to Read' },
   { value: 'reading', label: 'Reading' },
   { value: 'read', label: 'Read' },
+  { value: 'dnf', label: 'Did Not Finish' },
 ];
 
 export default function BookSearch() {
@@ -101,14 +103,14 @@ export default function BookSearch() {
                   if (result.isbn13) q.set('isbn', result.isbn13);
                   const previewHref = `/book/preview?${q}`;
                   return (
-                    <a href={previewHref} className="w-10 h-[60px] bg-paper-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm hover:opacity-90 transition-opacity">
-                      {result.cover_url ? (
-                        <img src={result.cover_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <BookOpen className="w-4 h-4 text-ink-300" />
-                        </div>
-                      )}
+                    <a href={previewHref} className="w-10 h-[60px] bg-paper-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm hover:opacity-90 transition-opacity relative">
+                      <BookCover
+                        src={result.cover_url}
+                        title={result.title}
+                        authors={result.authors}
+                        fill
+                        className="object-cover"
+                      />
                     </a>
                   );
                 })()}
