@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/people/suggestions
  * Returns "readers like you" suggestions: users who have read books
  * overlapping with the current user's shelf, excluding already-followed.
+ * Falls back to newest public users when overlaps are sparse.
  */
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
@@ -13,14 +14,6 @@ export async function GET() {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  // Get current user's book IDs
-  const { data: myBooks } = await supabase
-    .from('user_books')
-    .select('book_id')
-    .eq('user_id', user.id);
-
-  const myBookIds = (myBooks ?? []).map(b => b.book_id);
 
   // Get who the user already follows
   const { data: following } = await supabase
@@ -33,16 +26,22 @@ export async function GET() {
 
   let suggestions: Array<{ id: string; handle: string; display_name: string; avatar_url: string | null; overlap: number }> = [];
 
+  // Phase 1: book-overlap suggestions
+  const { data: myBooks } = await supabase
+    .from('user_books')
+    .select('book_id')
+    .eq('user_id', user.id);
+
+  const myBookIds = (myBooks ?? []).map(b => b.book_id);
+
   if (myBookIds.length >= 2) {
-    // Find users who read overlapping books
     const { data: overlappingReaders } = await supabase
       .from('user_books')
       .select('user_id, book_id')
-      .in('book_id', myBookIds.slice(0, 50)) // cap at 50 books for perf
+      .in('book_id', myBookIds.slice(0, 50))
       .neq('user_id', user.id)
       .eq('visibility', 'public');
 
-    // Count overlap per user
     const overlapMap: Record<string, number> = {};
     for (const row of overlappingReaders ?? []) {
       if (!followingIds.has(row.user_id)) {
@@ -67,33 +66,23 @@ export async function GET() {
     }
   }
 
-  // Fallback: most-followed public users (if suggestions are sparse)
+  // Phase 2: fallback — newest public users not yet followed
   if (suggestions.length < 5) {
-    const { data: popular } = await supabase
-      .from('social_follow')
-      .select('followee_id')
-      .not('followee_id', 'in', `(${[...followingIds].join(',') || 'null'})`)
-      .limit(100);
+    const existingIds = new Set(suggestions.map(s => s.id));
+    const excludeIds = [...followingIds].filter(id => id !== user.id);
+    // Build the exclude list: following + already in suggestions
+    const allExclude = [...new Set([...excludeIds, ...existingIds, user.id])];
 
-    const counts: Record<string, number> = {};
-    for (const row of popular ?? []) {
-      counts[row.followee_id] = (counts[row.followee_id] ?? 0) + 1;
-    }
+    const { data: profiles } = await supabase
+      .from('users')
+      .select('id, handle, display_name, avatar_url')
+      .eq('is_public', true)
+      .neq('id', user.id)
+      .order('id', { ascending: false })
+      .limit(20);
 
-    const topIds = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([id]) => id)
-      .filter(id => !suggestions.some(s => s.id === id));
-
-    if (topIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('users')
-        .select('id, handle, display_name, avatar_url')
-        .in('id', topIds)
-        .eq('is_public', true);
-
-      for (const p of profiles ?? []) {
+    for (const p of profiles ?? []) {
+      if (!allExclude.includes(p.id) && !existingIds.has(p.id)) {
         suggestions.push({ ...p, overlap: 0 });
       }
     }

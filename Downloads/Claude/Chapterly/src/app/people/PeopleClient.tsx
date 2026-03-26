@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
-import { Search, UserPlus, UserCheck, Loader2, Users, BookOpen, AlertCircle } from 'lucide-react';
+import { Search, UserPlus, UserCheck, Loader2, Users, BookOpen, AlertCircle, WifiOff } from 'lucide-react';
 
 interface UserResult {
   id: string;
@@ -83,6 +83,7 @@ export default function PeopleClient() {
   const [results, setResults] = useState<UserResult[]>([]);
   const [suggestions, setSuggestions] = useState<UserResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [followLoading, setFollowLoading] = useState<string | null>(null);
   const [followErrors, setFollowErrors] = useState<Record<string, string>>({});
   const [following, setFollowing] = useState<Set<string>>(new Set());
@@ -96,18 +97,26 @@ export default function PeopleClient() {
 
   // Debounced search
   useEffect(() => {
-    if (query.length < 2) { setResults([]); return; }
+    if (query.length < 2) { setResults([]); setSearchError(null); return; }
     const t = setTimeout(async () => {
       setSearching(true);
+      setSearchError(null);
       try {
         const res = await fetch(`/api/users?q=${encodeURIComponent(query)}`);
-        const json = await res.json();
-        setResults(json.data ?? []);
-        // Seed following state from results
-        const followingFromResults = (json.data ?? [])
-          .filter((u: UserResult) => u.is_following)
-          .map((u: UserResult) => u.id);
-        setFollowing(prev => new Set([...prev, ...followingFromResults]));
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setResults(json.data ?? []);
+          const followingFromResults = (json.data ?? [])
+            .filter((u: UserResult) => u.is_following)
+            .map((u: UserResult) => u.id);
+          setFollowing(prev => new Set([...prev, ...followingFromResults]));
+        } else {
+          setResults([]);
+          setSearchError(res.status === 401 ? 'Sign in to search for readers.' : 'Search failed. Please try again.');
+        }
+      } catch {
+        setResults([]);
+        setSearchError('Network error. Check your connection and try again.');
       } finally {
         setSearching(false);
       }
@@ -179,7 +188,12 @@ export default function PeopleClient() {
           {query.length >= 2 && (
             <section>
               <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Search Results</p>
-              {enrichedResults.length === 0 && !searching ? (
+              {searchError ? (
+                <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-700">
+                  <WifiOff className="w-4 h-4 flex-shrink-0" />
+                  {searchError}
+                </div>
+              ) : enrichedResults.length === 0 && !searching ? (
                 <p className="text-sm text-ink-400 py-4 text-center">No readers found for &ldquo;{query}&rdquo;</p>
               ) : (
                 <div className="space-y-2">
