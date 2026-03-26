@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
 import QuickLog from '@/components/sessions/QuickLog';
 import ReadingTimer from '@/components/sessions/ReadingTimer';
@@ -268,6 +267,11 @@ function BookDetailContent({ id }: { id: string }) {
   const [moodTags, setMoodTags] = useState<string[]>([]);
   const [showRecommend, setShowRecommend] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationEvent | null>(null);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [startedAt, setStartedAt] = useState('');
+  const [finishedAt, setFinishedAt] = useState('');
+  const [datesSaving, setDatesSaving] = useState(false);
+  const [datesSaved, setDatesSaved] = useState(false);
 
   const fetchUserBook = async () => {
     const res = await fetch(`/api/user-books/${id}`);
@@ -276,6 +280,24 @@ function BookDetailContent({ id }: { id: string }) {
     setUserBook(json.data);
     setRating(json.data.rating ?? 0);
     setReviewText(json.data.review_text ?? '');
+    setStartedAt(json.data.started_at ? json.data.started_at.slice(0, 10) : '');
+    setFinishedAt(json.data.finished_at ? json.data.finished_at.slice(0, 10) : '');
+  };
+
+  const saveDates = async () => {
+    if (!userBook) return;
+    setDatesSaving(true);
+    await fetch(`/api/user-books/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        started_at: startedAt ? new Date(startedAt + 'T12:00:00').toISOString() : null,
+        finished_at: finishedAt ? new Date(finishedAt + 'T12:00:00').toISOString() : null,
+      }),
+    });
+    setDatesSaving(false);
+    setDatesSaved(true);
+    setTimeout(() => setDatesSaved(false), 2000);
   };
 
   useEffect(() => {
@@ -365,10 +387,10 @@ function BookDetailContent({ id }: { id: string }) {
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
 
           {/* Back */}
-          <Link href="/dashboard?tab=reading"
+          <button onClick={() => router.back()}
             className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-800 mb-6 transition-colors">
-            <ArrowLeft className="w-4 h-4" /> My Books
-          </Link>
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
 
           {/* ── Hero ─────────────────────────────────── */}
           <div className="flex gap-5 mb-8">
@@ -581,11 +603,51 @@ function BookDetailContent({ id }: { id: string }) {
             </div>
           </section>
 
+          {/* ── Reading Dates ────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-ink-100 p-5 mb-5">
+            <h2 className="font-display font-semibold text-ink-800 text-sm mb-4">Reading Dates</h2>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-1.5 block">Started</label>
+                <input
+                  type="date"
+                  value={startedAt}
+                  onChange={e => setStartedAt(e.target.value)}
+                  className="w-full px-3 py-2 border border-ink-200 rounded-xl text-sm text-ink-800 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-1.5 block">Finished</label>
+                <input
+                  type="date"
+                  value={finishedAt}
+                  onChange={e => setFinishedAt(e.target.value)}
+                  className="w-full px-3 py-2 border border-ink-200 rounded-xl text-sm text-ink-800 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
+            </div>
+            <button onClick={saveDates} disabled={datesSaving}
+              className="flex items-center gap-2 px-4 py-2 bg-ink-900 hover:bg-ink-800 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors">
+              {datesSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : datesSaved ? <CheckCircle className="w-3.5 h-3.5" /> : null}
+              {datesSaved ? 'Saved!' : 'Save dates'}
+            </button>
+          </section>
+
           {/* ── About ────────────────────────────────── */}
           {book?.description && (
             <section className="bg-white rounded-2xl border border-ink-100 p-5 mb-5">
               <h2 className="font-display font-semibold text-ink-800 text-sm mb-3">About</h2>
-              <p className="text-sm text-ink-600 leading-relaxed whitespace-pre-line line-clamp-6">{book.description}</p>
+              <p className={`text-sm text-ink-600 leading-relaxed whitespace-pre-line ${showFullDescription ? '' : 'line-clamp-6'}`}>
+                {book.description}
+              </p>
+              {book.description.length > 300 && (
+                <button
+                  onClick={() => setShowFullDescription(v => !v)}
+                  className="mt-2 text-xs text-brand-600 hover:text-brand-700 font-medium transition-colors"
+                >
+                  {showFullDescription ? 'Show less' : 'Read more'}
+                </button>
+              )}
             </section>
           )}
 
