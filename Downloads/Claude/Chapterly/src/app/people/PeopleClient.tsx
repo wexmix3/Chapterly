@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
-import { Search, UserPlus, UserCheck, Loader2, Users, BookOpen } from 'lucide-react';
+import { Search, UserPlus, UserCheck, Loader2, Users, BookOpen, AlertCircle } from 'lucide-react';
 
 interface UserResult {
   id: string;
@@ -18,13 +18,16 @@ function UserCard({
   user,
   onFollowToggle,
   followLoading,
+  followError,
   onNavigate,
 }: {
   user: UserResult;
   onFollowToggle: (id: string, currently: boolean) => void;
   followLoading: string | null;
+  followError: string | null;
   onNavigate: () => void;
 }) {
+  const hasError = followError !== null;
   return (
     <div className="bg-white rounded-xl p-4 flex items-center gap-3 shadow-sm border border-paper-200">
       <button onClick={onNavigate} className="flex items-center gap-3 flex-1 min-w-0 text-left">
@@ -42,19 +45,28 @@ function UserCard({
               {user.overlap} book{(user.overlap ?? 0) !== 1 ? 's' : ''} in common
             </p>
           )}
+          {hasError && (
+            <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1">
+              <AlertCircle className="w-2.5 h-2.5" /> {followError}
+            </p>
+          )}
         </div>
       </button>
       <button
         onClick={() => onFollowToggle(user.id, !!user.is_following)}
         disabled={followLoading === user.id}
         className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-          user.is_following
+          hasError
+            ? 'bg-red-50 text-red-600 border border-red-100'
+            : user.is_following
             ? 'bg-paper-100 text-ink-600 hover:bg-red-50 hover:text-red-600 border border-paper-200'
             : 'bg-brand-500 text-white hover:bg-brand-600 shadow-sm'
         }`}
       >
         {followLoading === user.id ? (
           <Loader2 className="w-3 h-3 animate-spin" />
+        ) : hasError ? (
+          <><AlertCircle className="w-3 h-3" /> Retry</>
         ) : user.is_following ? (
           <><UserCheck className="w-3 h-3" /> Following</>
         ) : (
@@ -72,6 +84,7 @@ export default function PeopleClient() {
   const [suggestions, setSuggestions] = useState<UserResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [followLoading, setFollowLoading] = useState<string | null>(null);
+  const [followErrors, setFollowErrors] = useState<Record<string, string>>({});
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
   // Load follow suggestions on mount
@@ -104,6 +117,7 @@ export default function PeopleClient() {
 
   const handleFollowToggle = useCallback(async (userId: string, currentlyFollowing: boolean) => {
     setFollowLoading(userId);
+    setFollowErrors(prev => { const n = { ...prev }; delete n[userId]; return n; });
     try {
       const method = currentlyFollowing ? 'DELETE' : 'POST';
       const res = await fetch('/api/social', {
@@ -111,18 +125,25 @@ export default function PeopleClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ followee_id: userId }),
       });
-      if (res.ok) {
+      if (res.ok || res.status === 409) {
         setFollowing(prev => {
           const next = new Set(prev);
           currentlyFollowing ? next.delete(userId) : next.add(userId);
           return next;
         });
-        // Update both lists
         const patchFollowing = (list: UserResult[]) =>
           list.map(u => u.id === userId ? { ...u, is_following: !currentlyFollowing } : u);
         setResults(patchFollowing);
         setSuggestions(patchFollowing);
+      } else {
+        const json = await res.json().catch(() => ({}));
+        const msg = res.status === 401
+          ? 'Sign in to follow readers'
+          : (json.error ?? 'Failed to follow. Try again.');
+        setFollowErrors(prev => ({ ...prev, [userId]: msg }));
       }
+    } catch {
+      setFollowErrors(prev => ({ ...prev, [userId]: 'Network error. Try again.' }));
     } finally {
       setFollowLoading(null);
     }
@@ -168,6 +189,7 @@ export default function PeopleClient() {
                       user={u}
                       onFollowToggle={handleFollowToggle}
                       followLoading={followLoading}
+                      followError={followErrors[u.id] ?? null}
                       onNavigate={() => router.push(`/u/${u.handle}`)}
                     />
                   ))}
@@ -196,6 +218,7 @@ export default function PeopleClient() {
                       user={u}
                       onFollowToggle={handleFollowToggle}
                       followLoading={followLoading}
+                      followError={followErrors[u.id] ?? null}
                       onNavigate={() => router.push(`/u/${u.handle}`)}
                     />
                   ))}

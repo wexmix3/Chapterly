@@ -241,22 +241,33 @@ export function useBookSearch() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BookSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (query.length < 2) { setResults([]); return; }
+    if (query.length < 2) { setResults([]); setError(null); return; }
     const timer = setTimeout(async () => {
       setLoading(true);
-      const res = await fetch(`/api/books/search?q=${encodeURIComponent(query)}`);
-      if (res.ok) {
-        const json = await res.json();
-        setResults(json.data ?? []);
+      setError(null);
+      try {
+        const res = await fetch(`/api/books/search?q=${encodeURIComponent(query)}`);
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setResults(json.data ?? []);
+        } else {
+          setResults([]);
+          setError(json.error ?? 'Search failed. Please try again.');
+        }
+      } catch {
+        setResults([]);
+        setError('Network error. Check your connection and try again.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 500);
+    }, 400);
     return () => clearTimeout(timer);
   }, [query]);
 
-  return { query, setQuery, results, loading };
+  return { query, setQuery, results, loading, error };
 }
 
 // ─── useNotifications ────────────────────────────────────────

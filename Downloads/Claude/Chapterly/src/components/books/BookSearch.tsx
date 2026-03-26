@@ -18,7 +18,7 @@ const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
 ];
 
 export default function BookSearch() {
-  const { query, setQuery, results, loading } = useBookSearch();
+  const { query, setQuery, results, loading, error: searchError } = useBookSearch();
   const { addBook } = useShelf();
   const router = useRouter();
   const [expanding, setExpanding] = useState<string | null>(null);
@@ -58,7 +58,6 @@ export default function BookSearch() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by title, author, or ISBN…"
           className="w-full pl-11 pr-12 py-3 bg-white border border-ink-200 rounded-2xl text-sm placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
-          autoFocus
         />
         {loading
           ? <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 animate-spin" />
@@ -72,7 +71,14 @@ export default function BookSearch() {
         }
       </div>
 
-      {results.length === 0 && query.length >= 2 && !loading && (
+      {searchError && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          {searchError}
+        </div>
+      )}
+
+      {!searchError && results.length === 0 && query.length >= 2 && !loading && (
         <div className="text-center py-12 text-ink-400">
           <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
           <p className="text-sm">No books found for &quot;{query}&quot;</p>
