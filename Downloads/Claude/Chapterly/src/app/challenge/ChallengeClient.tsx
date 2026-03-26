@@ -168,7 +168,11 @@ export default function ChallengeClient() {
                     <p className="font-display text-lg font-bold text-ink-900">
                       {current} of {goal} books
                     </p>
-                    <p className="text-sm text-ink-500">{goal - current} books to go</p>
+                    <p className="text-sm text-ink-500">
+                      {current >= goal
+                        ? <span className="text-emerald-600 font-medium">🎉 Goal achieved!</span>
+                        : `${goal - current} books to go`}
+                    </p>
                   </div>
                   <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium ${
                     pace >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
