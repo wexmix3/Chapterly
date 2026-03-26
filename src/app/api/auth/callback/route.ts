@@ -103,6 +103,7 @@ export async function GET(request: NextRequest) {
       display_name: displayName,
       avatar_url: session.user.user_metadata?.avatar_url ?? null,
       onboarding_complete: false,
+      is_public: true,
     });
 
     return redirect(`${origin}/onboarding`);
