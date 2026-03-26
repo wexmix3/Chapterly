@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { BookOpen, Star, Loader2, X, Check, AlertCircle, Pencil, Search, Library, Bookmark, CheckCircle, Plus, XCircle } from 'lucide-react';
+import { BookOpen, Star, Loader2, X, Check, AlertCircle, Search, Library, Bookmark, CheckCircle, Plus, XCircle, ExternalLink } from 'lucide-react';
 import BookCover from '@/components/ui/BookCover';
 import { BookCardSkeleton } from '@/components/ui/Skeleton';
 import { useShelf } from '@/hooks';
@@ -252,15 +252,19 @@ export default function BookShelf() {
 
 function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void }) {
   const { book } = userBook;
-  const progress =
-    userBook.current_page && book?.page_count
+  const displayProgress =
+    userBook.status === 'read'
+      ? 100
+      : userBook.current_page && book?.page_count
       ? Math.round((userBook.current_page / book.page_count) * 100)
       : null;
 
+  const showProgress = userBook.status === 'reading' || userBook.status === 'read';
+
   return (
     <div className="group relative block text-left w-full">
-      {/* Cover — links to book detail */}
-      <Link href={`/book/${userBook.id}`} className="block">
+      {/* Cover — click opens edit modal */}
+      <button onClick={onEdit} className="block w-full">
         <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all relative">
           <BookCover
             src={book?.cover_url}
@@ -270,13 +274,13 @@ function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void
             className="object-cover"
           />
 
-          {/* Progress overlay for reading */}
-          {userBook.status === 'reading' && progress !== null && (
+          {/* Progress overlay for reading/read */}
+          {showProgress && displayProgress !== null && (
             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
               <div className="h-1 bg-white/30 rounded-full overflow-hidden">
-                <div className="h-full bg-brand-400 rounded-full" style={{ width: `${progress}%` }} />
+                <div className="h-full bg-brand-400 rounded-full" style={{ width: `${displayProgress}%` }} />
               </div>
-              <p className="text-[9px] text-white/80 mt-0.5 text-center">{progress}%</p>
+              <p className="text-[9px] text-white/80 mt-0.5 text-center">{displayProgress}%</p>
             </div>
           )}
 
@@ -288,15 +292,6 @@ function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void
             </div>
           )}
         </div>
-      </Link>
-
-      {/* Edit button — appears on hover */}
-      <button
-        onClick={onEdit}
-        className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-black/60 rounded-md"
-        title="Edit"
-      >
-        <Pencil className="w-3 h-3 text-white" />
       </button>
 
       {/* Title */}
@@ -396,6 +391,13 @@ function BookEditModal({
             {book?.page_count && (
               <p className="text-xs text-ink-400 mt-0.5">{book.page_count} pages</p>
             )}
+            <Link
+              href={`/book/${userBook.id}`}
+              className="inline-flex items-center gap-1 text-[10px] text-brand-500 hover:text-brand-700 mt-1"
+              onClick={onClose}
+            >
+              <ExternalLink className="w-2.5 h-2.5" /> View full details
+            </Link>
           </div>
           <button
             onClick={onClose}

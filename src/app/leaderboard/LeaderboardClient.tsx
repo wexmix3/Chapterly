@@ -38,6 +38,15 @@ export default function LeaderboardClient() {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myValue, setMyValue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+
+  // Fetch following list once so we can label global entries
+  useEffect(() => {
+    fetch('/api/social')
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => setFollowingIds(new Set((j.data ?? []).map((u: { id: string }) => u.id))))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -101,7 +110,7 @@ export default function LeaderboardClient() {
                     : 'bg-white border border-paper-200 text-ink-500 hover:text-ink-800'
                 }`}
               >
-                {s === 'global' ? 'Global' : 'Friends'}
+                {s === 'global' ? 'Global' : 'Following'}
               </button>
             ))}
           </div>
@@ -130,7 +139,7 @@ export default function LeaderboardClient() {
               <div className="text-center py-16 space-y-2">
                 <Trophy className="w-10 h-10 text-ink-200 mx-auto" />
                 <p className="text-sm text-ink-400">
-                  {scope === 'friends' ? 'Follow some readers to see their stats here.' : 'No data yet. Start reading!'}
+                  {scope === 'friends' ? 'Follow some readers to see their stats here.' : 'No data yet — start reading to appear here!'}
                 </p>
               </div>
             ) : (
@@ -170,7 +179,14 @@ export default function LeaderboardClient() {
                             {entry.display_name || entry.handle}
                             {entry.is_me && <span className="ml-1 text-xs font-normal text-brand-400">(you)</span>}
                           </p>
-                          <p className="text-xs text-ink-400">@{entry.handle}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="text-xs text-ink-400">@{entry.handle}</p>
+                            {scope === 'global' && !entry.is_me && followingIds.has(entry.id) && (
+                              <span className="text-[9px] font-medium bg-brand-50 text-brand-600 border border-brand-100 rounded-full px-1.5 py-0.5 leading-none">
+                                Following
+                              </span>
+                            )}
+                          </div>
                         </Link>
                       </div>
 

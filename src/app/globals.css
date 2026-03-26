@@ -41,6 +41,13 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  /* Extra bottom padding on mobile so content doesn't hide behind bottom tab bar */
+  @media (max-width: 767px) {
+    main {
+      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    }
+  }
 }
 
 /* ─── Global dark mode overrides ─────────────────────────────────────────── */

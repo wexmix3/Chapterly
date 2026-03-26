@@ -17,8 +17,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // ── Limits ────────────────────────────────────────────────────────────────────
-const FREE_DAILY_LIMIT     = 20;
-const PREMIUM_DAILY_LIMIT  = 100;
+const FREE_DAILY_LIMIT     = 50;
+const PREMIUM_DAILY_LIMIT  = 300;
 
 /** Hard cap on total Claude calls per day across all users. */
 const GLOBAL_DAILY_LIMIT = 5000;
