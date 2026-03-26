@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createAdminSupabaseClient } from '@/lib/supabase-server';
 
 // ─── Hardcoded fallback (no emoji) ───────────────────────────────────────────
 const FALLBACK_BOOKS = [
@@ -158,7 +158,7 @@ export async function GET() {
   let internalTrending: Map<string, { count: number; title: string; authors: string[]; cover_url: string | null }> = new Map();
 
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = createAdminSupabaseClient(); // admin bypasses RLS to see all users' books
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const { data } = await supabase

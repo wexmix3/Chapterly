@@ -126,14 +126,14 @@ export default function DiscoverClient() {
 
           <div>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-ink-900 mb-2">Discover</h1>
-            <p className="text-ink-500 text-sm">Trending books, curated lists, and what BookTok is loving right now.</p>
+            <p className="text-ink-500 text-sm">Trending books from Reddit, social media, and curated picks.</p>
           </div>
 
-          {/* Trending on BookTok */}
+          {/* Trending on Social Media */}
           <section>
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="w-4 h-4 text-brand-500" />
-              <h2 className="font-display text-lg font-semibold text-ink-800">Trending on BookTok</h2>
+              <h2 className="font-display text-lg font-semibold text-ink-800">Trending on Social Media</h2>
             </div>
             {trendingBooks && trendingBooks.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -142,7 +142,7 @@ export default function DiscoverClient() {
                   if (!b) return null;
                   const cardLabel = item.label ?? `${item.count} reader${item.count !== 1 ? 's' : ''} this week`;
                   const sourceBadge =
-                    item.source === 'reddit' && item.subreddit === 'booktok' ? 'BookTok'
+                    item.source === 'reddit' && item.subreddit === 'booktok' ? 'TikTok/Reddit'
                     : item.source === 'reddit' && item.subreddit === 'books' ? 'r/books'
                     : item.source === 'reddit' && item.subreddit === '52books' ? 'r/52books'
                     : item.source === 'both' ? 'Trending'
@@ -169,7 +169,7 @@ export default function DiscoverClient() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {TRENDING_BOOKS.map(book => (
-                  <BookCard key={book.title} {...book} badge="BookTok" badgeClass="bg-brand-500 text-white" onClick={() => toPreview(book.title, book.author, book.cover)} />
+                  <BookCard key={book.title} {...book} badge="Social" badgeClass="bg-brand-500 text-white" onClick={() => toPreview(book.title, book.author, book.cover)} />
                 ))}
               </div>
             )}
