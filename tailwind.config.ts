@@ -27,7 +27,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', '-apple-system', 'BlinkMacSystemFont', '"Helvetica Neue"', 'Arial', 'sans-serif'],
-        display: ['var(--font-inter)', '-apple-system', 'BlinkMacSystemFont', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+        display: ['var(--font-lora)', 'Georgia', '"Times New Roman"', 'serif'],
       },
       keyframes: {
         'streak-glow': {

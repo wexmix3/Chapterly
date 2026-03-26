@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
-import { Inter } from 'next/font/google';
+import { Inter, Lora } from 'next/font/google';
 import './globals.css';
 import PWARegister from '@/components/PWARegister';
 import { Analytics } from '@vercel/analytics/react';
@@ -8,6 +8,13 @@ import { Analytics } from '@vercel/analytics/react';
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
+});
+
+const lora = Lora({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-lora',
   display: 'swap',
 });
 
@@ -47,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isDark = theme === 'dark';
 
   return (
-    <html lang="en" className={`${inter.variable}${isDark ? ' dark' : ''}`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${lora.variable}${isDark ? ' dark' : ''}`} suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <meta name="theme-color" content="#ee7a1e" />
