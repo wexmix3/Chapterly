@@ -56,6 +56,7 @@ export default function DiscoverClient() {
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [recs, setRecs] = useState<Array<BookSearchResult & { genre: string }>>([]);
   const [trendingBooks, setTrendingBooks] = useState<TrendingBook[] | null>(null);
+  const [userBookTitles, setUserBookTitles] = useState<Set<string>>(new Set());
 
   // Fetch personalized recommendations
   useEffect(() => {
@@ -72,6 +73,21 @@ export default function DiscoverClient() {
       .then(j => {
         const items: TrendingBook[] = j.data ?? [];
         if (items.length > 0) setTrendingBooks(items);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch user's shelf book titles to exclude from trending
+  useEffect(() => {
+    fetch('/api/user-books?limit=200')
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => {
+        const titles = new Set<string>(
+          (j.data ?? []).map((ub: { book?: { title?: string } }) =>
+            (ub.book?.title ?? '').toLowerCase().trim()
+          )
+        );
+        setUserBookTitles(titles);
       })
       .catch(() => {});
   }, []);
@@ -105,6 +121,10 @@ export default function DiscoverClient() {
 
   const topGenre = recs[0]?.genre ?? null;
 
+  const visibleTrending = (trendingBooks ?? []).filter(
+    item => item.book && !userBookTitles.has((item.book.title ?? '').toLowerCase().trim())
+  );
+
   const toPreview = (title: string, author: string, cover: string) => {
     const isbnMatch = cover.match(/\/isbn\/(\d+)-/);
     const q = new URLSearchParams({ title, author });
@@ -135,9 +155,9 @@ export default function DiscoverClient() {
               <TrendingUp className="w-4 h-4 text-brand-500" />
               <h2 className="font-display text-lg font-semibold text-ink-800">Trending on Social Media</h2>
             </div>
-            {trendingBooks && trendingBooks.length > 0 ? (
+            {visibleTrending.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {trendingBooks.map((item) => {
+                {visibleTrending.map((item) => {
                   const b = item.book;
                   if (!b) return null;
                   const cardLabel = item.label ?? `${item.count} reader${item.count !== 1 ? 's' : ''} this week`;

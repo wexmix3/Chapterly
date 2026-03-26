@@ -44,7 +44,7 @@ export async function GET(req: import('next/server').NextRequest) {
     .from('user_books')
     .select('status, rating, book:books(title, authors, subjects)')
     .eq('user_id', user.id)
-    .in('status', ['read', 'reading', 'dnf'])
+    .in('status', ['read', 'reading', 'dnf', 'to_read'])
     .order('updated_at', { ascending: false })
     .limit(30);
 
@@ -61,6 +61,7 @@ export async function GET(req: import('next/server').NextRequest) {
   const topRated = read.filter(b => (b.rating ?? 0) >= 4).slice(0, 8);
   const recentlyRead = read.slice(0, 5);
   const allTitles = (shelf as ShelfBook[]).map(b => b.book?.title ?? '').filter(Boolean);
+  const wantToRead = (shelf as ShelfBook[]).filter(b => b.status === 'to_read').slice(0, 8);
 
   const genreCounts: Record<string, number> = {};
   for (const ub of shelf as ShelfBook[]) {
@@ -75,6 +76,7 @@ export async function GET(req: import('next/server').NextRequest) {
 THEIR READING PROFILE:
 - Top-rated books (4-5★): ${topRated.map(b => `"${b.book?.title}" by ${b.book?.authors?.[0]} (${b.rating}★)`).join(', ') || 'none yet'}
 - Recently read: ${recentlyRead.map(b => `"${b.book?.title}"`).join(', ') || 'none'}
+- Want to read: ${wantToRead.map(b => `"${b.book?.title}"`).join(', ') || 'none'}
 - Favourite genres: ${topGenres.join(', ') || 'varied'}
 - Total books on shelf: ${shelf.length}
 - Books already on shelf (DO NOT recommend these): ${allTitles.slice(0, 20).join(', ')}
