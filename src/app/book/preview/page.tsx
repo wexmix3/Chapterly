@@ -59,6 +59,13 @@ function BookPreviewContent() {
   const titleParam  = params.get('title') ?? '';
   const authorParam = params.get('author') ?? '';
 
+  // Redirect to full detail view if book is already on shelf
+  useEffect(() => {
+    if (userBook?.id && userBook.id !== 'added') {
+      router.replace(`/book/${userBook.id}`);
+    }
+  }, [userBook, router]);
+
   useEffect(() => {
     const query = new URLSearchParams();
     if (isbn)     { query.set('isbn', isbn); }
@@ -97,8 +104,16 @@ function BookPreviewContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ searchResult, status }),
     });
-    if (res.ok || res.status === 409) {
-      const json = res.ok ? await res.json() : null;
+    if (res.ok) {
+      const json = await res.json();
+      const newId = json?.data?.id;
+      if (newId) {
+        router.push(`/book/${newId}`);
+        return;
+      }
+    } else if (res.status === 409) {
+      // Already on shelf — fetch userBook id and redirect
+      const json = await res.json().catch(() => ({}));
       setUserBook({ id: json?.data?.id ?? 'added', status });
     }
     setAdding(null);

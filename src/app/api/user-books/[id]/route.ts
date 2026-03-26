@@ -95,13 +95,27 @@ export async function PATCH(
   if (updates.status === 'reading' && !updates.started_at) updates.started_at = now;
   if (updates.status === 'read' && !updates.finished_at) updates.finished_at = now;
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('user_books')
     .update({ ...updates, updated_at: now })
     .eq('id', params.id)
     .eq('user_id', user.id)
     .select('*, book:books(*)')
     .single();
+
+  // If format column doesn't exist yet (migration not applied), retry without it
+  if (error?.message?.includes('format')) {
+    const { format: _f, ...updatesNoFormat } = updates as Record<string, unknown> & { format?: unknown };
+    const retryResult = await supabase
+      .from('user_books')
+      .update({ ...updatesNoFormat, updated_at: now })
+      .eq('id', params.id)
+      .eq('user_id', user.id)
+      .select('*, book:books(*)')
+      .single();
+    data = retryResult.data;
+    error = retryResult.error;
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
