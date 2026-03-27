@@ -26,6 +26,21 @@ export async function POST(request: NextRequest) {
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Ensure the follower has a public.users profile (OAuth may create auth.users without public.users)
+  const { data: profile } = await supabase.from('users').select('id').eq('id', user.id).maybeSingle();
+  if (!profile) {
+    const meta = user.user_metadata ?? {};
+    const email = user.email ?? '';
+    const handle = (email.split('@')[0] || `reader_${Date.now()}`).replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+    await supabase.from('users').insert({
+      id: user.id,
+      handle,
+      display_name: (meta.full_name as string) ?? (meta.display_name as string) ?? email.split('@')[0] ?? 'Reader',
+      avatar_url: (meta.avatar_url as string) ?? null,
+      onboarding_complete: true,
+    }).select().maybeSingle();
+  }
+
   const body = await request.json().catch(() => null) as { followee_id?: string } | null;
   const followee_id = body?.followee_id;
   if (!followee_id) return NextResponse.json({ error: 'followee_id required' }, { status: 400 });
