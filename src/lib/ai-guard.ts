@@ -47,13 +47,13 @@ async function checkWindow(
       .maybeSingle();
 
     if (error) {
-      console.error('[ai-guard] rate limit query error (denying):', error);
-      return { allowed: false, count: 0 };
+      console.error('[ai-guard] rate limit query error (allowing):', error);
+      return { allowed: true, count: 0 };
     }
     row = data;
   } catch (err) {
-    console.error('[ai-guard] rate limit query threw (denying):', err);
-    return { allowed: false, count: 0 };
+    console.error('[ai-guard] rate limit query threw (allowing):', err);
+    return { allowed: true, count: 0 };
   }
 
   const count = row?.call_count ?? 0;
@@ -65,8 +65,8 @@ async function checkWindow(
       { onConflict: 'user_id,endpoint,window_start' },
     );
   } catch (err) {
-    console.error('[ai-guard] rate limit upsert threw (denying):', err);
-    return { allowed: false, count };
+    console.error('[ai-guard] rate limit upsert threw (allowing):', err);
+    return { allowed: true, count: count + 1 };
   }
 
   return { allowed: true, count: count + 1 };
