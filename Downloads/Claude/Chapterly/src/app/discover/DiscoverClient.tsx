@@ -149,6 +149,26 @@ export default function DiscoverClient() {
             <p className="text-ink-500 text-sm">Trending books from Reddit, social media, and curated picks.</p>
           </div>
 
+          {/* 2026 Must-Reads — pinned at top */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="w-4 h-4 text-brand-500" />
+              <h2 className="font-display text-lg font-semibold text-ink-800">2026 Must-Reads</h2>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {MUST_READS_2026.map(book => (
+                <button key={book.title} onClick={() => toPreview(book.title, book.author, book.cover)}
+                  className="group text-left">
+                  <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow relative">
+                    <BookCover src={book.cover} title={book.title} authors={[book.author]} fill className="object-cover group-hover:scale-105 transition-transform duration-200" />
+                  </div>
+                  <p className="text-[10px] font-medium text-ink-800 truncate">{book.title}</p>
+                  <p className="text-[9px] text-ink-400 truncate">{book.author}</p>
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Trending on Social Media */}
           <section>
             <div className="flex items-center gap-2 mb-4">
@@ -233,26 +253,6 @@ export default function DiscoverClient() {
                 )}
               </div>
             )}
-          </section>
-
-          {/* 2026 Must-Reads */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="w-4 h-4 text-brand-500" />
-              <h2 className="font-display text-lg font-semibold text-ink-800">2026 Must-Reads</h2>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {MUST_READS_2026.map(book => (
-                <button key={book.title} onClick={() => toPreview(book.title, book.author, book.cover)}
-                  className="group text-left">
-                  <div className="aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow relative">
-                    <BookCover src={book.cover} title={book.title} authors={[book.author]} fill className="object-cover group-hover:scale-105 transition-transform duration-200" />
-                  </div>
-                  <p className="text-[10px] font-medium text-ink-800 truncate">{book.title}</p>
-                  <p className="text-[9px] text-ink-400 truncate">{book.author}</p>
-                </button>
-              ))}
-            </div>
           </section>
 
           {/* Personalized — Because you read X */}

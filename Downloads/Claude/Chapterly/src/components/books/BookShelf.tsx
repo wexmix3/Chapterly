@@ -306,9 +306,8 @@ function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void
 
 function ReadBooksYearGroups({ books, onEdit }: { books: UserBook[]; onEdit: (ub: UserBook) => void }) {
   const grouped = books.reduce<Record<string, UserBook[]>>((acc, ub) => {
-    const year = ub.finished_at
-      ? new Date(ub.finished_at).getFullYear().toString()
-      : 'Unknown';
+    const dateSrc = ub.finished_at ?? ub.updated_at ?? ub.created_at;
+    const year = dateSrc ? new Date(dateSrc).getFullYear().toString() : 'Unknown';
     acc[year] = acc[year] ?? [];
     acc[year].push(ub);
     return acc;

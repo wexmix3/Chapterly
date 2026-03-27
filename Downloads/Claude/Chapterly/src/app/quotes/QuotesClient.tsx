@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
 import BookCover from '@/components/ui/BookCover';
-import { Quote, Trash2, Search, Plus, X, ChevronDown, Loader2 } from 'lucide-react';
+import { Quote, Trash2, Search, Plus, X, ChevronDown, Loader2, Pencil, Share2, Check } from 'lucide-react';
 
 interface QuoteBook {
   id: string;
@@ -42,6 +42,10 @@ export default function QuotesClient({ initialQuotes }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showForm || shelfBooks.length > 0) return;
@@ -81,6 +85,42 @@ export default function QuotesClient({ initialQuotes }: Props) {
   const deleteQuote = async (id: string) => {
     const res = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
     if (res.ok) setQuotes(prev => prev.filter(q => q.id !== id));
+  };
+
+  const startEdit = (q: QuoteEntry) => {
+    setEditingId(q.id);
+    setEditText(q.text);
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editText.trim()) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/quotes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: editText.trim() }),
+      });
+      if (res.ok) {
+        setQuotes(prev => prev.map(q => q.id === id ? { ...q, text: editText.trim() } : q));
+        setEditingId(null);
+      }
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const shareQuote = async (q: QuoteEntry) => {
+    const text = `"${q.text}"${q.books ? ` — ${q.books.title}` : ''}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: q.books?.title ?? 'Quote', text });
+      } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(q.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
   };
 
   const filtered = search.trim()
@@ -229,12 +269,39 @@ export default function QuotesClient({ initialQuotes }: Props) {
         <div className="space-y-4">
           {filtered.map(q => (
             <div key={q.id} className="bg-white rounded-2xl border border-ink-100 p-5">
-              <blockquote className="text-sm text-ink-700 italic leading-relaxed mb-3">
-                &ldquo;{q.text}&rdquo;
-                {q.page_number && (
-                  <span className="not-italic text-ink-400 text-xs ml-2">— p.{q.page_number}</span>
-                )}
-              </blockquote>
+              {editingId === q.id ? (
+                <div className="mb-3">
+                  <textarea
+                    value={editText}
+                    onChange={e => setEditText(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    className="w-full px-3 py-2.5 bg-paper-50 border border-brand-300 rounded-xl text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-100 resize-none"
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => saveEdit(q.id)}
+                      disabled={editSaving}
+                      className="flex-1 py-1.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors"
+                    >
+                      {editSaving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="px-3 py-1.5 border border-ink-200 text-ink-600 rounded-lg text-xs font-medium hover:bg-paper-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <blockquote className="text-sm text-ink-700 italic leading-relaxed mb-3">
+                  &ldquo;{q.text}&rdquo;
+                  {q.page_number && (
+                    <span className="not-italic text-ink-400 text-xs ml-2">— p.{q.page_number}</span>
+                  )}
+                </blockquote>
+              )}
 
               {q.books && (
                 <Link
@@ -261,13 +328,34 @@ export default function QuotesClient({ initialQuotes }: Props) {
 
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-paper-100">
                 <span className="text-[10px] text-ink-400">{timeAgo(q.created_at)}</span>
-                <button
-                  onClick={() => deleteQuote(q.id)}
-                  className="text-ink-300 hover:text-red-400 transition-colors"
-                  title="Delete quote"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => shareQuote(q)}
+                    className="text-ink-300 hover:text-brand-500 transition-colors"
+                    title={copiedId === q.id ? 'Copied!' : 'Share quote'}
+                  >
+                    {copiedId === q.id
+                      ? <Check className="w-4 h-4 text-emerald-500" />
+                      : <Share2 className="w-4 h-4" />
+                    }
+                  </button>
+                  {editingId !== q.id && (
+                    <button
+                      onClick={() => startEdit(q)}
+                      className="text-ink-300 hover:text-brand-500 transition-colors"
+                      title="Edit quote"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteQuote(q.id)}
+                    className="text-ink-300 hover:text-red-400 transition-colors"
+                    title="Delete quote"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

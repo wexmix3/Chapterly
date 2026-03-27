@@ -7,7 +7,7 @@ import {
   BarChart, Bar,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { Flame, BookOpen, FileText, Star, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Flame, BookOpen, FileText, Star, Loader2 } from 'lucide-react';
 import Navigation from '@/components/layout/Navigation';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import type { UserStats } from '@/types';
@@ -107,8 +107,8 @@ export default function ProgressClient() {
   const [dailyData, setDailyData] = useState<DailyCalendarStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [richStats, setRichStats] = useState<RichStats | null>(null);
-  const [richOpen, setRichOpen] = useState(false);
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
+  const [booksPeriod, setBooksPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -234,7 +234,26 @@ export default function ProgressClient() {
     };
   });
 
-  const genreData = (stats?.top_genres ?? []).slice(0, 6);
+  // Yearly books chart: group reading_by_month by year
+  const yearlyBooksChartData = (() => {
+    const byYear: Record<string, number> = {};
+    for (const m of stats?.reading_by_month ?? []) {
+      const yr = m.month.split('-')[0];
+      byYear[yr] = (byYear[yr] ?? 0) + (m.books ?? 0);
+    }
+    return Object.entries(byYear)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .map(([yr, books]) => ({ label: yr, books, isCurrent: yr === String(currentYear) }));
+  })();
+
+  const activeBooksData = booksPeriod === 'monthly' ? barChartData : yearlyBooksChartData;
+
+  // Genre data: prefer stats.top_genres, fall back to richStats.genre_breakdown
+  const genreData = (
+    stats?.top_genres?.length
+      ? stats.top_genres.slice(0, 6)
+      : richStats?.genre_breakdown?.slice(0, 6).map(g => ({ name: g.genre, count: g.count })) ?? []
+  );
   const genreTotal = genreData.reduce((s, g) => s + g.count, 0);
   const GENRE_COLORS = ['#ee7a1e', '#f5a05a', '#f7c18e', '#c45a0e', '#9c4508', '#7a3406'];
 
@@ -298,6 +317,127 @@ export default function ProgressClient() {
             </div>
           )}
 
+          {/* Reading Profile — always open */}
+          {richStats && (
+            <div className="bg-white rounded-2xl border border-ink-100 overflow-hidden">
+              <div className="flex items-center gap-2 px-6 py-4 border-b border-paper-100">
+                <Star className="w-4 h-4 text-brand-500" />
+                <span className="font-display font-semibold text-ink-800">Reading Profile</span>
+              </div>
+              <div className="px-6 pb-6 pt-4 space-y-5">
+
+                {/* Format breakdown */}
+                {richStats.format_breakdown.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">How you read</p>
+                    <div className="flex gap-3 flex-wrap">
+                      {richStats.format_breakdown.map(f => (
+                        <div key={f.format} className="flex items-center gap-2 bg-paper-50 border border-paper-200 rounded-xl px-3 py-2">
+                          <span className="text-lg">
+                            {f.format === 'physical' ? '📖' : f.format === 'ebook' ? '📱' : '🎧'}
+                          </span>
+                          <div>
+                            <p className="text-xs font-semibold text-ink-700 capitalize">{f.format}</p>
+                            <p className="text-[10px] text-ink-400">{f.count} book{f.count !== 1 ? 's' : ''} · {f.pct}%</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Finishing stats */}
+                <div className="grid grid-cols-2 gap-3">
+                  {richStats.avg_days_to_finish !== null && (
+                    <div className="bg-paper-50 rounded-xl p-3">
+                      <p className="text-[10px] text-ink-400 mb-1">Avg days to finish</p>
+                      <p className="font-display text-2xl font-bold text-brand-600">{richStats.avg_days_to_finish}</p>
+                      <p className="text-[10px] text-ink-400">days per book</p>
+                    </div>
+                  )}
+                  {richStats.dnf_rate !== null && (
+                    <div className="bg-paper-50 rounded-xl p-3">
+                      <p className="text-[10px] text-ink-400 mb-1">DNF rate</p>
+                      <p className="font-display text-2xl font-bold text-brand-600">{richStats.dnf_rate}%</p>
+                      <p className="text-[10px] text-ink-400">of started books</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Longest / shortest book */}
+                {(richStats.longest_book_read || richStats.shortest_book_read) && (
+                  <div className="space-y-2">
+                    {richStats.longest_book_read && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-ink-400 text-xs w-24 flex-shrink-0">Longest read</span>
+                        <span className="font-medium text-ink-800 truncate">{richStats.longest_book_read.title}</span>
+                        <span className="text-xs text-ink-400 flex-shrink-0">{richStats.longest_book_read.page_count}p</span>
+                      </div>
+                    )}
+                    {richStats.shortest_book_read && richStats.books_read > 1 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-ink-400 text-xs w-24 flex-shrink-0">Shortest read</span>
+                        <span className="font-medium text-ink-800 truncate">{richStats.shortest_book_read.title}</span>
+                        <span className="text-xs text-ink-400 flex-shrink-0">{richStats.shortest_book_read.page_count}p</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Most productive month */}
+                {richStats.most_productive_month && (
+                  <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
+                    <p className="text-[10px] text-brand-500 font-semibold uppercase tracking-wide mb-0.5">Best month ever</p>
+                    <p className="font-display text-base font-bold text-brand-700">{richStats.most_productive_month.month}</p>
+                    <p className="text-xs text-brand-600">{richStats.most_productive_month.books} books finished</p>
+                  </div>
+                )}
+
+                {/* Top Genres */}
+                {richStats.genre_breakdown && richStats.genre_breakdown.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Top Genres</p>
+                    <div className="space-y-2">
+                      {richStats.genre_breakdown.slice(0, 6).map(g => (
+                        <div key={g.genre}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-ink-700 font-medium">{g.genre}</span>
+                            <span className="text-ink-400">{g.count} book{g.count !== 1 ? 's' : ''} · {g.pct}%</span>
+                          </div>
+                          <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-brand-400 rounded-full" style={{ width: `${g.pct}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Authors */}
+                {richStats.author_breakdown && richStats.author_breakdown.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Authors You&apos;ve Read</p>
+                    <div className="space-y-2">
+                      {richStats.author_breakdown.slice(0, 6).map((a, i) => (
+                        <div key={a.author} className="flex items-center justify-between py-1.5 border-b border-ink-50 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-ink-300 w-4">{i + 1}</span>
+                            <span className="text-sm text-ink-800 font-medium">{a.author}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-ink-400">
+                            <span>{a.count} book{a.count !== 1 ? 's' : ''}</span>
+                            {a.avg_rating && <span className="text-brand-500">&#9733; {a.avg_rating}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
+
           {/* Pages — Line Chart with period selector */}
           <div className="bg-white rounded-2xl border border-ink-100 p-5">
             <div className="flex items-center justify-between mb-4">
@@ -318,8 +458,8 @@ export default function ProgressClient() {
                 ))}
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={activeChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={activeChartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="pagesGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ee7a1e" stopOpacity={0.15} />
@@ -332,7 +472,7 @@ export default function ProgressClient() {
                   tick={{ fontSize: 9, fill: '#9d9d9d' }}
                   tickLine={false}
                   axisLine={false}
-                  interval={period === 'daily' ? 4 : 0}
+                  interval={period === 'daily' ? 3 : 0}
                 />
                 <YAxis tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} />
                 <Tooltip content={<PagesTooltip />} />
@@ -354,15 +494,34 @@ export default function ProgressClient() {
 
             {/* Books bar chart */}
             <div className="bg-white rounded-2xl border border-ink-100 p-5">
-              <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-4">Books per Month — {currentYear}</p>
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={barChartData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide">
+                  Books {booksPeriod === 'monthly' ? `per Month — ${currentYear}` : 'per Year'}
+                </p>
+                <div className="flex gap-1">
+                  {(['monthly', 'yearly'] as const).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setBooksPeriod(p)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                        booksPeriod === p
+                          ? 'bg-brand-500 text-white'
+                          : 'text-ink-400 hover:text-ink-700 hover:bg-paper-100'
+                      }`}
+                    >
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={activeBooksData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0ede8" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip content={<BooksTooltip />} />
                   <Bar dataKey="books" radius={[4, 4, 0, 0]}>
-                    {barChartData.map((entry, index) => (
+                    {activeBooksData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={entry.isCurrent ? '#ee7a1e' : '#f5a05a'}
@@ -417,140 +576,6 @@ export default function ProgressClient() {
             <ReadingCalendar />
           </div>
 
-          {/* Reading Profile Accordion */}
-          {richStats && (
-            <div className="bg-white rounded-2xl border border-ink-100 overflow-hidden">
-              <button
-                onClick={() => setRichOpen(o => !o)}
-                className="w-full flex items-center justify-between px-6 py-4 hover:bg-paper-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-brand-500" />
-                  <span className="font-display font-semibold text-ink-800">Reading Profile</span>
-                </div>
-                {richOpen
-                  ? <ChevronUp className="w-4 h-4 text-ink-400" />
-                  : <ChevronDown className="w-4 h-4 text-ink-400" />
-                }
-              </button>
-
-              <div
-                className={`overflow-hidden transition-all duration-300 ${richOpen ? 'max-h-[1200px]' : 'max-h-0'}`}
-              >
-                <div className="px-6 pb-6 pt-2 space-y-5 border-t border-paper-100">
-
-                  {/* Format breakdown */}
-                  {richStats.format_breakdown.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">How you read</p>
-                      <div className="flex gap-3 flex-wrap">
-                        {richStats.format_breakdown.map(f => (
-                          <div key={f.format} className="flex items-center gap-2 bg-paper-50 border border-paper-200 rounded-xl px-3 py-2">
-                            <span className="text-lg">
-                              {f.format === 'physical' ? '📖' : f.format === 'ebook' ? '📱' : '🎧'}
-                            </span>
-                            <div>
-                              <p className="text-xs font-semibold text-ink-700 capitalize">{f.format}</p>
-                              <p className="text-[10px] text-ink-400">{f.count} book{f.count !== 1 ? 's' : ''} · {f.pct}%</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Finishing stats */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {richStats.avg_days_to_finish !== null && (
-                      <div className="bg-paper-50 rounded-xl p-3">
-                        <p className="text-[10px] text-ink-400 mb-1">Avg days to finish</p>
-                        <p className="font-display text-2xl font-bold text-brand-600">{richStats.avg_days_to_finish}</p>
-                        <p className="text-[10px] text-ink-400">days per book</p>
-                      </div>
-                    )}
-                    {richStats.dnf_rate !== null && (
-                      <div className="bg-paper-50 rounded-xl p-3">
-                        <p className="text-[10px] text-ink-400 mb-1">DNF rate</p>
-                        <p className="font-display text-2xl font-bold text-brand-600">{richStats.dnf_rate}%</p>
-                        <p className="text-[10px] text-ink-400">of started books</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Longest / shortest book */}
-                  {(richStats.longest_book_read || richStats.shortest_book_read) && (
-                    <div className="space-y-2">
-                      {richStats.longest_book_read && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-ink-400 text-xs w-24 flex-shrink-0">Longest read</span>
-                          <span className="font-medium text-ink-800 truncate">{richStats.longest_book_read.title}</span>
-                          <span className="text-xs text-ink-400 flex-shrink-0">{richStats.longest_book_read.page_count}p</span>
-                        </div>
-                      )}
-                      {richStats.shortest_book_read && richStats.books_read > 1 && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-ink-400 text-xs w-24 flex-shrink-0">Shortest read</span>
-                          <span className="font-medium text-ink-800 truncate">{richStats.shortest_book_read.title}</span>
-                          <span className="text-xs text-ink-400 flex-shrink-0">{richStats.shortest_book_read.page_count}p</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Most productive month */}
-                  {richStats.most_productive_month && (
-                    <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
-                      <p className="text-[10px] text-brand-500 font-semibold uppercase tracking-wide mb-0.5">Best month ever</p>
-                      <p className="font-display text-base font-bold text-brand-700">{richStats.most_productive_month.month}</p>
-                      <p className="text-xs text-brand-600">{richStats.most_productive_month.books} books finished</p>
-                    </div>
-                  )}
-
-                  {/* Genre Breakdown */}
-                  {richStats.genre_breakdown && richStats.genre_breakdown.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Top Genres</p>
-                      <div className="space-y-2">
-                        {richStats.genre_breakdown.slice(0, 6).map(g => (
-                          <div key={g.genre}>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-ink-700 font-medium">{g.genre}</span>
-                              <span className="text-ink-400">{g.count} book{g.count !== 1 ? 's' : ''} · {g.pct}%</span>
-                            </div>
-                            <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-brand-400 rounded-full" style={{ width: `${g.pct}%` }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Author Breakdown */}
-                  {richStats.author_breakdown && richStats.author_breakdown.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Authors You&apos;ve Read</p>
-                      <div className="space-y-2">
-                        {richStats.author_breakdown.slice(0, 6).map((a, i) => (
-                          <div key={a.author} className="flex items-center justify-between py-1.5 border-b border-ink-50 last:border-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-ink-300 w-4">{i + 1}</span>
-                              <span className="text-sm text-ink-800 font-medium">{a.author}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-ink-400">
-                              <span>{a.count} book{a.count !== 1 ? 's' : ''}</span>
-                              {a.avg_rating && <span className="text-brand-500">&#9733; {a.avg_rating}</span>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
       </main>
