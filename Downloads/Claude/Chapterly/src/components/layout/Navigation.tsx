@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BookOpen, TrendingUp, Trophy, Target, Sparkles, Users, Search,
-  BookMarked, BarChart2, Compass, Bell, Settings, LogOut, X,
+  BookMarked, BarChart2, Compass, Bell, Settings,
   ChevronDown, Quote, MoreHorizontal,
 } from 'lucide-react';
 import { useAuth, useNotifications } from '@/hooks';
@@ -28,12 +28,13 @@ const SOCIAL_ITEMS = [
   { href: '/leaderboard', label: 'Leaderboard',  icon: BarChart2 },
 ];
 
-// Bottom tab bar items (mobile only) — the 4 primary destinations
+// Bottom tab bar items (mobile only) — the 4 primary + More
 const BOTTOM_TABS = [
-  { href: '/dashboard?tab=reading', label: 'Books',    icon: BookOpen,  match: ['/dashboard', '/book'] },
-  { href: '/discover',              label: 'Discover', icon: Compass,   match: ['/discover'] },
-  { href: '/ai',                    label: 'AI',       icon: Sparkles,  match: ['/ai'] },
-  { href: '/feed',                  label: 'Social',   icon: Users,     match: ['/feed', '/people', '/clubs', '/leaderboard'] },
+  { href: '/dashboard?tab=reading', label: 'Books',    icon: BookOpen,       match: ['/dashboard', '/book'] },
+  { href: '/discover',              label: 'Discover', icon: Compass,        match: ['/discover'] },
+  { href: '/ai',                    label: 'AI',       icon: Sparkles,       match: ['/ai'] },
+  { href: '/feed',                  label: 'Social',   icon: Users,          match: ['/feed', '/people', '/clubs', '/leaderboard'] },
+  { href: '/more',                  label: 'More',     icon: MoreHorizontal, match: ['/more', '/progress', '/achievements', '/challenge', '/quotes', '/settings'] },
 ];
 
 // Which paths make each top-level item "active"
@@ -129,12 +130,11 @@ function NavDropdown({
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { unreadCount } = useNotifications();
 
   const [personalOpen, setPersonalOpen] = useState(false);
   const [socialOpen,   setSocialOpen]   = useState(false);
-  const [moreOpen,     setMoreOpen]     = useState(false);
 
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const name = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ?? 'Reader';
@@ -283,114 +283,8 @@ export default function Navigation() {
             );
           })}
 
-          {/* More tab — opens bottom sheet */}
-          <button
-            onClick={() => setMoreOpen(true)}
-            className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 rounded-xl transition-colors ${
-              moreOpen ? 'text-brand-600 dark:text-brand-400' : 'text-ink-400 dark:text-ink-500'
-            }`}
-          >
-            <MoreHorizontal className="w-5 h-5 stroke-[1.8px]" />
-            <span className="text-[10px] font-medium">More</span>
-          </button>
         </div>
       </nav>
-
-      {/* ── More bottom sheet (mobile) ── */}
-      {moreOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm md:hidden"
-            onClick={() => setMoreOpen(false)}
-          />
-          <div className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white dark:bg-ink-950 rounded-t-2xl shadow-2xl max-h-[75vh] overflow-y-auto safe-area-inset-bottom">
-            {/* Handle */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-2">
-              <div className="w-10 h-1 bg-ink-200 dark:bg-ink-700 rounded-full mx-auto" />
-            </div>
-            <div className="flex items-center justify-between px-5 pb-3">
-              <p className="font-display text-base font-semibold text-ink-900 dark:text-paper-100">Menu</p>
-              <button onClick={() => setMoreOpen(false)} className="p-1.5 rounded-lg text-ink-400 hover:bg-paper-100 dark:hover:bg-ink-900 transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="px-4 pb-4 space-y-5">
-              {/* Personal */}
-              <div>
-                <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest px-2 mb-2">Personal</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {PERSONAL_ITEMS.map(item => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMoreOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-paper-50 dark:bg-ink-900 text-sm font-medium text-ink-700 dark:text-ink-300 hover:bg-brand-50 dark:hover:bg-brand-950 hover:text-brand-700 dark:hover:text-brand-400 transition-colors"
-                      >
-                        <Icon className="w-4 h-4 flex-shrink-0 text-ink-500 dark:text-ink-400" />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Social */}
-              <div>
-                <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest px-2 mb-2">Social</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {SOCIAL_ITEMS.map(item => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMoreOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-paper-50 dark:bg-ink-900 text-sm font-medium text-ink-700 dark:text-ink-300 hover:bg-brand-50 dark:hover:bg-brand-950 hover:text-brand-700 dark:hover:text-brand-400 transition-colors"
-                      >
-                        <Icon className="w-4 h-4 flex-shrink-0 text-ink-500 dark:text-ink-400" />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Account */}
-              <div className="border-t border-paper-100 dark:border-ink-800 pt-4">
-                <div className="flex items-center gap-3 px-3 py-3 mb-2">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-700 dark:text-brand-400 text-sm font-bold flex-shrink-0">
-                      {name[0]}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-ink-900 dark:text-paper-100 truncate">{name}</p>
-                  </div>
-                  <ThemeToggle />
-                </div>
-                <Link
-                  href="/settings"
-                  onClick={() => setMoreOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-ink-600 dark:text-ink-400 hover:bg-paper-50 dark:hover:bg-ink-900 hover:text-ink-900 dark:hover:text-ink-100 transition-colors"
-                >
-                  <Settings className="w-4 h-4" /> Settings
-                </Link>
-                <button
-                  onClick={() => { setMoreOpen(false); void signOut(); }}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-ink-600 dark:text-ink-400 hover:bg-paper-50 dark:hover:bg-ink-900 hover:text-ink-900 dark:hover:text-ink-100 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" /> Sign out
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 }

@@ -108,6 +108,7 @@ export default function ProgressClient() {
   const [loading, setLoading] = useState(true);
   const [richStats, setRichStats] = useState<RichStats | null>(null);
   const [richOpen, setRichOpen] = useState(false);
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -163,6 +164,61 @@ export default function ProgressClient() {
       date,
     };
   });
+
+  // Weekly chart: aggregate daily data into 7-day buckets (last 8 weeks)
+  const weeklyChartData = (() => {
+    const today = new Date();
+    const weeks: { label: string; pages: number; minutes: number }[] = [];
+    for (let w = 7; w >= 0; w--) {
+      const weekEnd = new Date(today);
+      weekEnd.setDate(today.getDate() - w * 7);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() - 6);
+      let pages = 0; let minutes = 0;
+      for (let d = 0; d < 7; d++) {
+        const dt = new Date(weekStart);
+        dt.setDate(weekStart.getDate() + d);
+        const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+        const stat = dailyMap.get(key);
+        if (stat) { pages += stat.pages; minutes += stat.minutes; }
+      }
+      const label = `${String(weekStart.getMonth() + 1).padStart(2, '0')}/${String(weekStart.getDate()).padStart(2, '0')}`;
+      weeks.push({ label, pages, minutes });
+    }
+    return weeks;
+  })();
+
+  // Monthly chart: use reading_by_month pages data for last 12 months
+  const monthlyChartData = (() => {
+    const today = new Date();
+    const months: { label: string; pages: number; minutes: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const monthData = stats?.reading_by_month.find(m => m.month === key);
+      const lbl = new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      months.push({ label: lbl, pages: monthData?.pages ?? 0, minutes: 0 });
+    }
+    return months;
+  })();
+
+  // Yearly chart: group reading_by_month by year
+  const yearlyChartData = (() => {
+    const byYear: Record<string, number> = {};
+    for (const m of stats?.reading_by_month ?? []) {
+      const yr = m.month.split('-')[0];
+      byYear[yr] = (byYear[yr] ?? 0) + (m.pages ?? 0);
+    }
+    return Object.entries(byYear)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .map(([yr, pages]) => ({ label: yr, pages, minutes: 0 }));
+  })();
+
+  const activeChartData =
+    period === 'daily'   ? lineChartData :
+    period === 'weekly'  ? weeklyChartData :
+    period === 'monthly' ? monthlyChartData :
+    yearlyChartData;
 
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
@@ -242,11 +298,28 @@ export default function ProgressClient() {
             </div>
           )}
 
-          {/* Pages — Line Chart */}
+          {/* Pages — Line Chart with period selector */}
           <div className="bg-white rounded-2xl border border-ink-100 p-5">
-            <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-4">Pages Read — Last 30 Days</p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide">Pages Read</p>
+              <div className="flex gap-1">
+                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                      period === p
+                        ? 'bg-brand-500 text-white'
+                        : 'text-ink-400 hover:text-ink-700 hover:bg-paper-100'
+                    }`}
+                  >
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
             <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={lineChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <AreaChart data={activeChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="pagesGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ee7a1e" stopOpacity={0.15} />
@@ -259,7 +332,7 @@ export default function ProgressClient() {
                   tick={{ fontSize: 9, fill: '#9d9d9d' }}
                   tickLine={false}
                   axisLine={false}
-                  interval={4}
+                  interval={period === 'daily' ? 4 : 0}
                 />
                 <YAxis tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} />
                 <Tooltip content={<PagesTooltip />} />

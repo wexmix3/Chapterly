@@ -189,7 +189,7 @@ export default function DiscoverClient() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {TRENDING_BOOKS.map(book => (
-                  <BookCard key={book.title} {...book} badge="Social" badgeClass="bg-brand-500 text-white" onClick={() => toPreview(book.title, book.author, book.cover)} />
+                  <BookCard key={book.title} {...book} badge="TikTok" badgeClass="bg-black text-white" onClick={() => toPreview(book.title, book.author, book.cover)} />
                 ))}
               </div>
             )}

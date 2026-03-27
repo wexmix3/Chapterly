@@ -215,11 +215,15 @@ export default function BookShelf() {
               {filteredBooks.length} of {books.length} book{books.length !== 1 ? 's' : ''}
             </p>
           )}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-            {filteredBooks.map((ub) => (
-              <BookCard key={ub.id} userBook={ub} onEdit={() => setSelectedBook(ub)} />
-            ))}
-          </div>
+          {activeTab === 'read' ? (
+            <ReadBooksYearGroups books={filteredBooks} onEdit={setSelectedBook} />
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+              {filteredBooks.map((ub) => (
+                <BookCard key={ub.id} userBook={ub} onEdit={() => setSelectedBook(ub)} />
+              ))}
+            </div>
+          )}
           {/* Inline search widget — only on Reading tab */}
           {activeTab === 'reading' && (
             <InlineBookSearch
@@ -300,6 +304,42 @@ function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void
   );
 }
 
+function ReadBooksYearGroups({ books, onEdit }: { books: UserBook[]; onEdit: (ub: UserBook) => void }) {
+  const grouped = books.reduce<Record<string, UserBook[]>>((acc, ub) => {
+    const year = ub.finished_at
+      ? new Date(ub.finished_at).getFullYear().toString()
+      : 'Unknown';
+    acc[year] = acc[year] ?? [];
+    acc[year].push(ub);
+    return acc;
+  }, {});
+
+  const sortedYears = Object.keys(grouped).sort((a, b) => {
+    if (a === 'Unknown') return 1;
+    if (b === 'Unknown') return -1;
+    return parseInt(b) - parseInt(a);
+  });
+
+  return (
+    <div className="space-y-6">
+      {sortedYears.map(year => (
+        <div key={year}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="font-display text-sm font-bold text-ink-700">{year}</span>
+            <span className="text-xs text-ink-400">{grouped[year].length} book{grouped[year].length !== 1 ? 's' : ''}</span>
+            <div className="flex-1 h-px bg-ink-100" />
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            {grouped[year].map(ub => (
+              <BookCard key={ub.id} userBook={ub} onEdit={() => onEdit(ub)} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function BookEditModal({
   userBook,
   onClose,
@@ -312,9 +352,11 @@ function BookEditModal({
   const { book } = userBook;
 
   const [status, setStatus] = useState<ShelfStatus>(userBook.status);
-  const [currentPage, setCurrentPage] = useState<string>(
-    userBook.current_page != null ? String(userBook.current_page) : '',
-  );
+  const [currentPage, setCurrentPage] = useState<string>(() => {
+    if (userBook.current_page != null) return String(userBook.current_page);
+    if (userBook.status === 'read' && book?.page_count) return String(book.page_count);
+    return '';
+  });
   const [rating, setRating] = useState<number>(userBook.rating ?? 0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [reviewText, setReviewText] = useState(userBook.review_text ?? '');
@@ -424,6 +466,10 @@ function BookEditModal({
                     // Auto-set finished date if marking as read
                     if (opt.value === 'read' && !finishedAt) {
                       setFinishedAt(new Date().toISOString().slice(0, 10));
+                    }
+                    // Auto-set current page to total pages when marking as read
+                    if (opt.value === 'read' && book?.page_count) {
+                      setCurrentPage(String(book.page_count));
                     }
                     // Auto-set started date if marking as reading
                     if (opt.value === 'reading' && !startedAt) {
