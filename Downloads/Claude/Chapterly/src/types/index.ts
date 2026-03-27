@@ -102,6 +102,7 @@ export interface UserStats {
   avg_rating: number | null;
   top_genres: Array<{ name: string; count: number }>;
   reading_by_month: Array<{ month: string; books: number; pages: number }>;
+  books_by_year: Array<{ year: string; books: number }>;
   session_insights: SessionInsights;
 }
 

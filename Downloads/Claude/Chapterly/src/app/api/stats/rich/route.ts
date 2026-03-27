@@ -27,7 +27,7 @@ export async function GET() {
     .from('user_books')
     .select(`
       status, rating, format, started_at, finished_at,
-      books(title, authors, subjects, page_count)
+      books(id, source, source_id, title, authors, subjects, page_count)
     `)
     .eq('user_id', user.id);
 
@@ -35,16 +35,47 @@ export async function GET() {
     return NextResponse.json({ data: null });
   }
 
+  type BookRow = { id: string; source: string; source_id: string; title: string; authors: string[]; subjects: string[] | null; page_count: number | null };
   type ShelfRow = {
     status: string;
     rating: number | null;
     format: string | null;
     started_at: string | null;
     finished_at: string | null;
-    books: { title: string; authors: string[]; subjects: string[] | null; page_count: number | null } | null;
+    books: BookRow | null;
   };
 
   const rows = shelf as unknown as ShelfRow[];
+
+  // ── Backfill subjects for books that don't have them (up to 4 at a time) ──
+  const seenIds = new Set<string>();
+  const needsSubjects = rows
+    .map(r => r.books)
+    .filter((b): b is BookRow => !!b && !b.subjects?.length && !!b.source && !!b.source_id)
+    .filter(b => { if (seenIds.has(b.id)) return false; seenIds.add(b.id); return true; })
+    .slice(0, 4);
+
+  if (needsSubjects.length > 0) {
+    await Promise.allSettled(needsSubjects.map(async (book) => {
+      let subjects: string[] = [];
+      try {
+        if (book.source === 'openlibrary') {
+          const res = await fetch(`https://openlibrary.org/works/${book.source_id}.json`, { next: { revalidate: 86400 } });
+          if (res.ok) { const d = await res.json(); subjects = (d.subjects ?? []).slice(0, 10); }
+        } else if (book.source === 'googlebooks') {
+          const kp = process.env.GOOGLE_BOOKS_API_KEY ? `?key=${process.env.GOOGLE_BOOKS_API_KEY}` : '';
+          const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${book.source_id}${kp}`, { next: { revalidate: 86400 } });
+          if (res.ok) { const d = await res.json(); subjects = (d.volumeInfo?.categories ?? []).slice(0, 10); }
+        }
+      } catch { /* skip on error */ }
+      if (subjects.length > 0) {
+        await supabase.from('books').update({ subjects }).eq('id', book.id);
+        for (const row of rows) {
+          if (row.books?.id === book.id) row.books.subjects = subjects;
+        }
+      }
+    }));
+  }
   const readRows = rows.filter(r => r.status === 'read');
   const totalBooks = rows.length;
   const booksRead = readRows.length;

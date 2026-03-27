@@ -169,9 +169,10 @@ export default function ProgressClient() {
   const lineChartData = last30Dates.map(date => {
     const d = dailyMap.get(date);
     const dayNum = parseInt(date.split('-')[2]);
-    const monthStr = new Date(date).toLocaleDateString('en-US', { month: 'short' });
+    // Use noon UTC to avoid cross-midnight timezone shifts changing the month
+    const monthStr = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short' });
     return {
-      label: dayNum === 1 ? `${monthStr} ${dayNum}` : String(dayNum),
+      label: `${monthStr} ${dayNum}`,
       pages: d?.pages ?? 0,
       minutes: d?.minutes ?? 0,
       date,
@@ -247,17 +248,12 @@ export default function ProgressClient() {
     };
   });
 
-  // Yearly books chart: group reading_by_month by year
-  const yearlyBooksChartData = (() => {
-    const byYear: Record<string, number> = {};
-    for (const m of stats?.reading_by_month ?? []) {
-      const yr = m.month.split('-')[0];
-      byYear[yr] = (byYear[yr] ?? 0) + (m.books ?? 0);
-    }
-    return Object.entries(byYear)
-      .sort(([a], [b]) => parseInt(a) - parseInt(b))
-      .map(([yr, books]) => ({ label: yr, books, isCurrent: yr === String(currentYear) }));
-  })();
+  // Yearly books chart: use all-history data from stats (not limited to last 12 months)
+  const yearlyBooksChartData = (stats?.books_by_year ?? []).map(d => ({
+    label: d.year,
+    books: d.books,
+    isCurrent: d.year === String(currentYear),
+  }));
 
   const activeBooksData = booksPeriod === 'monthly' ? barChartData : yearlyBooksChartData;
 
@@ -500,8 +496,8 @@ export default function ProgressClient() {
                   tick={{ fontSize: 9, fill: '#9d9d9d' }}
                   tickLine={false}
                   axisLine={false}
-                  interval={period === 'daily' ? 4 : period === 'monthly' ? 1 : 0}
-                  minTickGap={period === 'daily' ? 20 : 8}
+                  interval={period === 'daily' ? 5 : period === 'monthly' ? 1 : 0}
+                  minTickGap={period === 'daily' ? 36 : 8}
                 />
                 <YAxis tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} />
                 <Tooltip content={<PagesTooltip />} />
