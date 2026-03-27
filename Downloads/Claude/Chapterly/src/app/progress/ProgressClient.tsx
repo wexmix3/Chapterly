@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, AreaChart, Area,
   BarChart, Bar,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LabelList,
 } from 'recharts';
 import { Flame, BookOpen, FileText, Star, Loader2 } from 'lucide-react';
 import Navigation from '@/components/layout/Navigation';
@@ -60,6 +60,19 @@ function BooksTooltip({ active, payload, label }: { active?: boolean; payload?: 
     <div className="bg-white border border-ink-100 rounded-xl shadow-lg px-3 py-2 text-xs">
       <p className="font-semibold text-ink-800 mb-0.5">{label}</p>
       <p className="text-ink-600">{books} book{books !== 1 ? 's' : ''}</p>
+    </div>
+  );
+}
+
+function AuthorTooltip({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: { author: string; avg_rating?: number | null } }> }) {
+  if (!active || !payload?.length) return null;
+  const books = payload[0]?.value ?? 0;
+  const rating = payload[0]?.payload?.avg_rating;
+  return (
+    <div className="bg-white border border-ink-100 rounded-xl shadow-lg px-3 py-2 text-xs">
+      <p className="font-semibold text-ink-800 mb-0.5">{payload[0]?.payload?.author}</p>
+      <p className="text-ink-600">{books} book{books !== 1 ? 's' : ''}</p>
+      {rating && <p className="text-brand-500">★ {rating} avg rating</p>}
     </div>
   );
 }
@@ -196,7 +209,7 @@ export default function ProgressClient() {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const monthData = stats?.reading_by_month.find(m => m.month === key);
-      const lbl = new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const lbl = new Date(d).toLocaleDateString('en-US', { month: 'short' });
       months.push({ label: lbl, pages: monthData?.pages ?? 0, minutes: 0 });
     }
     return months;
@@ -413,24 +426,39 @@ export default function ProgressClient() {
                   </div>
                 )}
 
-                {/* Authors */}
+                {/* Authors — horizontal bar chart */}
                 {richStats.author_breakdown && richStats.author_breakdown.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Authors You&apos;ve Read</p>
-                    <div className="space-y-2">
-                      {richStats.author_breakdown.slice(0, 6).map((a, i) => (
-                        <div key={a.author} className="flex items-center justify-between py-1.5 border-b border-ink-50 last:border-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-ink-300 w-4">{i + 1}</span>
-                            <span className="text-sm text-ink-800 font-medium">{a.author}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-ink-400">
-                            <span>{a.count} book{a.count !== 1 ? 's' : ''}</span>
-                            {a.avg_rating && <span className="text-brand-500">&#9733; {a.avg_rating}</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <ResponsiveContainer width="100%" height={Math.min(richStats.author_breakdown.length, 6) * 34 + 8}>
+                      <BarChart
+                        data={richStats.author_breakdown.slice(0, 6)}
+                        layout="vertical"
+                        margin={{ top: 0, right: 36, left: 0, bottom: 0 }}
+                        barSize={14}
+                      >
+                        <XAxis type="number" hide />
+                        <YAxis
+                          type="category"
+                          dataKey="author"
+                          tick={{ fontSize: 10, fill: '#374151' }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={96}
+                        />
+                        <Tooltip content={<AuthorTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                        <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                          {richStats.author_breakdown.slice(0, 6).map((_, i) => (
+                            <Cell key={`author-cell-${i}`} fill={i === 0 ? '#ee7a1e' : '#f5a05a'} />
+                          ))}
+                          <LabelList
+                            dataKey="count"
+                            position="right"
+                            style={{ fontSize: 10, fill: '#9ca3af' }}
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
 
@@ -472,7 +500,8 @@ export default function ProgressClient() {
                   tick={{ fontSize: 9, fill: '#9d9d9d' }}
                   tickLine={false}
                   axisLine={false}
-                  interval={period === 'daily' ? 3 : 0}
+                  interval={period === 'daily' ? 4 : period === 'monthly' ? 1 : 0}
+                  minTickGap={period === 'daily' ? 20 : 8}
                 />
                 <YAxis tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} />
                 <Tooltip content={<PagesTooltip />} />

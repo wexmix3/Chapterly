@@ -14,14 +14,14 @@ const GENRES = [
 ];
 
 const TRENDING_BOOKS = [
-  { title: 'Fourth Wing', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374042-M.jpg', label: '#BookTok', creator: '@cassiesbooktok' },
-  { title: 'Iron Flame', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374172-M.jpg', label: 'Sequel hype', creator: '@morgannbook' },
-  { title: 'A Court of Thorns and Roses', author: 'Sarah J. Maas', cover: 'https://covers.openlibrary.org/b/isbn/9781619635180-M.jpg', label: 'Classic pick', creator: '@cassiesbooktok' },
-  { title: 'Happy Place', author: 'Emily Henry', cover: 'https://covers.openlibrary.org/b/isbn/9780593334867-M.jpg', label: 'Romance fave', creator: '@amyjordanj' },
-  { title: 'Lessons in Chemistry', author: 'Bonnie Garmus', cover: 'https://covers.openlibrary.org/b/isbn/9780385547345-M.jpg', label: 'Must-read', creator: '@morgannbook' },
-  { title: 'The Housemaid', author: 'Freida McFadden', cover: 'https://covers.openlibrary.org/b/isbn/9781538742549-M.jpg', label: 'Thriller of the year', creator: '@stressinabox' },
-  { title: 'Daisy Jones & The Six', author: 'Taylor Jenkins Reid', cover: 'https://covers.openlibrary.org/b/isbn/9781524798659-M.jpg', label: 'Summer read', creator: '@abbysbooks' },
-  { title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', cover: 'https://covers.openlibrary.org/b/isbn/9780593321201-M.jpg', label: 'Mind-bending', creator: '@booksandquills' },
+  { title: 'Fourth Wing', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374042-M.jpg', label: '#BookTok', creator: '@cassiesbooktok', platform: 'TikTok' },
+  { title: 'Iron Flame', author: 'Rebecca Yarros', cover: 'https://covers.openlibrary.org/b/isbn/9781649374172-M.jpg', label: 'Sequel hype', creator: '@morgannbook', platform: 'TikTok' },
+  { title: 'A Court of Thorns and Roses', author: 'Sarah J. Maas', cover: 'https://covers.openlibrary.org/b/isbn/9781619635180-M.jpg', label: 'Classic pick', creator: '@cassiesbooktok', platform: 'TikTok' },
+  { title: 'Happy Place', author: 'Emily Henry', cover: 'https://covers.openlibrary.org/b/isbn/9780593334867-M.jpg', label: 'Romance fave', creator: '@amyjordanj', platform: 'Instagram' },
+  { title: 'Lessons in Chemistry', author: 'Bonnie Garmus', cover: 'https://covers.openlibrary.org/b/isbn/9780385547345-M.jpg', label: 'Must-read', creator: '@morgannbook', platform: 'TikTok' },
+  { title: 'The Housemaid', author: 'Freida McFadden', cover: 'https://covers.openlibrary.org/b/isbn/9781538742549-M.jpg', label: 'Thriller of the year', creator: '@stressinabox', platform: 'TikTok' },
+  { title: 'Daisy Jones & The Six', author: 'Taylor Jenkins Reid', cover: 'https://covers.openlibrary.org/b/isbn/9781524798659-M.jpg', label: 'Summer read', creator: '@abbysbooks', platform: 'Instagram' },
+  { title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', cover: 'https://covers.openlibrary.org/b/isbn/9780593321201-M.jpg', label: 'Mind-bending', creator: '@booksandquills', platform: 'YouTube' },
 ];
 
 const MUST_READS_2026 = [
@@ -209,7 +209,17 @@ export default function DiscoverClient() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {TRENDING_BOOKS.map(book => (
-                  <BookCard key={book.title} {...book} badge="TikTok" badgeClass="bg-black text-white" onClick={() => toPreview(book.title, book.author, book.cover)} />
+                  <BookCard
+                    key={book.title}
+                    {...book}
+                    badge={book.platform}
+                    badgeClass={
+                      book.platform === 'TikTok' ? 'bg-black/80 text-white'
+                      : book.platform === 'Instagram' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      : 'bg-red-600 text-white'
+                    }
+                    onClick={() => toPreview(book.title, book.author, book.cover)}
+                  />
                 ))}
               </div>
             )}

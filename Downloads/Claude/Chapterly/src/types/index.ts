@@ -27,6 +27,7 @@ export interface BookSearchResult {
   isbn13?: string | null;
   isbn10?: string | null;
   page_count?: number | null;
+  subjects?: string[];
 }
 
 // ─── Shelf / UserBook Types ──────────────────────────────────

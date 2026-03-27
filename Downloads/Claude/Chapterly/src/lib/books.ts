@@ -33,6 +33,7 @@ export async function searchOpenLibrary(query: string): Promise<BookSearchResult
     isbn13: doc.isbn?.find((i) => i.length === 13) ?? null,
     isbn10: doc.isbn?.find((i) => i.length === 10) ?? null,
     page_count: doc.number_of_pages_median ?? null,
+    subjects: (doc.subject ?? []).slice(0, 10),
   }));
 }
 
@@ -75,6 +76,7 @@ export async function searchGoogleBooks(query: string): Promise<BookSearchResult
       isbn13: info.industryIdentifiers?.find((i) => i.type === 'ISBN_13')?.identifier ?? null,
       isbn10: info.industryIdentifiers?.find((i) => i.type === 'ISBN_10')?.identifier ?? null,
       page_count: info.pageCount ?? null,
+      subjects: info.categories ?? [],
     };
   });
 }
@@ -118,7 +120,14 @@ export async function getOrCreateBook(
     .eq('source_id', searchResult.source_id)
     .maybeSingle();
 
-  if (existing) return existing as Book;
+  if (existing) {
+    // Backfill subjects for books that were stored before subjects were captured
+    if (!existing.subjects?.length && searchResult.subjects?.length) {
+      await supabase.from('books').update({ subjects: searchResult.subjects }).eq('id', existing.id);
+      return { ...existing, subjects: searchResult.subjects } as Book;
+    }
+    return existing as Book;
+  }
 
   const { data: created, error } = await supabase
     .from('books')
@@ -132,6 +141,7 @@ export async function getOrCreateBook(
       published_year: searchResult.published_year,
       cover_url: searchResult.cover_url,
       page_count: searchResult.page_count,
+      subjects: searchResult.subjects ?? [],
     })
     .select()
     .single();

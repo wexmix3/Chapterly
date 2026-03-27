@@ -37,7 +37,7 @@ export default async function LandingPage() {
       </nav>
 
       {/* ── Hero: split layout ── */}
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-24 grid md:grid-cols-2 gap-16 items-center">
+      <section className="max-w-6xl mx-auto px-6 pt-24 pb-28 grid md:grid-cols-2 gap-20 items-center">
         {/* Left: copy */}
         <div>
           <div className="inline-flex items-center gap-2 border border-brand-200 text-brand-700 rounded-full px-3 py-1 text-xs font-medium mb-8 bg-brand-50">
@@ -99,8 +99,8 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Stats strip ── */}
-      <section className="bg-ink-950 py-14 px-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8 text-center">
+      <section className="bg-ink-950 py-16 px-6">
+        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-6 sm:gap-12 text-center">
           {[
             { value: '10,000+', label: 'Active readers' },
             { value: '500,000+', label: 'Pages tracked' },
@@ -115,13 +115,13 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Section 3: Three competitive advantages ── */}
-      <section id="features" className="bg-paper-50 border-y border-ink-100 py-24 px-6">
+      <section id="features" className="bg-paper-50 border-y border-ink-100 py-28 px-6">
         <div className="max-w-5xl mx-auto">
-          <p className="text-center text-xs font-semibold text-ink-400 uppercase tracking-widest mb-4">Why Chapterly</p>
+          <p className="text-center text-xs font-semibold text-ink-400 uppercase tracking-widest mb-5">Why Chapterly</p>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-ink-950 text-center mb-16">
             Built different. Not just different-looking.
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {[
               {
                 icon: Sparkles,
@@ -139,12 +139,12 @@ export default async function LandingPage() {
                 desc: "Follow readers with your taste. See what they're reading. Discover books through people you trust — not algorithms.",
               },
             ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="text-center">
-                <div className="w-12 h-12 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <div key={title} className="text-center px-2">
+                <div className="w-12 h-12 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <Icon className="w-5 h-5 text-brand-500" />
                 </div>
-                <h3 className="font-display font-bold text-ink-950 text-xl mb-3">{title}</h3>
-                <p className="text-sm text-ink-500 leading-relaxed">{desc}</p>
+                <h3 className="font-display font-bold text-ink-950 text-xl mb-4">{title}</h3>
+                <p className="text-sm text-ink-500 leading-loose">{desc}</p>
               </div>
             ))}
           </div>
@@ -152,7 +152,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Section 4: Feature highlights ── */}
-      <section className="max-w-5xl mx-auto px-6 py-24 space-y-28">
+      <section className="max-w-5xl mx-auto px-6 py-28 space-y-32">
 
         {/* Row 1: AI Insights */}
         <div className="grid md:grid-cols-2 gap-16 items-center">
@@ -300,13 +300,13 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Testimonials ── */}
-      <section className="bg-paper-50 border-y border-ink-100 py-24 px-6">
+      <section className="bg-paper-50 border-y border-ink-100 py-28 px-6">
         <div className="max-w-5xl mx-auto">
-          <p className="text-center text-xs font-semibold text-ink-400 uppercase tracking-widest mb-4">What readers say</p>
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-ink-950 text-center mb-12">
+          <p className="text-center text-xs font-semibold text-ink-400 uppercase tracking-widest mb-5">What readers say</p>
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-ink-950 text-center mb-14">
             Readers who actually read.
           </h2>
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 name: 'Sarah M.',
@@ -327,12 +327,12 @@ export default async function LandingPage() {
                 color: 'bg-emerald-100 text-emerald-700',
               },
             ].map(t => (
-              <div key={t.name} className="bg-white rounded-2xl border border-ink-100 p-6 shadow-sm">
-                <div className="flex gap-0.5 mb-5">
+              <div key={t.name} className="bg-white rounded-2xl border border-ink-100 p-7 shadow-sm">
+                <div className="flex gap-0.5 mb-6">
                   {[0,1,2,3,4].map(i => <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />)}
                 </div>
-                <p className="text-sm text-ink-700 leading-relaxed mb-5">&ldquo;{t.text}&rdquo;</p>
-                <div className="flex items-center gap-3 pt-4 border-t border-ink-50">
+                <p className="text-sm text-ink-700 leading-loose mb-6">&ldquo;{t.text}&rdquo;</p>
+                <div className="flex items-center gap-3 pt-5 border-t border-ink-50">
                   <div className={`w-9 h-9 rounded-full ${t.color} flex items-center justify-center text-sm font-bold flex-shrink-0`}>
                     {t.name[0]}
                   </div>
@@ -348,10 +348,10 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Comparison table ── */}
-      <section className="bg-white border-b border-ink-100 py-24 px-6">
+      <section className="bg-white border-b border-ink-100 py-28 px-6">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-display text-3xl font-bold text-ink-950 text-center mb-3">Why switch?</h2>
-          <p className="text-ink-500 text-center mb-12">Everything readers have always wanted — in one place.</p>
+          <h2 className="font-display text-3xl font-bold text-ink-950 text-center mb-4">Why switch?</h2>
+          <p className="text-ink-500 text-center mb-14">Everything readers have always wanted — in one place.</p>
 
           <div className="bg-white rounded-2xl border border-ink-100 overflow-hidden shadow-sm">
             <div className="grid grid-cols-3 px-6 py-3 border-b border-ink-100 bg-paper-50">
@@ -369,7 +369,7 @@ export default async function LandingPage() {
               ['Reading statistics',      true,  'limited'],
               ['Free forever',            true,  true],
             ].map(([feature, ours, theirs]) => (
-              <div key={String(feature)} className="grid grid-cols-3 px-6 py-3.5 border-b border-ink-50 last:border-0">
+              <div key={String(feature)} className="grid grid-cols-3 px-6 py-4 border-b border-ink-50 last:border-0">
                 <span className="text-sm text-ink-700">{String(feature)}</span>
                 <span className="flex justify-center">
                   {ours === true
@@ -392,8 +392,8 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="px-4 md:px-8 py-24">
-        <div className="max-w-4xl mx-auto bg-ink-950 text-white rounded-3xl px-8 py-20 text-center relative overflow-hidden">
+      <section className="px-4 md:px-8 py-28">
+        <div className="max-w-4xl mx-auto bg-ink-950 text-white rounded-3xl px-8 py-24 text-center relative overflow-hidden">
           {/* Subtle book covers as background texture */}
           <div className="absolute inset-0 opacity-5 pointer-events-none flex items-center justify-center gap-4 overflow-hidden">
             {['9781649374042','9780735211292','9780525559474','9780385547345','9781619635180','9780593334867'].map(isbn => (
@@ -405,7 +405,7 @@ export default async function LandingPage() {
             <h2 className="font-display text-3xl md:text-5xl font-bold mb-4">
               Start your reading<br />journey today.
             </h2>
-            <p className="text-ink-300 text-lg mb-10 max-w-lg mx-auto">
+            <p className="text-ink-300 text-lg mb-12 max-w-lg mx-auto leading-relaxed">
               Join 10,000+ readers who track smarter, read more, and actually enjoy it.
             </p>
             <Link
