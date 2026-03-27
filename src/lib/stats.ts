@@ -131,6 +131,18 @@ export async function computeUserStats(
     return { month, books: booksByMonth[month] ?? 0, pages: pagesByMonth[month] ?? 0 };
   });
 
+  // All-time books per year (covers full history, not just last 12 months)
+  const byYear: Record<string, number> = {};
+  for (const ub of userBooks) {
+    if (ub.status === 'read' && ub.finished_at) {
+      const yr = ub.finished_at.substring(0, 4);
+      if (/^\d{4}$/.test(yr)) byYear[yr] = (byYear[yr] ?? 0) + 1;
+    }
+  }
+  const books_by_year = Object.entries(byYear)
+    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+    .map(([year, books]) => ({ year, books }));
+
   // ── Session insights ─────────────────────────────────────────
   const sessionCount = sessions.length;
   const avg_pages_per_session = sessionCount > 0 ? Math.round(totalPages / sessionCount) : 0;
@@ -175,6 +187,7 @@ export async function computeUserStats(
     avg_rating: avgRating,
     top_genres,
     reading_by_month,
+    books_by_year,
     session_insights: {
       avg_pages_per_session,
       avg_minutes_per_session,
