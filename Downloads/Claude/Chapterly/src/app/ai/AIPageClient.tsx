@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
+import PremiumGate from '@/components/ui/PremiumGate';
 import {
   Sparkles, BookOpen, RefreshCw, Loader2, Plus, Check,
   Brain, TrendingUp, Clock, Star, Zap, AlertCircle, Target, Dna,
 } from 'lucide-react';
+import { track } from '@/lib/analytics';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -161,6 +163,17 @@ export default function AIPageClient() {
   const [dnaLoading, setDnaLoading] = useState(false);
   const [dnaLoaded, setDnaLoaded] = useState(false);
 
+  // Premium status
+  const [isPremium, setIsPremium] = useState(false);
+
+  // Load premium status once on mount
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j?.data?.is_premium) setIsPremium(true); })
+      .catch(() => {});
+  }, []);
+
   // Load on tab switch
   useEffect(() => {
     if (activeTab === 'picks' && !recsLoaded) loadRecs();
@@ -182,6 +195,7 @@ export default function AIPageClient() {
       setRecs(data.recommendations ?? []);
       if (data.message) setRecsMessage(data.message);
       setRecsLoaded(true);
+      track({ event: 'ai_feature_used', properties: { feature: 'recommend' } });
     } catch (e) {
       setRecsError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -200,6 +214,7 @@ export default function AIPageClient() {
       setInsightsCached(!!data._cached);
       setInsightsLoadedAt(new Date());
       setInsightsLoaded(true);
+      track({ event: 'ai_feature_used', properties: { feature: 'insights' } });
     } catch (e) {
       setInsightsError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -217,6 +232,7 @@ export default function AIPageClient() {
       setPersonality(data);
       setPersonalityCached(!!data._cached);
       setPersonalityLoaded(true);
+      track({ event: 'ai_feature_used', properties: { feature: 'personality' } });
     } catch (e) {
       setPersonalityError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -231,6 +247,7 @@ export default function AIPageClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setMoodRecs(data.recommendations ?? []);
+      track({ event: 'ai_feature_used', properties: { feature: 'mood' } });
     } catch (e) {
       setMoodError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -452,14 +469,21 @@ export default function AIPageClient() {
                   <h2 className="font-display text-base font-semibold text-ink-800">Reading DNA</h2>
                 </div>
 
-                {dnaLoading ? (
-                  <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
-                    <span className="text-sm text-ink-400">Analyzing your reading DNA…</span>
-                  </div>
-                ) : dna ? (
-                  <DNACard dna={dna} />
-                ) : null}
+                <PremiumGate isPremium={isPremium} featureName="Reading DNA" compact>
+                  {dnaLoading ? (
+                    <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
+                      <span className="text-sm text-ink-400">Analyzing your reading DNA…</span>
+                    </div>
+                  ) : dna ? (
+                    <DNACard dna={dna} />
+                  ) : (
+                    <div className="bg-white rounded-2xl border border-ink-100 p-5 text-center">
+                      <span className="text-3xl block mb-2">🧬</span>
+                      <p className="text-sm text-ink-500">Read more books to unlock your DNA.</p>
+                    </div>
+                  )}
+                </PremiumGate>
               </div>
             </div>
           )}
@@ -472,7 +496,7 @@ export default function AIPageClient() {
                   <h2 className="font-display text-lg font-semibold text-ink-800">Your Reading Type</h2>
                   <p className="text-xs text-ink-400">Claude&apos;s take on what kind of reader you are</p>
                 </div>
-                {personalityLoaded && (
+                {personalityLoaded && isPremium && (
                   <div className="flex items-center gap-2">
                     {personalityCached && <span className="text-[10px] text-ink-400">From cache</span>}
                     <button onClick={() => loadPersonality(true)}
@@ -485,13 +509,15 @@ export default function AIPageClient() {
                 )}
               </div>
 
-              {personalityLoading ? (
-                <LoadingCard message="Discovering your reading personality…" />
-              ) : personalityError ? (
-                <ErrorCard message={personalityError} onRetry={() => { setPersonalityLoaded(false); loadPersonality(); }} />
-              ) : personality ? (
-                <PersonalityCard personality={personality} />
-              ) : null}
+              <PremiumGate isPremium={isPremium} featureName="Reading Personality">
+                {personalityLoading ? (
+                  <LoadingCard message="Discovering your reading personality…" />
+                ) : personalityError ? (
+                  <ErrorCard message={personalityError} onRetry={() => { setPersonalityLoaded(false); loadPersonality(); }} />
+                ) : personality ? (
+                  <PersonalityCard personality={personality} />
+                ) : null}
+              </PremiumGate>
             </div>
           )}
 
@@ -503,50 +529,52 @@ export default function AIPageClient() {
                 <p className="text-xs text-ink-400">Pick a vibe and Claude will find the perfect read</p>
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
-                {MOODS.map(mood => (
-                  <button
-                    key={mood.label}
-                    onClick={() => loadMoodRecs(mood)}
-                    disabled={moodLoading}
-                    className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border text-center transition-all ${
-                      selectedMood?.label === mood.label
-                        ? 'bg-brand-500 border-transparent text-white shadow-md shadow-brand-500/20'
-                        : 'bg-white border-ink-100 text-ink-700 hover:border-brand-200 hover:bg-brand-50'
-                    }`}
-                  >
-                    <span className="text-xl">{mood.emoji}</span>
-                    <span className="text-[10px] font-semibold leading-tight">{mood.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {moodLoading && <LoadingCard message={`Finding ${selectedMood?.label?.toLowerCase()} reads for you…`} />}
-              {moodError && <ErrorCard message={moodError} onRetry={() => selectedMood && loadMoodRecs(selectedMood)} />}
-
-              {!moodLoading && moodRecs.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-ink-400 uppercase tracking-wider">
-                    {selectedMood?.emoji} {selectedMood?.label} picks
-                  </p>
-                  {moodRecs.map((rec, i) => (
-                    <RecommendationCard
-                      key={`${rec.title}-${i}`}
-                      rec={rec}
-                      gradient={REC_GRADIENTS[i % REC_GRADIENTS.length]}
-                      isAdded={added.has(`${rec.title}-${rec.author}`)}
-                      onAdd={() => handleAddToShelf(rec.title, rec.author)}
-                    />
+              <PremiumGate isPremium={isPremium} featureName="Mood Recommendations">
+                <div className="grid grid-cols-4 gap-2">
+                  {MOODS.map(mood => (
+                    <button
+                      key={mood.label}
+                      onClick={() => loadMoodRecs(mood)}
+                      disabled={moodLoading}
+                      className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border text-center transition-all ${
+                        selectedMood?.label === mood.label
+                          ? 'bg-brand-500 border-transparent text-white shadow-md shadow-brand-500/20'
+                          : 'bg-white border-ink-100 text-ink-700 hover:border-brand-200 hover:bg-brand-50'
+                      }`}
+                    >
+                      <span className="text-xl">{mood.emoji}</span>
+                      <span className="text-[10px] font-semibold leading-tight">{mood.label}</span>
+                    </button>
                   ))}
                 </div>
-              )}
 
-              {!moodLoading && !selectedMood && (
-                <div className="text-center py-12 text-ink-300">
-                  <span className="text-5xl block mb-3">🎭</span>
-                  <p className="text-sm text-ink-400">Tap a mood above to get your picks</p>
-                </div>
-              )}
+                {moodLoading && <LoadingCard message={`Finding ${selectedMood?.label?.toLowerCase()} reads for you…`} />}
+                {moodError && <ErrorCard message={moodError} onRetry={() => selectedMood && loadMoodRecs(selectedMood)} />}
+
+                {!moodLoading && moodRecs.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-ink-400 uppercase tracking-wider">
+                      {selectedMood?.emoji} {selectedMood?.label} picks
+                    </p>
+                    {moodRecs.map((rec, i) => (
+                      <RecommendationCard
+                        key={`${rec.title}-${i}`}
+                        rec={rec}
+                        gradient={REC_GRADIENTS[i % REC_GRADIENTS.length]}
+                        isAdded={added.has(`${rec.title}-${rec.author}`)}
+                        onAdd={() => handleAddToShelf(rec.title, rec.author)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {!moodLoading && !selectedMood && (
+                  <div className="text-center py-12 text-ink-300">
+                    <span className="text-5xl block mb-3">🎭</span>
+                    <p className="text-sm text-ink-400">Tap a mood above to get your picks</p>
+                  </div>
+                )}
+              </PremiumGate>
             </div>
           )}
 

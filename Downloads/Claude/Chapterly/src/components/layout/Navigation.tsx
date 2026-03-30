@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useNotifications } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import { identify } from '@/lib/analytics';
 
 // ── Nav structure ──────────────────────────────────────────────────────────────
 
@@ -148,9 +149,12 @@ export default function Navigation() {
       .then(j => {
         if (j?.data?.reader_level) setReaderLevel(j.data.reader_level as number);
         if (j?.data?.handle) setUserHandle(j.data.handle as string);
+        if (user?.id) {
+          identify(user.id, { is_premium: !!j?.data?.is_premium });
+        }
       })
       .catch(() => {});
-  }, []);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isAIActive       = pathname === '/ai' || pathname.startsWith('/ai/');
   const isDiscoverActive = pathname === '/discover' || pathname.startsWith('/discover/');
@@ -215,6 +219,7 @@ export default function Navigation() {
             {/* Notifications */}
             <Link
               href="/notifications"
+              aria-label="Notifications"
               className="relative p-2 rounded-lg hover:bg-ink-50 dark:hover:bg-ink-900 transition-colors"
             >
               <Bell className="w-4 h-4 text-ink-500 dark:text-ink-400" />
@@ -242,6 +247,7 @@ export default function Navigation() {
             {/* User avatar → direct profile link (desktop) */}
             <Link
               href={userHandle ? `/u/${userHandle}` : '/settings'}
+              aria-label="View profile"
               className="relative hidden md:flex items-center"
             >
               {avatarUrl ? (

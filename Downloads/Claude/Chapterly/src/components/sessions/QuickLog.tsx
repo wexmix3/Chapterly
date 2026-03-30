@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BookOpen, Minus, Plus, CheckCircle, Loader2, ChevronDown, ChevronUp, Quote } from 'lucide-react';
 import { useLogSession } from '@/hooks';
 import type { UserBook } from '@/types';
+import { track } from '@/lib/analytics';
 
 const PAGE_PRESETS = [5, 10, 25, 50];
 const MIN_PRESETS = [5, 15, 30, 60];
@@ -53,6 +54,7 @@ export default function QuickLog({ userBook, onComplete, onLogged }: Props) {
     });
 
     if (res.ok) {
+      track({ event: 'session_logged', properties: { mode, value } });
       if (quoteText.trim()) {
         await fetch('/api/quotes', {
           method: 'POST',
@@ -165,13 +167,16 @@ export default function QuickLog({ userBook, onComplete, onLogged }: Props) {
       {/* Stepper */}
       <div className="flex items-center justify-center gap-4">
         <button onClick={() => setValue(Math.max(1, value - 1))}
+          aria-label={`Decrease ${mode === 'pages' ? 'pages' : 'minutes'}`}
           className="w-11 h-11 rounded-xl bg-ink-50 hover:bg-ink-100 flex items-center justify-center text-ink-700 transition-colors active:scale-95">
           <Minus className="w-4 h-4" />
         </button>
         <input type="number" value={value} min={1}
+          aria-label={`Number of ${mode === 'pages' ? 'pages' : 'minutes'} read`}
           onChange={(e) => setValue(Math.max(1, parseInt(e.target.value, 10) || 1))}
           className="w-20 text-center font-display text-3xl font-bold text-ink-950 bg-transparent border-none outline-none" />
         <button onClick={() => setValue(value + 1)}
+          aria-label={`Increase ${mode === 'pages' ? 'pages' : 'minutes'}`}
           className="w-11 h-11 rounded-xl bg-ink-50 hover:bg-ink-100 flex items-center justify-center text-ink-700 transition-colors active:scale-95">
           <Plus className="w-4 h-4" />
         </button>

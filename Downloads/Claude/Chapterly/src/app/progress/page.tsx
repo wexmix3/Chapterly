@@ -2,7 +2,9 @@ export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import ProgressClient from './ProgressClient';
+import nextDynamic from 'next/dynamic';
+
+const ProgressClient = nextDynamic(() => import('./ProgressClient'), { ssr: false });
 
 export default async function ProgressPage() {
   const supabase = createServerSupabaseClient();
