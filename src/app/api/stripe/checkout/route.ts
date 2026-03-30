@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getStripe, PREMIUM_PRICE_ID } from '@/lib/stripe';
+import { getStripe, PREMIUM_PRICE_ID, ANNUAL_PRICE_ID } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   const supabase = createServerSupabaseClient();
@@ -12,6 +12,15 @@ export async function POST(req: NextRequest) {
 
   const stripe = getStripe();
   const origin = req.nextUrl.origin;
+
+  // Parse plan selection from request body
+  let plan: 'monthly' | 'annual' = 'monthly';
+  try {
+    const body = await req.json();
+    if (body?.plan === 'annual') plan = 'annual';
+  } catch { /* no body or invalid JSON — default to monthly */ }
+
+  const priceId = plan === 'annual' ? ANNUAL_PRICE_ID : PREMIUM_PRICE_ID;
 
   // Get or create Stripe customer
   const { data: profile } = await supabase
@@ -36,7 +45,7 @@ export async function POST(req: NextRequest) {
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      line_items: [{ price: PREMIUM_PRICE_ID, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/premium?success=true`,
       cancel_url: `${origin}/premium`,
       subscription_data: {

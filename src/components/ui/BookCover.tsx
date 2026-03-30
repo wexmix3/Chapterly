@@ -80,7 +80,6 @@ export default function BookCover({ src, title, authors, className, width, heigh
     onError: handleError,
     onLoad: handleLoad,
     className,
-    unoptimized: true,
   };
 
   if (fill) return <Image {...commonProps} fill sizes={sizes ?? '(max-width: 768px) 100vw, 200px'} alt={title} />;

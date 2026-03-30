@@ -4,6 +4,7 @@ import { Inter, Lora } from 'next/font/google';
 import './globals.css';
 import PWARegister from '@/components/PWARegister';
 import { Analytics } from '@vercel/analytics/react';
+import PostHogProvider from '@/components/providers/PostHogProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -61,9 +62,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="bg-paper-50 dark:bg-ink-950 text-ink-900 dark:text-paper-100 transition-colors">
-        <PWARegister />
-        <Analytics />
-        {children}
+        <PostHogProvider>
+          <PWARegister />
+          <Analytics />
+          {children}
+        </PostHogProvider>
       </body>
     </html>
   );

@@ -11,7 +11,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, handle, bio, avatar_url, is_public, onboarding_done')
+    .select('display_name, handle, bio, avatar_url, is_public, onboarding_done, timezone, email_prefs, is_premium, premium_expires_at')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -25,7 +25,18 @@ export default async function SettingsPage() {
   return (
     <SettingsClient
       email={user.email ?? ''}
-      profile={profile ?? { display_name: '', handle: '', bio: '', avatar_url: null, is_public: true, onboarding_done: false }}
+      profile={profile ?? {
+        display_name: '',
+        handle: '',
+        bio: '',
+        avatar_url: null,
+        is_public: true,
+        onboarding_done: false,
+        timezone: null,
+        email_prefs: null,
+        is_premium: false,
+        premium_expires_at: null,
+      }}
       challenge={challenge ?? null}
     />
   );

@@ -12,6 +12,7 @@ export function getStripe(): Stripe {
 }
 
 export const PREMIUM_PRICE_ID = process.env.STRIPE_PREMIUM_PRICE_ID ?? '';
+export const ANNUAL_PRICE_ID = process.env.STRIPE_ANNUAL_PRICE_ID ?? '';
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 
 export const PREMIUM_FEATURES = [

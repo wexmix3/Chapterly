@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server';
+import { writeLimiter, checkRateLimit } from '@/lib/rate-limit';
 
 /** GET /api/social — fetch the current user's following list */
 export async function GET() {
@@ -25,6 +26,9 @@ export async function POST(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { success } = await checkRateLimit(writeLimiter, user.id);
+  if (!success) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
   // Ensure the follower has a public.users profile (OAuth may create auth.users without public.users)
   const { data: profile } = await supabase.from('users').select('id').eq('id', user.id).maybeSingle();

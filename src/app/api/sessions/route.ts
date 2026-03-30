@@ -22,6 +22,20 @@ export async function POST(request: NextRequest) {
     ended_at?: string;
   };
 
+  // Validate session values to prevent leaderboard cheating
+  const MAX_PAGES_PER_HOUR = 150;
+  const MAX_MINUTES_PER_DAY = 600;
+
+  if (body.mode === 'pages' && body.value > MAX_PAGES_PER_HOUR) {
+    return NextResponse.json({ error: 'Session value exceeds maximum allowed pages per session' }, { status: 400 });
+  }
+  if (body.mode === 'minutes' && body.value > MAX_MINUTES_PER_DAY) {
+    return NextResponse.json({ error: 'Session value exceeds maximum allowed minutes per session' }, { status: 400 });
+  }
+  if (body.value <= 0) {
+    return NextResponse.json({ error: 'Session value must be positive' }, { status: 400 });
+  }
+
   const now = new Date();
   const pages_delta = body.mode === 'pages' ? body.value : 0;
   const minutes_delta = body.mode === 'minutes' ? body.value : 0;

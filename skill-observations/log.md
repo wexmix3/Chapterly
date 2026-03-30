@@ -40,3 +40,21 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement:** Add to Chapterly project notes: whenever using `next/dynamic` inside a page file that also has `export const dynamic = 'force-dynamic'`, always alias the import as `nextDynamic` or `dynamicImport`.
 
 **Principle:** Next.js reserved export names (`dynamic`, `revalidate`, `fetchCache`, etc.) occupy the module scope and will conflict with any same-named import. Always alias `next/dynamic` in page/route files that also use the `dynamic` route segment config export.
+
+---
+
+## 2026-03-30
+
+### Observation 3: XP update pattern — always read-then-write, never raw SQL increment
+
+**Date:** 2026-03-30
+**Session context:** Daily quests system — building /api/quests POST handler that awards XP on quest completion
+**Skill:** internal — Chapterly backend patterns
+**Type:** internal
+**Phase/Area:** XP mutation in API routes
+
+**Issue:** When first drafting the quests POST route, used a convoluted approach with `supabase.rpc('increment_user_xp', ...)` which doesn't exist in the schema, plus a series of messy fallbacks. The correct established pattern (already in `/api/xp/award/route.ts`) is: fetch `total_xp` + `reader_level` with `.maybeSingle()`, compute new values using `levelFromXP()` from `src/lib/xp.ts`, then write both columns back in a single `.update()` call.
+
+**Suggested improvement:** Add to Chapterly project notes: the canonical XP increment pattern is read-compute-write using `levelFromXP` from `src/lib/xp.ts`. No RPC needed. Reference: `src/app/api/xp/award/route.ts` as the authoritative example for any new route that awards XP.
+
+**Principle:** When an established pattern already exists in the codebase for a common operation (like incrementing XP), read that reference file before drafting the new implementation. Avoids inventing unnecessary abstractions (RPC calls) that don't match the actual DB schema.
