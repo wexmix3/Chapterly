@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { writeLimiter, checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient();
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { success } = await checkRateLimit(writeLimiter, user.id);
+  if (!success) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
   const body = await req.json();
   const { book_id, user_book_id, rating, text, mood_tags, contains_spoilers } = body;
@@ -110,9 +114,16 @@ export async function POST(req: NextRequest) {
           created_at: new Date().toISOString(),
         }));
 
-        await supabase.from('notifications').insert(notifications);
-      } catch {
-        // fire-and-forget — swallow errors silently
+        try {
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert(notifications);
+          if (notifError) console.error('[notifications] Insert failed:', notifError.message);
+        } catch (err) {
+          console.error('[notifications] Unexpected error:', err);
+        }
+      } catch (err) {
+        console.error('[reviews] Notification dispatch failed:', err);
       }
     })();
   }

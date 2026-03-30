@@ -62,14 +62,19 @@ export async function POST(req: NextRequest) {
     .eq('id', book_id)
     .maybeSingle();
 
-  await supabase.from('notifications').insert({
-    user_id: recipient_id,
-    actor_id: user.id,
-    type: 'book_recommendation',
-    title: `${senderProfile?.display_name ?? 'Someone'} recommended a book`,
-    body: `"${book?.title ?? 'A book'}"${message?.trim() ? ` — "${message.trim()}"` : ''}`,
-    link: `/notifications`,
-  });
+  try {
+    const { error: notifError } = await supabase.from('notifications').insert({
+      user_id: recipient_id,
+      actor_id: user.id,
+      type: 'book_recommendation',
+      title: `${senderProfile?.display_name ?? 'Someone'} recommended a book`,
+      body: `"${book?.title ?? 'A book'}"${message?.trim() ? ` — "${message.trim()}"` : ''}`,
+      link: `/notifications`,
+    });
+    if (notifError) console.error('[notifications] Insert failed:', notifError.message);
+  } catch (err) {
+    console.error('[notifications] Unexpected error:', err);
+  }
 
   return NextResponse.json({ data }, { status: 201 });
 }

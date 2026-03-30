@@ -36,3 +36,36 @@ At the start of any task-oriented session (multi-step work using tools), invoke 
 ## DB Schema
 Run `supabase/migrations/001_initial_schema.sql` manually in Supabase SQL Editor.
 Tables: users, books, user_books, sessions, stats_daily, social_follow, share_cards, reading_challenges. All with RLS.
+
+## Web App Build Patterns
+
+### API retry logic for Anthropic calls
+All `anthropic.messages.create()` calls must use `createMessageWithRetry` from `src/lib/ai-retry.ts`. Retries up to 3 attempts on 429 (rate limit) and 529 (overloaded) with 1.5s then 3s delays. Non-retryable errors (400, 401) throw immediately. Never deploy an AI feature without this.
+
+### Match model to task
+- Text analysis, summarization, structured extraction → `claude-haiku-4-5-20251001` (current default — correct)
+- Complex multi-step reasoning → `claude-sonnet-4-6`
+- Never use Opus for text analysis. Never add adaptive thinking to structured output tasks.
+
+### Cross-cutting principles
+Mandatory checklist for all code changes: `skill-observations/cross-cutting-principles.md`
+
+## Automation Layer — When to Use What
+
+Before designing or building any automation, background job, or webhook handler, classify which layer is right:
+
+**Use n8n when:**
+- Connecting SaaS tools (email, Stripe webhooks, Supabase with simple logic)
+- Simple trigger → condition → action patterns, under ~8 nodes
+- The workflow needs to be visible/explainable to someone non-technical
+
+**Use Trigger.dev or Vercel serverless when:**
+- The agent decides how many iterations to run (agentic loops)
+- Long-running jobs (>30 seconds)
+- Complex retry logic that would need 3+ custom Code nodes in n8n
+- The output is a Chapterly feature (not a client automation)
+- Version control and testability matter
+
+**Two forcing questions:**
+1. Would I need 3+ custom Code nodes to handle the logic in n8n? If yes → code.
+2. Does the workflow decide how many steps to take, or is step count fixed? If the agent decides → code.

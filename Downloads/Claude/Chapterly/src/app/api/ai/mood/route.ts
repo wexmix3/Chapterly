@@ -10,6 +10,7 @@ import { aiGuard } from '@/lib/ai-guard';
 import { getCachedAI, setCachedAI } from '@/lib/ai-cache';
 import { logAIUsage } from '@/lib/ai-usage-log';
 import Anthropic from '@anthropic-ai/sdk';
+import { createMessageWithRetry } from '@/lib/ai-retry';
 
 let _anthropic: Anthropic | null = null;
 function getAnthropic() {
@@ -150,7 +151,7 @@ Return ONLY valid JSON, no markdown.
 
   try {
     const anthropic = getAnthropic();
-    const response = await anthropic.messages.create({
+    const response = await createMessageWithRetry(anthropic, {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 768,
       messages: [{ role: 'user', content: prompt }],

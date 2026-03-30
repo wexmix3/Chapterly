@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git status:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(find C:/Users/maxmw/Downloads/Claude/Chapterly -name .env* -o -name *.env)",
+      "Bash(xargs wc:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"C:/Users/maxmw/Downloads/Claude/Chapterly\" && if [ -n \"$(git status --porcelain)\" ]; then git add -A && git commit -m \"Auto-push: $(date '+%Y-%m-%d %H:%M')\" && git push; fi",
+            "timeout": 30,
+            "statusMessage": "Pushing changes to GitHub..."
+          }
+        ]
+      }
+    ]
+  }
+}

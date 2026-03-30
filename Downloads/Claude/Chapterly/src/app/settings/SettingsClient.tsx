@@ -7,8 +7,33 @@ import LibraryImport from '@/components/books/GoodreadsImport';
 import ShareCardPreview from '@/components/share/ShareCardPreview';
 import {
   User, BookOpen, Lock, Sun, Moon, Download, Trash2,
-  Check, Loader2, ChevronRight, AlertTriangle, Bell, Upload, Share2
+  Check, Loader2, ChevronRight, AlertTriangle, Bell, Upload, Share2,
+  CreditCard, Globe,
 } from 'lucide-react';
+
+const AVATAR_OPTIONS = ['📚', '🦉', '🐉', '🌙', '☕', '🌿', '🦋', '⚡'];
+
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Moscow',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Bangkok',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'Asia/Seoul',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+  'UTC',
+];
 
 type Profile = {
   display_name: string;
@@ -17,13 +42,17 @@ type Profile = {
   avatar_url: string | null;
   is_public: boolean;
   onboarding_done: boolean;
+  timezone?: string | null;
+  email_prefs?: Record<string, boolean> | null;
+  is_premium?: boolean;
+  premium_expires_at?: string | null;
 };
 
 type Challenge = { goal_books: number; goal_pages?: number | null } | null;
 
-type Section = 'account' | 'reading' | 'privacy' | 'appearance' | 'notifications' | 'data' | 'import' | 'share';
+type Section = 'account' | 'notifications' | 'privacy' | 'billing' | 'reading' | 'appearance' | 'data' | 'import' | 'share';
 
-function SectionButton({ id, active, icon: Icon, label, onClick }: {
+function SectionButton({ active, icon: Icon, label, onClick }: {
   id: Section; active: boolean; icon: React.ElementType; label: string; onClick: () => void;
 }) {
   return (
@@ -45,14 +74,20 @@ function SectionButton({ id, active, icon: Icon, label, onClick }: {
 function SaveBar({ saving, saved }: { saving: boolean; saved: boolean }) {
   if (!saving && !saved) return null;
   return (
-    <div className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-      saved ? 'text-emerald-600' : 'text-brand-600'
-    }`}>
-      {saving
-        ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-        : <><Check className="w-4 h-4" /> Saved</>
-      }
+    <div className={`flex items-center gap-2 text-sm font-medium transition-colors ${saved ? 'text-emerald-600' : 'text-brand-600'}`}>
+      {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><Check className="w-4 h-4" /> Saved</>}
     </div>
+  );
+}
+
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors ${on ? 'bg-brand-500' : 'bg-ink-300 dark:bg-ink-600'}`}
+    >
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0'}`} />
+    </button>
   );
 }
 
@@ -70,8 +105,19 @@ export default function SettingsClient({
   const [displayName, setDisplayName] = useState(initialProfile.display_name);
   const [handle, setHandle] = useState(initialProfile.handle);
   const [bio, setBio] = useState(initialProfile.bio ?? '');
+  const [selectedAvatar, setSelectedAvatar] = useState(initialProfile.avatar_url ?? '📚');
+  const [timezone, setTimezone] = useState(initialProfile.timezone ?? 'America/New_York');
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountSaved, setAccountSaved] = useState(false);
+
+  // Notification prefs
+  const initialEmailPrefs = initialProfile.email_prefs ?? {};
+  const [digestEnabled, setDigestEnabled] = useState(initialEmailPrefs.digest !== false);
+  const [streakReminderEnabled, setStreakReminderEnabled] = useState(initialEmailPrefs.streak_reminder !== false);
+  const [newFollowerEnabled, setNewFollowerEnabled] = useState(initialEmailPrefs.new_follower !== false);
+  const [friendFinishedEnabled, setFriendFinishedEnabled] = useState(initialEmailPrefs.friend_finished !== false);
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifSaved, setNotifSaved] = useState(false);
 
   // Reading goal
   const [goalBooks, setGoalBooks] = useState(initialChallenge?.goal_books ?? 12);
@@ -80,6 +126,8 @@ export default function SettingsClient({
 
   // Privacy
   const [isPublic, setIsPublic] = useState(initialProfile.is_public);
+  const [showStats, setShowStats] = useState(true);
+  const [allowFollow, setAllowFollow] = useState(true);
   const [privacySaving, setPrivacySaving] = useState(false);
   const [privacySaved, setPrivacySaved] = useState(false);
 
@@ -104,17 +152,50 @@ export default function SettingsClient({
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Billing
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const isPremium = initialProfile.is_premium ?? false;
+  const premiumExpiry = initialProfile.premium_expires_at
+    ? new Date(initialProfile.premium_expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : null;
+
   const saveAccount = async () => {
     if (!displayName.trim()) return;
     setAccountSaving(true);
     await fetch('/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ display_name: displayName.trim(), handle: handle.trim(), bio: bio.trim() }),
+      body: JSON.stringify({
+        display_name: displayName.trim(),
+        handle: handle.trim(),
+        bio: bio.trim(),
+        avatar_url: selectedAvatar,
+        timezone,
+      }),
     });
     setAccountSaving(false);
     setAccountSaved(true);
     setTimeout(() => setAccountSaved(false), 2500);
+  };
+
+  const saveNotifications = async () => {
+    setNotifSaving(true);
+    await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email_prefs: {
+          digest: digestEnabled,
+          streak_reminder: streakReminderEnabled,
+          new_follower: newFollowerEnabled,
+          friend_finished: friendFinishedEnabled,
+        },
+      }),
+    });
+    setNotifSaving(false);
+    setNotifSaved(true);
+    setTimeout(() => setNotifSaved(false), 2500);
   };
 
   const saveGoal = async () => {
@@ -157,14 +238,32 @@ export default function SettingsClient({
   const handleDelete = async () => {
     if (deleteConfirm !== 'DELETE') return;
     setDeleting(true);
-    await fetch('/api/profile', {
-      method: 'DELETE',
-    }).catch(() => {});
+    await fetch('/api/account', { method: 'DELETE' }).catch(() => {});
     await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {});
     router.push('/');
   };
 
+  const handleBillingPortal = async () => {
+    setPortalLoading(true);
+    const res = await fetch('/api/stripe/portal', { method: 'POST' });
+    const json = await res.json();
+    if (json.url) window.location.href = json.url;
+    setPortalLoading(false);
+  };
+
   const GOAL_PRESETS = [6, 12, 24, 36, 52, 100];
+
+  const NAV_ITEMS: { id: Section; icon: React.ElementType; label: string }[] = [
+    { id: 'account', icon: User, label: 'Account' },
+    { id: 'notifications', icon: Bell, label: 'Notifications' },
+    { id: 'privacy', icon: Lock, label: 'Privacy' },
+    { id: 'billing', icon: CreditCard, label: 'Billing' },
+    { id: 'reading', icon: BookOpen, label: 'Reading Goal' },
+    { id: 'appearance', icon: Sun, label: 'Appearance' },
+    { id: 'import', icon: Upload, label: 'Import Library' },
+    { id: 'share', icon: Share2, label: 'Share Cards' },
+    { id: 'data', icon: Download, label: 'Data' },
+  ];
 
   return (
     <div className="min-h-screen bg-paper-50 dark:bg-ink-950 pt-[52px]">
@@ -180,16 +279,7 @@ export default function SettingsClient({
           <div className="grid md:grid-cols-[180px_1fr] gap-6">
             {/* Sidebar nav */}
             <nav className="space-y-1">
-              {([
-                { id: 'account', icon: User, label: 'Account' },
-                { id: 'reading', icon: BookOpen, label: 'Reading Goal' },
-                { id: 'privacy', icon: Lock, label: 'Privacy' },
-                { id: 'appearance', icon: Sun, label: 'Appearance' },
-                { id: 'notifications', icon: Bell, label: 'Notifications' },
-                { id: 'import', icon: Upload, label: 'Import Library' },
-                { id: 'share', icon: Share2, label: 'Share Cards' },
-                { id: 'data', icon: Download, label: 'Data' },
-              ] as { id: Section; icon: React.ElementType; label: string }[]).map(({ id, icon, label }) => (
+              {NAV_ITEMS.map(({ id, icon, label }) => (
                 <SectionButton key={id} id={id} active={active === id} icon={icon} label={label} onClick={() => setActive(id)} />
               ))}
             </nav>
@@ -204,7 +294,7 @@ export default function SettingsClient({
                     <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Account</h2>
                     <SaveBar saving={accountSaving} saved={accountSaved} />
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
                       <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 mb-1.5">Display name</label>
                       <input
@@ -219,8 +309,8 @@ export default function SettingsClient({
                         <span className="px-3 py-2.5 bg-ink-50 dark:bg-ink-800 border border-r-0 border-ink-200 dark:border-ink-700 rounded-l-xl text-sm text-ink-400">@</span>
                         <input
                           value={handle}
-                          onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                          className="flex-1 px-3 py-2.5 bg-paper-50 dark:bg-ink-800 border border-ink-200 dark:border-ink-700 rounded-r-xl text-sm focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-100 transition-colors"
+                          readOnly
+                          className="flex-1 px-3 py-2.5 bg-ink-50 dark:bg-ink-800 border border-ink-200 dark:border-ink-700 rounded-r-xl text-sm text-ink-500 cursor-not-allowed"
                         />
                       </div>
                       <p className="text-[11px] text-ink-400 mt-1">Your public profile is at /u/{handle || '…'}</p>
@@ -237,6 +327,44 @@ export default function SettingsClient({
                       />
                       <p className="text-[11px] text-ink-400 mt-1 text-right">{bio.length}/160</p>
                     </div>
+
+                    {/* Avatar selector */}
+                    <div>
+                      <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 mb-2">Avatar</label>
+                      <div className="flex flex-wrap gap-2">
+                        {AVATAR_OPTIONS.map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => setSelectedAvatar(emoji)}
+                            className={`w-11 h-11 rounded-xl text-xl flex items-center justify-center border-2 transition-all ${
+                              selectedAvatar === emoji
+                                ? 'border-brand-400 bg-brand-50 scale-110'
+                                : 'border-ink-200 dark:border-ink-700 hover:border-brand-200'
+                            }`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Timezone */}
+                    <div>
+                      <label className="block text-xs font-medium text-ink-600 dark:text-ink-400 mb-1.5">
+                        <Globe className="w-3 h-3 inline mr-1" />
+                        Timezone
+                      </label>
+                      <select
+                        value={timezone}
+                        onChange={e => setTimezone(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-paper-50 dark:bg-ink-800 border border-ink-200 dark:border-ink-700 rounded-xl text-sm focus:outline-none focus:border-brand-400 transition-colors"
+                      >
+                        {TIMEZONES.map(tz => (
+                          <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
+                        ))}
+                      </select>
+                    </div>
+
                     <button
                       onClick={saveAccount}
                       disabled={accountSaving || !displayName.trim()}
@@ -244,7 +372,186 @@ export default function SettingsClient({
                     >
                       Save changes
                     </button>
+
+                    {/* Danger zone */}
+                    <div className="pt-2 border-t border-ink-100 dark:border-ink-800">
+                      <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-3">Danger zone</p>
+                      <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/40">
+                        <div className="flex items-start gap-3 mb-3">
+                          <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-red-800 dark:text-red-300">Delete account</p>
+                            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                              Permanently deletes your account and all data. This cannot be undone.
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-ink-600 dark:text-ink-400 mb-2">Type <strong>DELETE</strong> to confirm:</p>
+                        <div className="flex gap-2">
+                          <input
+                            value={deleteConfirm}
+                            onChange={e => setDeleteConfirm(e.target.value)}
+                            placeholder="DELETE"
+                            className="flex-1 px-3 py-2 bg-white dark:bg-ink-800 border border-red-200 dark:border-red-900 rounded-xl text-sm focus:outline-none focus:border-red-400"
+                          />
+                          <button
+                            onClick={handleDelete}
+                            disabled={deleteConfirm !== 'DELETE' || deleting}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-xl text-sm font-medium transition-colors"
+                          >
+                            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                </>
+              )}
+
+              {/* ── Notifications ────────────────────────── */}
+              {active === 'notifications' && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Notifications</h2>
+                    <SaveBar saving={notifSaving} saved={notifSaved} />
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      {
+                        label: 'Weekly digest email',
+                        desc: 'Your reading summary every Monday',
+                        value: digestEnabled,
+                        setter: setDigestEnabled,
+                      },
+                      {
+                        label: 'Streak reminders',
+                        desc: 'Daily nudge if you haven\'t read yet',
+                        value: streakReminderEnabled,
+                        setter: setStreakReminderEnabled,
+                      },
+                      {
+                        label: 'New followers',
+                        desc: 'When someone follows you',
+                        value: newFollowerEnabled,
+                        setter: setNewFollowerEnabled,
+                      },
+                      {
+                        label: 'Friend finished a book',
+                        desc: 'When someone you follow completes a book',
+                        value: friendFinishedEnabled,
+                        setter: setFriendFinishedEnabled,
+                      },
+                    ].map(({ label, desc, value, setter }) => (
+                      <div key={label} className="flex items-start justify-between gap-4 p-4 bg-paper-50 dark:bg-ink-800 rounded-xl border border-ink-100 dark:border-ink-700">
+                        <div>
+                          <p className="text-sm font-medium text-ink-800 dark:text-ink-200">{label}</p>
+                          <p className="text-xs text-ink-500 mt-0.5">{desc}</p>
+                        </div>
+                        <Toggle on={value} onToggle={() => setter(v => !v)} />
+                      </div>
+                    ))}
+                    <button
+                      onClick={saveNotifications}
+                      disabled={notifSaving}
+                      className="px-5 py-2.5 bg-ink-900 hover:bg-ink-800 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                    >
+                      Save preferences
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* ── Privacy ──────────────────────────────── */}
+              {active === 'privacy' && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Privacy</h2>
+                    <SaveBar saving={privacySaving} saved={privacySaved} />
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      {
+                        label: 'Public profile',
+                        desc: isPublic ? 'Your profile, shelf, and reviews are visible to everyone.' : 'Only people you follow can see your profile and shelf.',
+                        value: isPublic,
+                        setter: setIsPublic,
+                      },
+                      {
+                        label: 'Show reading stats publicly',
+                        desc: 'Let others see your pages read, streak, and goals.',
+                        value: showStats,
+                        setter: setShowStats,
+                      },
+                      {
+                        label: 'Allow follow requests',
+                        desc: 'Let other readers follow your reading activity.',
+                        value: allowFollow,
+                        setter: setAllowFollow,
+                      },
+                    ].map(({ label, desc, value, setter }) => (
+                      <div key={label} className="flex items-start justify-between gap-4 p-4 bg-paper-50 dark:bg-ink-800 rounded-xl border border-ink-100 dark:border-ink-700">
+                        <div>
+                          <p className="text-sm font-medium text-ink-800 dark:text-ink-200">{label}</p>
+                          <p className="text-xs text-ink-500 mt-0.5">{desc}</p>
+                        </div>
+                        <Toggle on={value} onToggle={() => setter(v => !v)} />
+                      </div>
+                    ))}
+                    <p className="text-xs text-ink-400">
+                      Regardless of your privacy setting, your username and reading stats are always shown on the leaderboard if you rank in the top 100.
+                    </p>
+                    <button
+                      onClick={savePrivacy}
+                      disabled={privacySaving}
+                      className="px-5 py-2.5 bg-ink-900 hover:bg-ink-800 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                    >
+                      Save privacy
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* ── Billing ──────────────────────────────── */}
+              {active === 'billing' && (
+                <>
+                  <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Billing</h2>
+                  {isPremium ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gradient-to-br from-brand-50 to-violet-50 dark:from-brand-950/30 dark:to-violet-950/30 rounded-xl border border-brand-200 dark:border-brand-800">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">✨</span>
+                          <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">Chapterly Premium</p>
+                        </div>
+                        <p className="text-xs text-ink-500">
+                          {premiumExpiry ? `Renews ${premiumExpiry}` : 'Active subscription'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleBillingPortal}
+                        disabled={portalLoading}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-ink-900 hover:bg-ink-800 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                      >
+                        {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                        Manage Billing
+                      </button>
+                      <p className="text-xs text-ink-400">Update your payment method, view invoices, or cancel your subscription.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-ink-50 dark:bg-ink-800 rounded-xl border border-ink-200 dark:border-ink-700">
+                        <p className="text-sm font-medium text-ink-800 dark:text-ink-200 mb-1">Free plan</p>
+                        <p className="text-xs text-ink-500">You are on the free plan. Upgrade to unlock AI insights, advanced stats, and more.</p>
+                      </div>
+                      <a
+                        href="/premium"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-medium transition-colors"
+                      >
+                        <span>✨</span>
+                        Upgrade to Premium
+                      </a>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -295,48 +602,6 @@ export default function SettingsClient({
                 </>
               )}
 
-              {/* ── Privacy ──────────────────────────────── */}
-              {active === 'privacy' && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Privacy</h2>
-                    <SaveBar saving={privacySaving} saved={privacySaved} />
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-4 p-4 bg-paper-50 dark:bg-ink-800 rounded-xl border border-ink-100 dark:border-ink-700">
-                      <div>
-                        <p className="text-sm font-medium text-ink-800 dark:text-ink-200">Public profile</p>
-                        <p className="text-xs text-ink-500 mt-0.5">
-                          {isPublic
-                            ? 'Your profile, shelf, and reviews are visible to everyone.'
-                            : 'Only people you follow can see your profile and shelf.'}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setIsPublic(v => !v)}
-                        className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors ${
-                          isPublic ? 'bg-brand-500' : 'bg-ink-300 dark:bg-ink-600'
-                        }`}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                          isPublic ? 'translate-x-5' : 'translate-x-0'
-                        }`} />
-                      </button>
-                    </div>
-                    <p className="text-xs text-ink-400">
-                      Regardless of your privacy setting, your username and reading stats are always shown on the leaderboard if you rank in the top 100.
-                    </p>
-                    <button
-                      onClick={savePrivacy}
-                      disabled={privacySaving}
-                      className="px-5 py-2.5 bg-ink-900 hover:bg-ink-800 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
-                    >
-                      Save privacy
-                    </button>
-                  </div>
-                </>
-              )}
-
               {/* ── Appearance ───────────────────────────── */}
               {active === 'appearance' && (
                 <>
@@ -371,33 +636,6 @@ export default function SettingsClient({
                 </>
               )}
 
-              {/* ── Notifications ────────────────────────── */}
-              {active === 'notifications' && (
-                <>
-                  <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Notifications</h2>
-                  <div className="space-y-3">
-                    {[
-                      { label: 'New followers', desc: 'When someone follows you' },
-                      { label: 'Friend activity', desc: 'When friends finish books or hit milestones' },
-                      { label: 'Book recommendations', desc: 'When a friend recommends a book to you' },
-                      { label: 'Club updates', desc: 'New posts in your book clubs' },
-                      { label: 'Weekly digest email', desc: 'Your reading summary every Monday' },
-                      { label: 'Streak reminders', desc: 'Daily nudge if you haven\'t read yet' },
-                    ].map(({ label, desc }) => (
-                      <div key={label} className="flex items-start justify-between gap-4 p-4 bg-paper-50 dark:bg-ink-800 rounded-xl border border-ink-100 dark:border-ink-700">
-                        <div>
-                          <p className="text-sm font-medium text-ink-800 dark:text-ink-200">{label}</p>
-                          <p className="text-xs text-ink-500 mt-0.5">{desc}</p>
-                        </div>
-                        {/* Toggle defaults to on — persisted client-side via localStorage for now */}
-                        <NotifToggle id={label} />
-                      </div>
-                    ))}
-                    <p className="text-xs text-ink-400 pt-1">Notification preferences are saved locally on this device.</p>
-                  </div>
-                </>
-              )}
-
               {/* ── Import Library ───────────────────────── */}
               {active === 'import' && (
                 <>
@@ -421,8 +659,6 @@ export default function SettingsClient({
                 <>
                   <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Your Data</h2>
                   <div className="space-y-4">
-
-                    {/* Export */}
                     <div className="p-4 bg-paper-50 dark:bg-ink-800 rounded-xl border border-ink-100 dark:border-ink-700">
                       <div className="flex items-start gap-3 mb-3">
                         <Download className="w-5 h-5 text-ink-500 mt-0.5 flex-shrink-0" />
@@ -440,66 +676,14 @@ export default function SettingsClient({
                         {exporting ? 'Preparing…' : 'Download CSV'}
                       </button>
                     </div>
-
-                    {/* Delete account */}
-                    <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/40">
-                      <div className="flex items-start gap-3 mb-3">
-                        <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-red-800 dark:text-red-300">Delete account</p>
-                          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                            Permanently deletes your account, shelf, sessions, and all data. This cannot be undone.
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-ink-600 dark:text-ink-400 mb-2">Type <strong>DELETE</strong> to confirm:</p>
-                      <div className="flex gap-2">
-                        <input
-                          value={deleteConfirm}
-                          onChange={e => setDeleteConfirm(e.target.value)}
-                          placeholder="DELETE"
-                          className="flex-1 px-3 py-2 bg-white dark:bg-ink-800 border border-red-200 dark:border-red-900 rounded-xl text-sm focus:outline-none focus:border-red-400"
-                        />
-                        <button
-                          onClick={handleDelete}
-                          disabled={deleteConfirm !== 'DELETE' || deleting}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-xl text-sm font-medium transition-colors"
-                        >
-                          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                          Delete
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </>
               )}
+
             </div>
           </div>
         </div>
       </main>
     </div>
-  );
-}
-
-// Notification toggle — persisted in localStorage per device
-function NotifToggle({ id }: { id: string }) {
-  const key = `notif_${id}`;
-  const [on, setOn] = useState(true);
-  useEffect(() => {
-    const saved = localStorage.getItem(key);
-    if (saved !== null) setOn(saved === '1');
-  }, [key]);
-  const toggle = () => {
-    const next = !on;
-    setOn(next);
-    localStorage.setItem(key, next ? '1' : '0');
-  };
-  return (
-    <button
-      onClick={toggle}
-      className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors ${on ? 'bg-brand-500' : 'bg-ink-300 dark:bg-ink-600'}`}
-    >
-      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0'}`} />
-    </button>
   );
 }

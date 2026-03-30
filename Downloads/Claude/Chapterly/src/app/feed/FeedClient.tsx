@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
-import { UserPlus, Loader2, BookOpen, Search, X, UserCheck } from 'lucide-react';
+import { UserPlus, Loader2, BookOpen, Search, X, UserCheck, Quote } from 'lucide-react';
 import { FeedEventSkeleton } from '@/components/ui/Skeleton';
 
 interface SuggestedUser {
@@ -16,9 +16,9 @@ interface SuggestedUser {
 
 interface FeedEvent {
   id: string;
-  event_type: 'started_reading' | 'finished' | 'rated' | 'shared_card' | 'added_to_shelf';
+  event_type: 'started_reading' | 'finished' | 'rated' | 'shared_card' | 'added_to_shelf' | 'wrote_review' | 'saved_quote';
   user_id: string;
-  user_book_id: string;
+  user_book_id: string | null;
   book_title: string;
   book_cover?: string;
   rating?: number;
@@ -26,6 +26,8 @@ interface FeedEvent {
   avatar_url?: string;
   handle?: string;
   created_at: string;
+  review_text?: string;
+  quote_text?: string;
 }
 
 interface UserResult {
@@ -112,6 +114,8 @@ export default function FeedClient() {
       case 'rated': return 'rated';
       case 'shared_card': return 'shared a card for';
       case 'added_to_shelf': return 'added to their shelf';
+      case 'wrote_review': return 'reviewed';
+      case 'saved_quote': return 'saved a quote from';
       default: return 'updated';
     }
   };
@@ -299,10 +303,30 @@ function FeedCard({ event, actionLabel, timeAgo }: {
           ) : (
             <span className="font-medium text-ink-900">{event.book_title}</span>
           )}
-          {event.event_type === 'rated' && event.rating && (
+          {(event.event_type === 'rated' || event.event_type === 'wrote_review') && event.rating && (
             <span className="ml-1 text-brand-500">{'★'.repeat(Math.floor(event.rating))}</span>
           )}
         </p>
+
+        {event.event_type === 'wrote_review' && event.review_text && (
+          <div className="mt-2 flex items-start gap-1.5">
+            <Quote className="w-3.5 h-3.5 text-ink-300 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-ink-600 leading-relaxed line-clamp-2">
+              {event.review_text.length > 120
+                ? `${event.review_text.slice(0, 120).trimEnd()}…`
+                : event.review_text}
+            </p>
+          </div>
+        )}
+
+        {event.event_type === 'saved_quote' && event.quote_text && (
+          <blockquote className="mt-2 border-l-2 border-brand-200 pl-3">
+            <p className="text-xs text-ink-600 italic leading-relaxed line-clamp-3">
+              &ldquo;{event.quote_text}&rdquo;
+            </p>
+          </blockquote>
+        )}
+
         <p className="text-xs text-ink-400 mt-0.5">{timeAgo}</p>
       </div>
       {event.book_cover && bookHref && (

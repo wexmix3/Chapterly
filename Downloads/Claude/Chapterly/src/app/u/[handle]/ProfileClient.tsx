@@ -6,9 +6,10 @@ import Navigation from '@/components/layout/Navigation';
 import {
   BookOpen, Star, Users, UserPlus, UserCheck, BookMarked,
   Lock, ChevronRight, MessageSquare, Loader2, BarChart3,
-  Calendar, Award, BadgeCheck, Share2, Check
+  Calendar, Award, BadgeCheck, Share2, Check, Zap,
 } from 'lucide-react';
 import { getArchetype, type Archetype } from '@/lib/archetype';
+import { levelFromXP, xpForLevel, xpForNextLevel, progressToNextLevel, levelTitle } from '@/lib/xp';
 
 interface BookEntry {
   status: string;
@@ -51,6 +52,8 @@ interface ProfileData {
     want_to_read_count: number;
     total_pages: number;
     avg_rating: number | null;
+    total_xp: number;
+    reader_level: number;
     is_creator?: boolean;
     creator_platform?: string | null;
   };
@@ -321,6 +324,48 @@ export default function ProfileClient({
               </div>
             ))}
           </div>
+
+          {/* XP / Level section */}
+          {(() => {
+            const xp = profile.total_xp ?? 0;
+            const level = levelFromXP(xp);
+            const title = levelTitle(level);
+            const progress = progressToNextLevel(xp);
+            const currentLevelXP = xpForLevel(level);
+            const nextLevelXP = xpForNextLevel(level);
+            const xpIntoLevel = xp - currentLevelXP;
+            const xpNeeded = nextLevelXP - currentLevelXP;
+            return (
+              <section className="bg-white rounded-2xl p-4 border border-ink-100 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-brand-500" />
+                    <h2 className="font-display text-sm font-semibold text-ink-800">Reader Level</h2>
+                  </div>
+                  <span className="text-xs text-ink-400">{xp.toLocaleString()} XP total</span>
+                </div>
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <span className="text-white text-sm font-bold">{level}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-ink-900">{title}</p>
+                    <p className="text-xs text-ink-400">
+                      {level < 50
+                        ? `${xpIntoLevel.toLocaleString()} / ${xpNeeded.toLocaleString()} XP to Level ${level + 1}`
+                        : 'Maximum level reached'}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-2 bg-ink-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all duration-500"
+                    style={{ width: `${level >= 50 ? 100 : progress}%` }}
+                  />
+                </div>
+              </section>
+            );
+          })()}
 
           {/* Currently Reading */}
           {currently_reading.length > 0 && (

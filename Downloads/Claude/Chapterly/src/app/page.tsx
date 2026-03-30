@@ -15,10 +15,25 @@ const HERO_BOOKS = [
   { isbn: '9781619635180', title: 'A Court of Thorns and Roses' },
 ];
 
+async function getPublicStats(): Promise<{ count: number; formatted: string }> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/stats/public`, {
+      next: { revalidate: 3600 },
+    });
+    if (res.ok) return res.json();
+  } catch { /* fallback */ }
+  return { count: 0, formatted: '0+' };
+}
+
 export default async function LandingPage() {
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const [{ data: { user } }, stats] = await Promise.all([
+    supabase.auth.getUser(),
+    getPublicStats(),
+  ]);
   if (user) redirect('/dashboard');
+
+  const userCountDisplay = stats.count >= 100 ? stats.formatted : '1,000+';
 
   return (
     <div className="min-h-screen bg-white text-ink-900">
@@ -72,7 +87,7 @@ export default async function LandingPage() {
                 <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
               ))}
             </div>
-            <span className="text-sm text-ink-500">Loved by <span className="font-semibold text-ink-800">10,000+ readers</span></span>
+            <span className="text-sm text-ink-500">Loved by <span className="font-semibold text-ink-800">{userCountDisplay} readers</span></span>
           </div>
         </div>
 
@@ -102,7 +117,7 @@ export default async function LandingPage() {
       <section className="bg-ink-950 py-16 px-6">
         <div className="max-w-4xl mx-auto grid grid-cols-3 gap-6 sm:gap-12 text-center">
           {[
-            { value: '10,000+', label: 'Active readers' },
+            { value: userCountDisplay, label: 'Active readers' },
             { value: '500,000+', label: 'Pages tracked' },
             { value: '4.9 ★', label: 'Average rating' },
           ].map(s => (
@@ -406,7 +421,7 @@ export default async function LandingPage() {
               Start your reading<br />journey today.
             </h2>
             <p className="text-ink-300 text-lg mb-12 max-w-lg mx-auto leading-relaxed">
-              Join 10,000+ readers who track smarter, read more, and actually enjoy it.
+              Join {userCountDisplay} readers who track smarter, read more, and actually enjoy it.
             </p>
             <Link
               href="/login"

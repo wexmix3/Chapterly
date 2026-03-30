@@ -87,14 +87,31 @@ export async function POST(req: NextRequest) {
       break;
     }
 
-    case 'invoice.payment_failed': {
-      // Mark premium as inactive on payment failure
+    case 'invoice.payment_failed':
+    case 'invoice.payment_action_required': {
+      // Mark premium as inactive on payment failure or required action
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = String(invoice.customer);
       await supabase.from('users').update({
         is_premium: false,
         premium_expires_at: null,
       }).eq('stripe_customer_id', customerId);
+
+      // Send dunning/recovery email so user knows to update their payment method
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('email')
+        .eq('stripe_customer_id', customerId)
+        .maybeSingle();
+
+      if (userRow?.email) {
+        try {
+          const { sendPaymentFailedEmail } = await import('@/lib/email');
+          await sendPaymentFailedEmail(userRow.email);
+        } catch (e) {
+          console.error('[stripe/webhook] Failed to send dunning email:', e);
+        }
+      }
       break;
     }
   }

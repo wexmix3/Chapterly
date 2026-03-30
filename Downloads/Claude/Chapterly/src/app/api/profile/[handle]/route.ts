@@ -16,7 +16,7 @@ export async function GET(
   // Fetch the profile
   const { data: profile, error } = await supabase
     .from('users')
-    .select('id, handle, display_name, avatar_url, bio, is_public, created_at, is_creator, creator_platform, creator_handle')
+    .select('id, handle, display_name, avatar_url, bio, is_public, created_at, is_creator, creator_platform, creator_handle, total_xp, reader_level')
     .eq('handle', handle)
     .maybeSingle();
 
@@ -88,6 +88,8 @@ export async function GET(
       want_to_read_count,
       total_pages,
       avg_rating,
+      total_xp: profile.total_xp ?? 0,
+      reader_level: profile.reader_level ?? 1,
     },
     currently_reading,
     recently_read: books_read.slice(0, 12),

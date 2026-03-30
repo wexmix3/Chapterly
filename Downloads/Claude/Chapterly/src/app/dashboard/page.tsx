@@ -13,6 +13,7 @@ import { BookOpen, Loader2, X, Search as SearchIcon } from 'lucide-react';
 import AIInsights from '@/components/dashboard/AIInsights';
 import SocialPulse from '@/components/dashboard/SocialPulse';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import DailyQuests from '@/components/quests/DailyQuests';
 
 type Tab = 'overview' | 'reading' | 'search';
 
@@ -115,10 +116,13 @@ function DashboardContent() {
                 {/* 3 — Daily goal */}
                 <section><DailyGoal /></section>
 
-                {/* 4 — Social pulse */}
+                {/* 4 — Daily quests */}
+                <section><DailyQuests /></section>
+
+                {/* 5 — Social pulse */}
                 <section><SocialPulse /></section>
 
-                {/* 5 — Stats */}
+                {/* 6 — Stats */}
                 <section>
                   <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Your Stats</h2>
                   <StatsOverview />

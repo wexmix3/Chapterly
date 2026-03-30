@@ -40,6 +40,54 @@ export function verifyUnsubscribeToken(userId: string, token: string): boolean {
   return diff === 0;
 }
 
+// ─── Payment Failed / Dunning Email ─────────────────────────────
+
+export async function sendPaymentFailedEmail(to: string): Promise<void> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://getchapterly.com';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Action required: Update your payment method</title></head>
+<body style="margin:0;padding:0;background:#fdfcfb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<div style="max-width:480px;margin:0 auto;padding:32px 16px;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <p style="font-size:24px;font-weight:800;color:#1a1a1a;margin:0;">📚 Chapterly</p>
+  </div>
+  <div style="background:white;border-radius:20px;padding:32px 24px;border:1px solid #f0ece4;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+    <p style="font-size:20px;font-weight:700;color:#1a1a1a;margin:0 0 12px;">Action required: Update your payment method</p>
+    <p style="font-size:14px;color:#6b7280;margin:0 0 16px;">
+      We were unable to process your Chapterly Premium payment. Your premium features have been
+      temporarily paused until your billing information is updated.
+    </p>
+    <p style="font-size:14px;color:#6b7280;margin:0 0 24px;">
+      To restore access to AI insights, unlimited reading history, and all premium features,
+      please update your payment method below.
+    </p>
+    <div style="text-align:center;">
+      <a href="${appUrl}/premium"
+         style="display:inline-block;background:#ee7a1e;color:white;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:15px;">
+        Update billing →
+      </a>
+    </div>
+    <p style="font-size:12px;color:#9ca3af;margin:24px 0 0;text-align:center;">
+      If you have any questions, reply to this email or visit
+      <a href="${appUrl}/premium" style="color:#ee7a1e;">getchapterly.com/premium</a>.
+    </p>
+  </div>
+  <p style="font-size:11px;color:#d1d5db;text-align:center;margin-top:20px;">
+    You received this because you have a Chapterly Premium subscription.
+  </p>
+</div>
+</body>
+</html>`;
+
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: 'Action required: Update your payment method',
+    html,
+  });
+}
+
 // ─── Weekly Digest Email ────────────────────────────────────────
 export interface DigestData {
   display_name: string;
