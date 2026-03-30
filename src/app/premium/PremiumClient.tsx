@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
 import { Sparkles, Check, Zap, Crown, BookOpen, BarChart3, Palette, Shield, Loader2 } from 'lucide-react';
 import { PREMIUM_FEATURES, PREMIUM_PRICE_DISPLAY } from '@/lib/stripe';
+import { track } from '@/lib/analytics';
 
 const FEATURE_ICONS = [BookOpen, BarChart3, Palette, Zap, Shield, Crown];
 
@@ -22,12 +23,18 @@ export default function PremiumClient({
   const justSubscribed = searchParams.get('success') === 'true';
   const [loading, setLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const [billingPlan, setBillingPlan] = useState<'monthly' | 'annual'>('monthly');
 
   const handleCheckout = async () => {
+    track({ event: 'premium_upgrade_clicked', properties: { source: 'premium_page' } });
     setLoading(true);
     setCheckoutError('');
     try {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' });
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: billingPlan }),
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
@@ -128,6 +135,31 @@ export default function PremiumClient({
           {/* CTA */}
           {!isPremium ? (
             <div className="space-y-3">
+              {/* Billing period toggle */}
+              <div className="flex bg-paper-100 rounded-xl p-1 gap-1 border border-paper-200">
+                <button
+                  onClick={() => setBillingPlan('monthly')}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                    billingPlan === 'monthly'
+                      ? 'bg-white text-ink-900 shadow-sm'
+                      : 'text-ink-500 hover:text-ink-700'
+                  }`}
+                >
+                  Monthly
+                  <span className="block text-xs font-normal text-ink-400">$4.99/mo</span>
+                </button>
+                <button
+                  onClick={() => setBillingPlan('annual')}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all relative ${
+                    billingPlan === 'annual'
+                      ? 'bg-white text-ink-900 shadow-sm'
+                      : 'text-ink-500 hover:text-ink-700'
+                  }`}
+                >
+                  Annual
+                  <span className="block text-xs font-normal text-emerald-600">$49.99/yr · 2 months free</span>
+                </button>
+              </div>
               <button
                 onClick={handleCheckout}
                 disabled={loading}
