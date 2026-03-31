@@ -108,3 +108,21 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement:** When launching multiple background agents in parallel, stagger them or use at most 2 concurrent large agents. After receiving completion notifications, always check token counts in the result — a result with <5,000 tokens from a complex agent likely indicates a rate limit abort, not successful completion. Add an explicit audit step: before marking tasks complete from agent results, verify key output files actually exist on disk.
 
 **Principle:** Agent completion notifications confirm the agent process ended, not that it succeeded. Rate-limited agents return a shell result with near-zero token usage. Always cross-reference agent output claims against actual file system state before declaring tasks complete — especially when agents ran in parallel and rate limits are a factor.
+
+---
+
+## 2026-03-31
+
+### Observation 7: Recharts PieChart center label requires Customized layer — not direct SVG children
+
+**Date:** 2026-03-31
+**Session context:** Genre distribution chart bug fix — donut center label was not rendering.
+**Skill:** internal — Chapterly frontend patterns
+**Type:** internal
+**Phase/Area:** Recharts donut chart implementation
+
+**Issue:** The `GenreDonutCenter` component was placed as a direct child of `<Pie>` in JSX (outside the `{data.map(...)}` children), but recharts Pie does not accept arbitrary React children for overlay rendering. The center label rendered with `cx={undefined}` and `cy={undefined}` because recharts does not inject those props onto arbitrary children. The component appeared to exist in the DOM but rendered at 0,0 and was invisible.
+
+**Suggested improvement:** For donut center labels in recharts, use the `<Customized>` component from recharts — it receives the chart's layout props (including `cx`, `cy`) via its `component` render prop. Pattern: `<Customized component={(props) => <MyLabel viewBox={{ cx: props.cx, cy: props.cy }} />} />` placed as a sibling of `<Pie>` inside `<PieChart>`.
+
+**Principle:** Recharts charts do not pass layout geometry to arbitrary child components. Any overlay element that needs chart coordinates (cx, cy, width, height) must use the `Customized` layer — not direct JSX children of chart primitives like `Pie`, `Bar`, or `Line`.
