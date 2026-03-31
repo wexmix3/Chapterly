@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square, CheckCircle, Loader2, Timer } from 'lucide-react';
 import type { UserBook } from '@/types';
+import { track } from '@/lib/analytics';
 
 interface Props {
   userBook: UserBook;
@@ -90,6 +91,7 @@ export default function ReadingTimer({ userBook, onLogged, onComplete }: Props) 
     setLoading(false);
 
     if (res.ok) {
+      track({ event: 'session_logged', properties: { mode: 'minutes', value: minutes } });
       if (onLogged && pagesEnd !== undefined) onLogged(pagesEnd);
       setDone(true);
       setTimeout(() => {

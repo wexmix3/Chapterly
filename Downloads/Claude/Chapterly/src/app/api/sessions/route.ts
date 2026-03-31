@@ -140,6 +140,8 @@ export async function POST(request: NextRequest) {
             { onConflict: 'user_id,milestone_days', ignoreDuplicates: true }
           );
       }
+      // Return streak info so client can track milestones
+      return NextResponse.json({ data: session, streak, streak_milestone: streak }, { status: 201 });
     }
   } catch {
     // Non-critical — don't fail the session save

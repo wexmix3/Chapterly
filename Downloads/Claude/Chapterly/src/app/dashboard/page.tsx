@@ -9,7 +9,8 @@ import BookSearch from '@/components/books/BookSearch';
 import BookShelf from '@/components/books/BookShelf';
 import QuickLog from '@/components/sessions/QuickLog';
 import DailyGoal from '@/components/dashboard/DailyGoal';
-import { BookOpen, Loader2, X, Search as SearchIcon } from 'lucide-react';
+import { BookOpen, Loader2, X, Search as SearchIcon, Crown } from 'lucide-react';
+import Link from 'next/link';
 import AIInsights from '@/components/dashboard/AIInsights';
 import SocialPulse from '@/components/dashboard/SocialPulse';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -119,6 +120,9 @@ function DashboardContent() {
                 {/* 4 — Daily quests */}
                 <section><DailyQuests /></section>
 
+                {/* 4b — Premium upgrade CTA (client-side, shown to free users) */}
+                <UpgradeCTA />
+
                 {/* 5 — Social pulse */}
                 <section><SocialPulse /></section>
 
@@ -151,6 +155,36 @@ function DashboardContent() {
         </div>
       )}
     </div>
+  );
+}
+
+function UpgradeCTA() {
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(j => setIsPremium(j?.data?.is_premium ?? false))
+      .catch(() => setIsPremium(false));
+  }, []);
+  if (isPremium !== false) return null; // null = loading, true = premium
+  return (
+    <section>
+      <Link
+        href="/premium"
+        className="flex items-center gap-4 bg-gradient-to-r from-amber-50 to-brand-50 border border-amber-200 rounded-2xl p-4 hover:border-amber-300 transition-colors group"
+      >
+        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+          <Crown className="w-5 h-5 text-amber-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-ink-800 text-sm">Unlock AI-powered reading insights</p>
+          <p className="text-xs text-ink-500 mt-0.5">Reading Coach, DNA, Personality + more — free trial</p>
+        </div>
+        <span className="flex-shrink-0 text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full group-hover:bg-amber-200 transition-colors">
+          Upgrade →
+        </span>
+      </Link>
+    </section>
   );
 }
 

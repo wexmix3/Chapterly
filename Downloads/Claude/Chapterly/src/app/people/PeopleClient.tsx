@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
 import { Search, UserPlus, UserCheck, Loader2, Users, BookOpen, AlertCircle, WifiOff } from 'lucide-react';
+import { track } from '@/lib/analytics';
 
 interface UserResult {
   id: string;
@@ -135,6 +136,9 @@ export default function PeopleClient() {
         body: JSON.stringify({ followee_id: userId }),
       });
       if (res.ok || res.status === 409) {
+        if (!currentlyFollowing && res.ok) {
+          track({ event: 'friend_followed', properties: {} });
+        }
         setFollowing(prev => {
           const next = new Set(prev);
           currentlyFollowing ? next.delete(userId) : next.add(userId);

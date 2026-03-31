@@ -447,7 +447,10 @@ export default function LoginPage() {
             )}
 
             <p className="text-xs text-ink-400 dark:text-ink-500 text-center mt-4">
-              By continuing, you agree to our terms of service.
+              By continuing, you agree to our{' '}
+              <Link href="/terms" className="underline hover:text-ink-600">Terms of Service</Link>
+              {' '}and{' '}
+              <Link href="/privacy" className="underline hover:text-ink-600">Privacy Policy</Link>.
             </p>
           </div>
         )}

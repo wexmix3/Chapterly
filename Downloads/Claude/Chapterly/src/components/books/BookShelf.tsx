@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { BookOpen, Star, Loader2, X, Check, AlertCircle, Search, Library, Bookmark, CheckCircle, Plus, XCircle, ExternalLink } from 'lucide-react';
+import { BookOpen, Star, Loader2, X, Check, AlertCircle, Search, Library, Bookmark, CheckCircle, Plus, XCircle, ExternalLink, Upload } from 'lucide-react';
 import BookCover from '@/components/ui/BookCover';
 import { BookCardSkeleton } from '@/components/ui/Skeleton';
 import { useShelf } from '@/hooks';
@@ -170,13 +170,22 @@ export default function BookShelf() {
                 : 'Books you mark will appear here'}
             </p>
             {(activeTab === 'all' || activeTab === 'to_read') && (
-              <a
-                href="/dashboard?tab=search"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-colors"
-              >
-                <Search className="w-4 h-4" />
-                Search books
-              </a>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href="/dashboard?tab=search"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-colors"
+                >
+                  <Search className="w-4 h-4" />
+                  Search books
+                </a>
+                <a
+                  href="/settings?tab=account"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-ink-200 hover:border-brand-300 hover:bg-brand-50 text-ink-600 hover:text-brand-700 text-sm font-medium rounded-xl transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Import from Goodreads
+                </a>
+              </div>
             )}
           </div>
           {activeTab === 'reading' && (

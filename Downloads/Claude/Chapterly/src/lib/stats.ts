@@ -53,7 +53,7 @@ export async function computeUserStats(
   const yearStart = format(startOfYear(now), 'yyyy-MM-dd');
   const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
 
-  const [booksRes, sessionsRes, dailyRes, ratingRes] = await Promise.all([
+  const [booksRes, sessionsRes, dailyRes, ratingRes, userRes] = await Promise.all([
     supabase
       .from('user_books')
       .select('id, status, finished_at, book:books(subjects)')
@@ -73,12 +73,18 @@ export async function computeUserStats(
       .eq('user_id', userId)
       .eq('status', 'read')
       .not('rating', 'is', null),
+    supabase
+      .from('users')
+      .select('streak_freeze_available')
+      .eq('id', userId)
+      .maybeSingle(),
   ]);
 
   const userBooks = booksRes.data ?? [];
   const sessions = sessionsRes.data ?? [];
   const dailyStats = (dailyRes.data ?? []) as DailyStats[];
   const ratings = ratingRes.data ?? [];
+  const streakFreezeAvailable = userRes.data?.streak_freeze_available ?? false;
 
   const totalBooksRead = userBooks.filter((b) => b.status === 'read').length;
   const booksThisYear = userBooks.filter(
@@ -182,6 +188,8 @@ export async function computeUserStats(
     total_minutes: totalMinutes,
     current_streak: streakInfo.current,
     longest_streak: streakInfo.longest,
+    today_logged: streakInfo.today_logged,
+    streak_freeze_available: streakFreezeAvailable,
     books_this_year: booksThisYear,
     pages_this_month: pagesThisMonth,
     avg_rating: avgRating,

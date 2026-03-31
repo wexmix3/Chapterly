@@ -120,5 +120,6 @@ export async function POST(req: NextRequest) {
     console.error('[quests] Failed to update user XP:', updateError.message);
   }
 
-  return NextResponse.json({ xp_awarded: quest.xp });
+  const prevLevel = levelFromXP(currentXP);
+  return NextResponse.json({ xp_awarded: quest.xp, prev_level: prevLevel, new_level: newLevel });
 }

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, BookOpen, Plus, Check, Loader2, Camera, AlertCircle } from 'lucide-react';
 import BookCover from '@/components/ui/BookCover';
 import { useBookSearch, useShelf } from '@/hooks';
 import type { BookSearchResult, ShelfStatus } from '@/types';
 import dynamic from 'next/dynamic';
+import { track } from '@/lib/analytics';
 
 const ISBNScanner = dynamic(() => import('./ISBNScanner'), { ssr: false });
 
@@ -17,11 +18,39 @@ const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
   { value: 'dnf', label: 'Did Not Finish' },
 ];
 
+const RECENT_KEY = 'chapterly_recent_searches';
+const MAX_RECENT = 5;
+
+function getRecentSearches(): string[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]'); } catch { return []; }
+}
+
+function saveRecentSearch(q: string) {
+  if (typeof window === 'undefined' || !q.trim()) return;
+  const prev = getRecentSearches().filter(s => s !== q);
+  localStorage.setItem(RECENT_KEY, JSON.stringify([q, ...prev].slice(0, MAX_RECENT)));
+}
+
 export default function BookSearch() {
   const { query, setQuery, results, loading, error: searchError } = useBookSearch();
   const { addBook } = useShelf();
   const router = useRouter();
   const [expanding, setExpanding] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+  useEffect(() => { setRecentSearches(getRecentSearches()); }, []);
+
+  // Track book searches when results load; save to recent history
+  useEffect(() => {
+    if (query.length >= 2 && !loading) {
+      track({ event: 'book_searched', properties: { query, result_count: results.length } });
+      if (results.length > 0) {
+        saveRecentSearch(query);
+        setRecentSearches(getRecentSearches());
+      }
+    }
+  }, [results]); // eslint-disable-line react-hooks/exhaustive-deps
   const [adding, setAdding] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
@@ -70,6 +99,22 @@ export default function BookSearch() {
           )
         }
       </div>
+
+      {/* Recent searches — shown when query is empty */}
+      {!query && recentSearches.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {recentSearches.map(s => (
+            <button
+              key={s}
+              onClick={() => setQuery(s)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-ink-50 hover:bg-brand-50 border border-ink-100 hover:border-brand-200 rounded-full text-xs text-ink-600 hover:text-brand-700 transition-colors"
+            >
+              <Search className="w-3 h-3 opacity-50" />
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
       {searchError && (
         <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-700">
