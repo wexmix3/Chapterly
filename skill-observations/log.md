@@ -58,3 +58,53 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement:** Add to Chapterly project notes: the canonical XP increment pattern is read-compute-write using `levelFromXP` from `src/lib/xp.ts`. No RPC needed. Reference: `src/app/api/xp/award/route.ts` as the authoritative example for any new route that awards XP.
 
 **Principle:** When an established pattern already exists in the codebase for a common operation (like incrementing XP), read that reference file before drafting the new implementation. Avoids inventing unnecessary abstractions (RPC calls) that don't match the actual DB schema.
+
+---
+
+## 2026-03-31
+
+### Observation 4: Upstash Redis placeholder URL bypasses null guard and crashes build
+
+**Date:** 2026-03-31
+**Session context:** Weakness analyzer improvements — rate limiting via Upstash Redis added to API routes. Build failed during page data collection phase.
+**Skill:** internal — Chapterly backend patterns
+**Type:** internal
+**Phase/Area:** Optional dependency initialization with env var placeholders
+
+**Issue:** `src/lib/rate-limit.ts` initialized the Redis client inside a guard `if (!url || !token)`. The `.env.local` file had placeholder values `UPSTASH_REDIS_REST_URL=your_upstash_redis_url` (non-empty strings). The null check passed, the Redis client was instantiated with an invalid URL, and Next.js threw `UrlError: Upstash Redis client was passed an invalid URL` during build's page data collection phase — causing the entire build to fail.
+
+**Suggested improvement:** For any optional SDK that validates its config at construction time, guard with a content check, not just a presence check. For URL-typed config: `!url.startsWith('https://')`. Applied fix: `if (!url || !token || !url.startsWith('https://')) return null`.
+
+**Principle:** Placeholder env var values (e.g. `your_api_key_here`) are non-empty strings that pass truthy/falsy checks. Any SDK that validates at construction time will throw, not at the guard, but deep in the call stack — making the error hard to trace. Always validate that env vars contain _valid_ values, not merely that they exist. For URLs: check the scheme. For tokens: check minimum length or prefix format.
+
+---
+
+### Observation 5: Supabase CLI loses migration history when migrations were applied manually
+
+**Date:** 2026-03-31
+**Session context:** Setting up Supabase CLI (`supabase db push`) to automate future migrations. CLI tried to re-apply all 17 migration files including the 15 already applied manually via SQL Editor.
+**Skill:** internal — Chapterly backend patterns
+**Type:** internal
+**Phase/Area:** DB migration tooling setup
+
+**Issue:** `supabase db push` uses a `supabase_migrations` tracking table to know which migrations have been applied. When migrations are applied manually (via Supabase SQL Editor or direct psql), this table is never populated. The CLI has no record of prior migrations and attempts to apply all of them from scratch, failing immediately on duplicate objects (tables, policies that already exist).
+
+**Suggested improvement:** For Chapterly: new migrations should always be applied via `npm run db:push` (which reads `SUPABASE_ACCESS_TOKEN` from `.env.local`). The Supabase Management API (`POST /v1/projects/{ref}/database/query`) is the reliable fallback when the CLI's migration state is mismatched — it executes SQL directly with no tracking dependencies. For future projects: set up `supabase link` before applying the first migration so all history is tracked from day one.
+
+**Principle:** Migration tracking tools only know what they applied themselves. Any out-of-band SQL execution (manual SQL Editor, psql, API calls) creates a state divergence that will surface the next time the tool runs. Either commit to the tool from migration #1, or use the raw API as the escape hatch when state is already diverged.
+
+---
+
+### Observation 6: Multi-agent parallel runs hit Anthropic rate limits mid-task, leaving partial work
+
+**Date:** 2026-03-31
+**Session context:** Three background agents launched in parallel — settings/onboarding/quests/push/tests, frontend improvements, and backend hardening. Two agents returned "You've hit your limit · resets 1am" with very low token counts (450 and 1,770 tokens), indicating they were cut off almost immediately.
+**Skill:** New skill candidate: multi-agent orchestration patterns
+**Type:** internal
+**Phase/Area:** Parallel agent launch strategy and rate limit handling
+
+**Issue:** Launching 3 large agents simultaneously triggered Anthropic API rate limits. Two agents returned immediately with a rate limit message, meaning their work was never done — but the orchestrator assumed all three had completed work and moved on. This left a large number of tasks in an indeterminate state that required manual audit to determine what had actually been completed.
+
+**Suggested improvement:** When launching multiple background agents in parallel, stagger them or use at most 2 concurrent large agents. After receiving completion notifications, always check token counts in the result — a result with <5,000 tokens from a complex agent likely indicates a rate limit abort, not successful completion. Add an explicit audit step: before marking tasks complete from agent results, verify key output files actually exist on disk.
+
+**Principle:** Agent completion notifications confirm the agent process ended, not that it succeeded. Rate-limited agents return a shell result with near-zero token usage. Always cross-reference agent output claims against actual file system state before declaring tasks complete — especially when agents ran in parallel and rate limits are a factor.

@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, AreaChart, Area,
   BarChart, Bar,
-  PieChart, Pie, Cell, Legend, LabelList,
+  PieChart, Pie, Cell, Legend, LabelList, Customized,
 } from 'recharts';
 import { Flame, BookOpen, FileText, Star, Loader2 } from 'lucide-react';
 import Navigation from '@/components/layout/Navigation';
@@ -99,11 +99,14 @@ function StatCard({ icon, value, suffix, label, glow }: {
 }
 
 // ─── Genre donut center label ─────────────────────────────────────────────────
+// Rendered as a recharts customized layer so cx/cy come from the chart layout.
 
-function GenreDonutCenter({ cx, cy, total }: { cx?: number; cy?: number; total: number }) {
+function GenreDonutCenterLabel({ viewBox, total }: { viewBox?: { cx?: number; cy?: number }; total: number }) {
+  const cx = viewBox?.cx ?? 0;
+  const cy = viewBox?.cy ?? 0;
   return (
     <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-      <tspan x={cx} dy="-6" className="font-bold" style={{ fontSize: '20px', fontWeight: 700, fill: '#1a1a2e' }}>
+      <tspan x={cx} dy="-6" style={{ fontSize: '20px', fontWeight: 700, fill: '#1a1a2e' }}>
         {total}
       </tspan>
       <tspan x={cx} dy="20" style={{ fontSize: '11px', fill: '#6b7280' }}>
@@ -257,11 +260,12 @@ export default function ProgressClient() {
 
   const activeBooksData = booksPeriod === 'monthly' ? barChartData : yearlyBooksChartData;
 
-  // Genre data: prefer stats.top_genres, fall back to richStats.genre_breakdown
+  // Genre data: prefer richStats.genre_breakdown (backed by subject backfill),
+  // fall back to stats.top_genres (may be empty if subjects not yet populated).
   const genreData = (
-    stats?.top_genres?.length
-      ? stats.top_genres.slice(0, 6)
-      : richStats?.genre_breakdown?.slice(0, 6).map(g => ({ name: g.genre, count: g.count })) ?? []
+    richStats?.genre_breakdown?.length
+      ? richStats.genre_breakdown.slice(0, 6).map(g => ({ name: g.genre, count: g.count }))
+      : stats?.top_genres?.slice(0, 6) ?? []
   );
   const genreTotal = genreData.reduce((s, g) => s + g.count, 0);
   const GENRE_COLORS = ['#ee7a1e', '#f5a05a', '#f7c18e', '#c45a0e', '#9c4508', '#7a3406'];
@@ -426,21 +430,22 @@ export default function ProgressClient() {
                 {richStats.author_breakdown && richStats.author_breakdown.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Authors You&apos;ve Read</p>
-                    <ResponsiveContainer width="100%" height={Math.min(richStats.author_breakdown.length, 6) * 34 + 8}>
+                    <ResponsiveContainer width="100%" height={Math.min(richStats.author_breakdown.length, 6) * 36 + 8}>
                       <BarChart
                         data={richStats.author_breakdown.slice(0, 6)}
                         layout="vertical"
-                        margin={{ top: 0, right: 36, left: 0, bottom: 0 }}
+                        margin={{ top: 0, right: 40, left: 8, bottom: 0 }}
                         barSize={14}
                       >
                         <XAxis type="number" hide />
                         <YAxis
                           type="category"
                           dataKey="author"
-                          tick={{ fontSize: 10, fill: '#374151' }}
+                          tick={{ fontSize: 11, fill: '#374151' }}
                           tickLine={false}
                           axisLine={false}
-                          width={96}
+                          width={120}
+                          tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 17) + '…' : v}
                         />
                         <Tooltip content={<AuthorTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
                         <Bar dataKey="count" radius={[0, 4, 4, 0]}>
@@ -577,8 +582,13 @@ export default function ProgressClient() {
                       {genreData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GENRE_COLORS[index % GENRE_COLORS.length]} />
                       ))}
-                      <GenreDonutCenter cx={undefined} cy={undefined} total={genreTotal} />
                     </Pie>
+                    {/* Center label: rendered via recharts Customized layer so cx/cy resolve correctly */}
+                    <Customized component={(props: Record<string, unknown>) => {
+                      const cx = typeof props.cx === 'number' ? props.cx : 80;
+                      const cy = typeof props.cy === 'number' ? props.cy : 80;
+                      return <GenreDonutCenterLabel viewBox={{ cx, cy }} total={genreTotal} />;
+                    }} />
                     <Tooltip formatter={(value) => [`${value} books`]} />
                     <Legend
                       iconType="circle"

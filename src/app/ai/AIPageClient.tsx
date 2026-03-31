@@ -6,6 +6,7 @@ import PremiumGate from '@/components/ui/PremiumGate';
 import {
   Sparkles, BookOpen, RefreshCw, Loader2, Plus, Check,
   Brain, TrendingUp, Clock, Star, Zap, AlertCircle, Target, Dna,
+  GraduationCap, MessageSquare, Lightbulb, Bell, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { track } from '@/lib/analytics';
 
@@ -73,6 +74,45 @@ interface DNAResult {
   summary: string;
 }
 
+interface CoachPrompt {
+  question: string;
+  purpose: string;
+}
+
+interface PreSessionCoach {
+  mode: 'pre_session';
+  prompts: CoachPrompt[];
+  tip: string;
+  _cached?: boolean;
+}
+
+interface PostBookCoach {
+  mode: 'post_book';
+  discussion_questions: string[];
+  key_themes: string[];
+  retention_summary: string;
+  read_alike_prompt: string;
+  _cached?: boolean;
+}
+
+type CoachResult = PreSessionCoach | PostBookCoach;
+
+interface HabitNudge {
+  optimal_window: string;
+  nudge_message: string;
+  micro_goal: string;
+  why_it_matters: string;
+  current_streak: number;
+  _cached?: boolean;
+}
+
+interface ShelfBook {
+  id: string;
+  status: string;
+  current_page: number | null;
+  book: { id: string; title: string; authors: string[] } | null;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 interface ElementStyle {
@@ -122,7 +162,7 @@ const MOODS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AIPageClient() {
-  const [activeTab, setActiveTab] = useState<'picks' | 'insights' | 'personality' | 'mood'>('picks');
+  const [activeTab, setActiveTab] = useState<'picks' | 'insights' | 'personality' | 'mood' | 'coach'>('picks');
 
   // Recommendations
   const [recs, setRecs] = useState<Recommendation[]>([]);
@@ -163,6 +203,19 @@ export default function AIPageClient() {
   const [dnaLoading, setDnaLoading] = useState(false);
   const [dnaLoaded, setDnaLoaded] = useState(false);
 
+  // Reading Coach
+  const [coachBooks, setCoachBooks] = useState<ShelfBook[]>([]);
+  const [selectedCoachBook, setSelectedCoachBook] = useState<ShelfBook | null>(null);
+  const [coachMode, setCoachMode] = useState<'pre_session' | 'post_book'>('pre_session');
+  const [coachResult, setCoachResult] = useState<CoachResult | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState('');
+
+  // Habit Nudge
+  const [nudge, setNudge] = useState<HabitNudge | null>(null);
+  const [nudgeLoading, setNudgeLoading] = useState(false);
+  const [nudgeLoaded, setNudgeLoaded] = useState(false);
+
   // Premium status
   const [isPremium, setIsPremium] = useState(false);
 
@@ -183,6 +236,10 @@ export default function AIPageClient() {
       if (!dnaLoaded) loadDNA();
     }
     if (activeTab === 'personality' && !personalityLoaded) loadPersonality();
+    if (activeTab === 'coach') {
+      loadCoachBooks();
+      if (!nudgeLoaded) loadNudge();
+    }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadRecs = async (refresh = false) => {
@@ -283,6 +340,56 @@ export default function AIPageClient() {
     }
   };
 
+  const loadCoachBooks = async () => {
+    try {
+      const [readingRes, readRes] = await Promise.all([
+        fetch('/api/user-books?status=reading&limit=10'),
+        fetch('/api/user-books?status=read&limit=10'),
+      ]);
+      const [readingData, readData] = await Promise.all([
+        readingRes.ok ? readingRes.json() : { data: [] },
+        readRes.ok ? readRes.json() : { data: [] },
+      ]);
+      const books: ShelfBook[] = [
+        ...((readingData.data ?? []) as ShelfBook[]),
+        ...((readData.data ?? []) as ShelfBook[]),
+      ];
+      setCoachBooks(books);
+      const reading = books.find(b => b.status === 'reading');
+      if (reading && !selectedCoachBook) setSelectedCoachBook(reading);
+    } catch { /* ignore */ }
+  };
+
+  const loadCoach = async (book: ShelfBook, mode: 'pre_session' | 'post_book', refresh = false) => {
+    setCoachLoading(true); setCoachError(''); setCoachResult(null);
+    try {
+      const res = await fetch('/api/ai/reading-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_book_id: book.id, mode, refresh }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed');
+      setCoachResult(data as CoachResult);
+      track({ event: 'ai_feature_used', properties: { feature: 'reading-coach', mode } });
+    } catch (e) {
+      setCoachError(e instanceof Error ? e.message : 'Failed to load');
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  const loadNudge = async () => {
+    setNudgeLoading(true);
+    try {
+      const res = await fetch('/api/ai/habit-nudge');
+      const data = await res.json();
+      if (res.ok) { setNudge(data as HabitNudge); setNudgeLoaded(true); }
+    } catch { /* ignore */ } finally {
+      setNudgeLoading(false);
+    }
+  };
+
   const handleAddToShelf = async (title: string, author: string) => {
     const key = `${title}-${author}`;
     if (added.has(key)) return;
@@ -305,6 +412,7 @@ export default function AIPageClient() {
     { id: 'insights' as const,    label: 'Insights',   icon: TrendingUp },
     { id: 'personality' as const, label: 'My Type',    icon: Brain },
     { id: 'mood' as const,        label: 'By Mood',    icon: Zap },
+    { id: 'coach' as const,       label: 'Coach',      icon: GraduationCap },
   ];
 
   return (
@@ -575,6 +683,165 @@ export default function AIPageClient() {
                   </div>
                 )}
               </PremiumGate>
+            </div>
+          )}
+
+          {/* ── Tab: Coach ── */}
+          {activeTab === 'coach' && (
+            <div className="space-y-6">
+
+              {/* Habit Nudge card */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-brand-500" />
+                  <h2 className="font-display text-base font-semibold text-ink-800">Today&apos;s Nudge</h2>
+                </div>
+                <p className="text-xs text-ink-400 -mt-1">Your personalized reading habit check-in</p>
+
+                {nudgeLoading ? (
+                  <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
+                    <span className="text-sm text-ink-400">Analyzing your reading habits…</span>
+                  </div>
+                ) : nudge ? (
+                  <div className="bg-white rounded-2xl border border-brand-100 overflow-hidden">
+                    {/* Streak + window */}
+                    <div className="bg-gradient-to-r from-brand-50 to-paper-50 px-5 py-3 border-b border-brand-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{nudge.current_streak > 0 ? '🔥' : '📚'}</span>
+                        <div>
+                          <p className="text-xs font-bold text-brand-700">
+                            {nudge.current_streak > 0
+                              ? `${nudge.current_streak}-day streak`
+                              : 'Start a streak today'}
+                          </p>
+                          <p className="text-[10px] text-brand-500">Best window: {nudge.optimal_window}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={loadNudge}
+                        disabled={nudgeLoading}
+                        className="w-7 h-7 rounded-lg bg-white border border-brand-100 flex items-center justify-center hover:bg-brand-50 transition-colors"
+                      >
+                        <RefreshCw className={`w-3 h-3 text-ink-400 ${nudgeLoading ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
+                    <div className="p-5 space-y-3">
+                      {/* Nudge message */}
+                      <p className="text-sm text-ink-700 leading-relaxed">{nudge.nudge_message}</p>
+
+                      {/* Micro goal */}
+                      <div className="flex items-start gap-2.5 bg-brand-50 rounded-xl px-3 py-2.5">
+                        <Target className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-bold text-brand-600 uppercase tracking-wide mb-0.5">Today&apos;s micro-goal</p>
+                          <p className="text-sm text-brand-800 font-medium">{nudge.micro_goal}</p>
+                        </div>
+                      </div>
+
+                      {/* Why it matters */}
+                      <p className="text-xs text-ink-400 italic">{nudge.why_it_matters}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-ink-100 p-5 text-center">
+                    <Bell className="w-7 h-7 text-ink-200 mx-auto mb-2" />
+                    <p className="text-sm text-ink-500">Log some reading sessions to unlock your daily nudge.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Reading Coach */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-brand-500" />
+                  <h2 className="font-display text-base font-semibold text-ink-800">Reading Coach</h2>
+                </div>
+                <p className="text-xs text-ink-400 -mt-1">Get focus questions before a session, or a deep-reflection package after finishing</p>
+
+                {/* Book selector */}
+                {coachBooks.length > 0 ? (
+                  <div className="bg-white rounded-2xl border border-ink-100 p-4 space-y-4">
+                    {/* Book picker */}
+                    <div>
+                      <p className="text-[10px] font-bold text-ink-400 uppercase tracking-wide mb-2">Choose a book</p>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {coachBooks.slice(0, 10).map(b => (
+                          <button
+                            key={b.id}
+                            onClick={() => { setSelectedCoachBook(b); setCoachResult(null); setCoachError(''); }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left transition-colors ${
+                              selectedCoachBook?.id === b.id
+                                ? 'bg-brand-50 border border-brand-200 text-brand-800'
+                                : 'hover:bg-ink-50 text-ink-700'
+                            }`}
+                          >
+                            <BookOpen className="w-3.5 h-3.5 flex-shrink-0 text-ink-300" />
+                            <span className="truncate font-medium">{b.book?.title ?? 'Unknown'}</span>
+                            <span className={`text-[10px] ml-auto flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium ${
+                              b.status === 'reading' ? 'bg-brand-100 text-brand-600' : 'bg-ink-100 text-ink-500'
+                            }`}>{b.status === 'reading' ? 'Reading' : 'Finished'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mode selector */}
+                    {selectedCoachBook && (
+                      <div>
+                        <p className="text-[10px] font-bold text-ink-400 uppercase tracking-wide mb-2">What do you need?</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setCoachMode('pre_session')}
+                            className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-sm transition-colors ${
+                              coachMode === 'pre_session'
+                                ? 'bg-brand-50 border-brand-200 text-brand-800'
+                                : 'bg-paper-50 border-ink-100 text-ink-600 hover:border-brand-200'
+                            }`}
+                          >
+                            <Lightbulb className="w-4 h-4" />
+                            <span className="font-semibold text-xs">Focus questions</span>
+                            <span className="text-[10px] text-ink-400">Before your next session</span>
+                          </button>
+                          <button
+                            onClick={() => setCoachMode('post_book')}
+                            className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-sm transition-colors ${
+                              coachMode === 'post_book'
+                                ? 'bg-brand-50 border-brand-200 text-brand-800'
+                                : 'bg-paper-50 border-ink-100 text-ink-600 hover:border-brand-200'
+                            }`}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            <span className="font-semibold text-xs">Deep reflection</span>
+                            <span className="text-[10px] text-ink-400">After finishing the book</span>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => loadCoach(selectedCoachBook, coachMode)}
+                          disabled={coachLoading}
+                          className="mt-3 w-full py-2.5 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+                        >
+                          {coachLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GraduationCap className="w-4 h-4" />}
+                          {coachLoading ? 'Generating…' : `Get ${coachMode === 'pre_session' ? 'focus questions' : 'reflection package'}`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-ink-100 p-5 text-center">
+                    <BookOpen className="w-7 h-7 text-ink-200 mx-auto mb-2" />
+                    <p className="text-sm text-ink-500">Add books to your shelf to use the reading coach.</p>
+                  </div>
+                )}
+
+                {/* Coach error */}
+                {coachError && <ErrorCard message={coachError} onRetry={() => selectedCoachBook && loadCoach(selectedCoachBook, coachMode)} />}
+
+                {/* Coach result */}
+                {!coachLoading && coachResult && (
+                  <CoachResultCard result={coachResult} onRefresh={() => selectedCoachBook && loadCoach(selectedCoachBook, coachMode, true)} />
+                )}
+              </div>
             </div>
           )}
 
@@ -862,6 +1129,113 @@ function DNACard({ dna }: { dna: DNAResult }) {
           <p className="text-xs text-ink-600 leading-relaxed">{dna.author_patterns}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Coach Result Card ────────────────────────────────────────────────────────
+
+function CoachResultCard({ result, onRefresh }: { result: CoachResult; onRefresh: () => void }) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  if (result.mode === 'pre_session') {
+    return (
+      <div className="bg-white rounded-2xl border border-ink-100 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="w-4 h-4 text-brand-500" />
+            <p className="font-semibold text-sm text-ink-800">Focus Questions</p>
+          </div>
+          <button onClick={onRefresh} className="w-7 h-7 rounded-lg bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
+            <RefreshCw className="w-3 h-3 text-ink-400" />
+          </button>
+        </div>
+        <p className="text-xs text-ink-400">Keep these questions in mind as you read — they activate deeper comprehension.</p>
+        <div className="space-y-3">
+          {result.prompts.map((p, i) => (
+            <button
+              key={i}
+              onClick={() => setExpanded(expanded === i ? null : i)}
+              className="w-full text-left"
+            >
+              <div className={`rounded-xl border p-3.5 transition-colors ${expanded === i ? 'bg-brand-50 border-brand-200' : 'bg-paper-50 border-paper-200 hover:border-brand-200'}`}>
+                <div className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-lg bg-brand-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink-800 leading-snug">{p.question}</p>
+                    {expanded === i && (
+                      <p className="text-xs text-ink-500 mt-1.5 leading-relaxed border-t border-paper-200 pt-1.5">{p.purpose}</p>
+                    )}
+                  </div>
+                  {expanded === i
+                    ? <ChevronDown className="w-3.5 h-3.5 text-ink-400 flex-shrink-0 mt-1" />
+                    : <ChevronRight className="w-3.5 h-3.5 text-ink-400 flex-shrink-0 mt-1" />}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {result.tip && (
+          <div className="bg-ink-50 rounded-xl px-3 py-2.5 flex items-start gap-2">
+            <span className="text-sm flex-shrink-0">💡</span>
+            <p className="text-xs text-ink-600 italic leading-relaxed">{result.tip}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // post_book
+  return (
+    <div className="bg-white rounded-2xl border border-ink-100 p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-brand-500" />
+          <p className="font-semibold text-sm text-ink-800">Deep Reflection Package</p>
+        </div>
+        <button onClick={onRefresh} className="w-7 h-7 rounded-lg bg-paper-100 border border-paper-200 flex items-center justify-center hover:bg-paper-200 transition-colors">
+          <RefreshCw className="w-3 h-3 text-ink-400" />
+        </button>
+      </div>
+
+      {/* Discussion questions */}
+      <div>
+        <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest mb-2.5">Discussion Questions</p>
+        <div className="space-y-2">
+          {result.discussion_questions.map((q, i) => (
+            <div key={i} className="flex items-start gap-2.5 bg-paper-50 rounded-xl px-3 py-2.5">
+              <span className="w-5 h-5 rounded-lg bg-brand-100 text-brand-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+              <p className="text-sm text-ink-700 leading-snug">{q}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Key themes */}
+      <div>
+        <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest mb-2">Key Themes</p>
+        <div className="flex flex-wrap gap-1.5">
+          {result.key_themes.map(t => (
+            <span key={t} className="text-xs bg-brand-50 text-brand-700 border border-brand-100 px-2.5 py-1 rounded-full font-medium">{t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Retention summary */}
+      <div>
+        <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest mb-2">Retention Summary</p>
+        <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
+          <p className="text-sm text-brand-800 leading-relaxed italic">&ldquo;{result.retention_summary}&rdquo;</p>
+        </div>
+      </div>
+
+      {/* Read-alike */}
+      <div className="flex items-start gap-2.5 border-t border-paper-100 pt-4">
+        <ChevronRight className="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-ink-600 leading-relaxed"><span className="font-semibold text-ink-800">What to read next: </span>{result.read_alike_prompt}</p>
+      </div>
     </div>
   );
 }

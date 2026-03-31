@@ -237,11 +237,18 @@ READING DATA (last 30 days):
   }
 
   // ── Prompt for Claude (if API key is available) ────────────────────────────
-  const prompt = `You are an encouraging, insightful reading coach. Analyze this reader's data and generate 4 personalized insights.
+  const prompt = `You are an expert reading coach focused on helping people read BETTER and LONGER — not just track more books.
+Analyze this reader's data and generate 4 personalized insights that help with comprehension, retention, or habit formation.
 
 ${dataProfile}
 
-Make insights feel personal, surprising, and motivating — NOT generic. Reference their actual numbers.
+Rules:
+- At least 2 insights must be actionable (not just observational)
+- Reference their actual numbers — no generic "great job reading" filler
+- One insight should address habit formation or optimal reading conditions
+- One insight should give a concrete technique to improve comprehension or retention
+- Be warm and specific, not clinical
+
 Return ONLY valid JSON, no markdown, no extra text.
 
 {
@@ -249,7 +256,7 @@ Return ONLY valid JSON, no markdown, no extra text.
     {
       "emoji": "single emoji",
       "title": "Short punchy title (max 8 words)",
-      "body": "2-3 sentences. Reference their specific data. Be conversational and warm, not clinical.",
+      "body": "2-3 sentences. Reference their specific data. Include a concrete action or technique where relevant.",
       "type": "pattern|achievement|suggestion|encouragement"
     }
   ]

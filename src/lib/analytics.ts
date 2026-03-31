@@ -4,7 +4,7 @@ type AnalyticsEvent =
   | { event: 'signed_up'; properties: { provider: string } }
   | { event: 'book_added'; properties: { status: string; source: string } }
   | { event: 'session_logged'; properties: { mode: 'pages' | 'minutes'; value: number } }
-  | { event: 'ai_feature_used'; properties: { feature: 'insights' | 'mood' | 'dna' | 'personality' | 'recommend' } }
+  | { event: 'ai_feature_used'; properties: { feature: 'insights' | 'mood' | 'dna' | 'personality' | 'recommend' | 'reading-coach' | 'habit-nudge'; mode?: string } }
   | { event: 'premium_upgrade_clicked'; properties: { source: string } }
   | { event: 'goal_set'; properties: { goal_books: number } }
   | { event: 'friend_followed'; properties: Record<string, never> }

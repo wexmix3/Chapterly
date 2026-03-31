@@ -11,6 +11,7 @@ import {
 import { useAuth, useNotifications } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { identify } from '@/lib/analytics';
+import Logo from '@/components/ui/Logo';
 
 // ── Nav structure ──────────────────────────────────────────────────────────────
 
@@ -166,11 +167,7 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-full px-6">
 
           {/* Left: Logo */}
-          <Link href="/dashboard" className="flex-shrink-0">
-            <span className="font-display text-lg font-semibold text-brand-600 dark:text-brand-400 tracking-tight">
-              Chapterly
-            </span>
-          </Link>
+          <Logo size="md" href="/dashboard" />
 
           {/* Center: Desktop nav — 4 categories */}
           <nav className="hidden md:flex items-center gap-1">

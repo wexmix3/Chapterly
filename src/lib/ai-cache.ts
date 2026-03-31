@@ -1,12 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const TTL_HOURS: Record<string, number> = {
-  insights:    48,
-  personality: 168,  // ~7 days — personality changes rarely
-  mood:        24,
-  recommend:   48,
-  dna:         168,  // ~7 days
-  archetype:   168,  // ~7 days
+  insights:        48,
+  personality:     168,  // ~7 days — personality changes rarely
+  mood:            24,
+  recommend:       48,
+  dna:             168,  // ~7 days
+  archetype:       168,  // ~7 days
+  'reading-coach': 12,   // invalidate after 12h so post-session context stays fresh
+  'habit-nudge':   8,    // nudge refreshes every 8h (roughly morning/afternoon/evening)
 };
 
 export async function getCachedAI(
