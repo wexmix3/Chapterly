@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { Sparkles, Flame, Users, CheckCircle, X, Star } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 
 // Real book covers — verified OpenLibrary ISBNs used throughout the app
 const HERO_BOOKS = [
@@ -40,7 +41,7 @@ export default async function LandingPage() {
 
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-10 flex items-center justify-between px-6 h-14 bg-white/95 backdrop-blur-sm border-b border-ink-100/60">
-        <span className="font-display text-xl font-bold text-ink-950">Chapterly</span>
+        <Logo href="/" size="md" />
         <div className="flex items-center gap-6">
           <Link href="#features" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Features</Link>
           <Link href="/demo" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Demo</Link>
@@ -437,7 +438,7 @@ export default async function LandingPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-ink-100 px-6 py-10">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-ink-400">
-          <span className="font-display text-lg font-bold text-ink-700">Chapterly</span>
+          <Logo href="/" size="sm" />
           <p>© 2026 Chapterly · Built for readers, by readers.</p>
           <div className="flex items-center gap-4">
             <Link href="#features" className="hover:text-ink-700 transition-colors">Features</Link>
