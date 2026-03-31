@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Share2, BookOpen, Trophy, Flame, Star } from 'lucide-react';
+import { X, Share2, BookOpen, Trophy, Flame, Star, Zap } from 'lucide-react';
 
 export type CelebrationEvent =
   | { type: 'book_finished'; bookTitle: string; bookCover?: string | null }
   | { type: 'streak'; days: number }
   | { type: 'challenge_complete'; booksRead: number; goal: number }
-  | { type: 'pages_milestone'; pages: number };
+  | { type: 'pages_milestone'; pages: number }
+  | { type: 'level_up'; level: number };
 
 interface Props {
   event: CelebrationEvent | null;
@@ -78,6 +79,14 @@ function getContent(event: CelebrationEvent) {
         headline: `${event.pages.toLocaleString()} pages read!`,
         sub: 'You\'re on a roll',
         shareText: `I've read ${event.pages.toLocaleString()} pages on Chapterly! ⭐`,
+      };
+    case 'level_up':
+      return {
+        icon: <Zap className="w-10 h-10 text-brand-500" />,
+        emoji: '⚡',
+        headline: `Level ${event.level} reached!`,
+        sub: 'Keep completing quests to level up',
+        shareText: `I just reached Level ${event.level} on Chapterly! ⚡`,
       };
   }
 }

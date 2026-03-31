@@ -379,9 +379,28 @@ function BookDetailContent({ id }: { id: string }) {
   const totalPagesRead = sessions.reduce((sum, s) => sum + (s.pages_delta ?? 0), 0);
   const totalMinRead = sessions.reduce((sum, s) => sum + (s.minutes_delta ?? 0), 0);
 
+  // JSON-LD structured data
+  const jsonLd = book ? {
+    '@context': 'https://schema.org',
+    '@type': 'Book',
+    name: book.title,
+    author: book.authors?.map((a: string) => ({ '@type': 'Person', name: a })),
+    ...(book.published_year ? { datePublished: String(book.published_year) } : {}),
+    ...(book.isbn13 ? { isbn: book.isbn13 } : {}),
+    ...(book.cover_url ? { image: book.cover_url } : {}),
+    ...(book.page_count ? { numberOfPages: book.page_count } : {}),
+    ...(book.description ? { description: book.description } : {}),
+  } : null;
+
   return (
     <div className="min-h-screen bg-paper-50 dark:bg-ink-950 pt-[52px]">
       <Navigation />
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
       <CelebrationModal event={celebration} onClose={() => setCelebration(null)} />
       <main className="pb-12">
         <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">

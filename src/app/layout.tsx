@@ -5,6 +5,7 @@ import './globals.css';
 import PWARegister from '@/components/PWARegister';
 import { Analytics } from '@vercel/analytics/react';
 import PostHogProvider from '@/components/providers/PostHogProvider';
+import PageTracker from '@/components/providers/PageTracker';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-paper-50 dark:bg-ink-950 text-ink-900 dark:text-paper-100 transition-colors">
         <PostHogProvider>
+          <PageTracker />
           <PWARegister />
           <Analytics />
           {children}

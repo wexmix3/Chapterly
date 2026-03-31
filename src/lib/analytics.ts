@@ -9,11 +9,21 @@ type AnalyticsEvent =
   | { event: 'goal_set'; properties: { goal_books: number } }
   | { event: 'friend_followed'; properties: Record<string, never> }
   | { event: 'review_written'; properties: { rating: number } }
-  | { event: 'share_card_created'; properties: { template: string } };
+  | { event: 'share_card_created'; properties: { template: string } }
+  | { event: 'onboarding_step_completed'; properties: { step: 1 | 2 | 3 } }
+  | { event: 'quest_completed'; properties: { quest_key: string; xp_awarded: number } }
+  | { event: 'streak_milestone_reached'; properties: { days: number } }
+  | { event: 'book_searched'; properties: { query: string; result_count: number } }
+  | { event: 'club_joined'; properties: { club_id: string } };
 
 export function track(payload: AnalyticsEvent) {
   if (typeof window === 'undefined') return;
   posthog.capture(payload.event, payload.properties);
+}
+
+export function trackPage(path: string) {
+  if (typeof window === 'undefined') return;
+  posthog.capture('$pageview', { path });
 }
 
 export function identify(userId: string, traits: { email?: string; is_premium?: boolean }) {

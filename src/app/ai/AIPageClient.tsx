@@ -759,6 +759,7 @@ export default function AIPageClient() {
                 </div>
                 <p className="text-xs text-ink-400 -mt-1">Get focus questions before a session, or a deep-reflection package after finishing</p>
 
+                <PremiumGate isPremium={isPremium} featureName="Reading Coach">
                 {/* Book selector */}
                 {coachBooks.length > 0 ? (
                   <div className="bg-white rounded-2xl border border-ink-100 p-4 space-y-4">
@@ -841,6 +842,7 @@ export default function AIPageClient() {
                 {!coachLoading && coachResult && (
                   <CoachResultCard result={coachResult} onRefresh={() => selectedCoachBook && loadCoach(selectedCoachBook, coachMode, true)} />
                 )}
+                </PremiumGate>
               </div>
             </div>
           )}

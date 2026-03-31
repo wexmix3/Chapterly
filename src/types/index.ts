@@ -97,6 +97,8 @@ export interface UserStats {
   total_minutes: number;
   current_streak: number;
   longest_streak: number;
+  today_logged: boolean;
+  streak_freeze_available: boolean;
   books_this_year: number;
   pages_this_month: number;
   avg_rating: number | null;

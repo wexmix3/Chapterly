@@ -6,8 +6,9 @@ import Navigation from '@/components/layout/Navigation';
 import {
   BookOpen, Users, MessageSquare, Send, ArrowLeft,
   Loader2, Globe, Lock, UserPlus, UserMinus, AlertTriangle,
-  Search, X, ChevronDown
+  Search, X, ChevronDown, Trash2
 } from 'lucide-react';
+import { track } from '@/lib/analytics';
 
 interface ClubBook {
   id: string;
@@ -94,6 +95,9 @@ export default function ClubDetailClient({ clubId, viewerId }: { clubId: string;
     const method = data.is_member ? 'DELETE' : 'POST';
     const res = await fetch(`/api/clubs/${clubId}/members`, { method });
     if (res.ok) {
+      if (!data.is_member) {
+        track({ event: 'club_joined', properties: { club_id: clubId } });
+      }
       setData(prev => prev ? {
         ...prev,
         is_member: !prev.is_member,
@@ -431,7 +435,16 @@ export default function ClubDetailClient({ clubId, viewerId }: { clubId: string;
                   <p className="text-sm text-ink-400">No discussion posts yet. Start the conversation!</p>
                 </div>
               ) : (
-                posts.map(post => <PostCard key={post.id} post={post} viewerId={viewerId} />)
+                posts.map(post => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    viewerId={viewerId}
+                    clubId={clubId}
+                    isClubOwner={is_owner}
+                    onDeleted={() => setPosts(prev => prev.filter(p => p.id !== post.id))}
+                  />
+                ))
               )}
             </div>
           )}
@@ -512,9 +525,31 @@ export default function ClubDetailClient({ clubId, viewerId }: { clubId: string;
   );
 }
 
-function PostCard({ post, viewerId }: { post: Post; viewerId: string }) {
+function PostCard({
+  post,
+  viewerId,
+  clubId,
+  isClubOwner,
+  onDeleted,
+}: {
+  post: Post;
+  viewerId: string;
+  clubId: string;
+  isClubOwner: boolean;
+  onDeleted: () => void;
+}) {
   const [revealed, setRevealed] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isOwn = post.author?.id === viewerId;
+  const canDelete = isOwn || isClubOwner;
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this post?')) return;
+    setDeleting(true);
+    const res = await fetch(`/api/clubs/${clubId}/posts/${post.id}`, { method: 'DELETE' });
+    setDeleting(false);
+    if (res.ok) onDeleted();
+  };
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-paper-200">
@@ -529,6 +564,16 @@ function PostCard({ post, viewerId }: { post: Post; viewerId: string }) {
         <p className="text-xs text-ink-400 ml-auto">
           {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </p>
+        {canDelete && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="ml-1 p-1 rounded text-ink-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+            title="Delete post"
+          >
+            {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+          </button>
+        )}
       </div>
       {post.contains_spoilers && !revealed ? (
         <button onClick={() => setRevealed(true)} className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 w-full justify-center">

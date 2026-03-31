@@ -55,6 +55,11 @@ export default function QuickLog({ userBook, onComplete, onLogged }: Props) {
 
     if (res.ok) {
       track({ event: 'session_logged', properties: { mode, value } });
+      const responseData = await res.json().catch(() => ({}));
+      const MILESTONES = [3, 7, 14, 30, 50, 100, 200, 365];
+      if (responseData?.streak && MILESTONES.includes(responseData.streak)) {
+        track({ event: 'streak_milestone_reached', properties: { days: responseData.streak } });
+      }
       if (quoteText.trim()) {
         await fetch('/api/quotes', {
           method: 'POST',

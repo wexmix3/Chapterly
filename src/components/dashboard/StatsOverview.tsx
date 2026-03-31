@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Flame, BookOpen, TrendingUp, FileText, Clock, Star, Loader2, X, ChevronRight, Calendar, BarChart3, Zap, Target, Gauge } from 'lucide-react';
+import { Flame, BookOpen, TrendingUp, FileText, Clock, Star, Loader2, X, ChevronRight, Calendar, BarChart3, Zap, Target, Gauge, Shield } from 'lucide-react';
 import { useStats } from '@/hooks';
 import type { UserStats } from '@/types';
 
@@ -48,6 +48,14 @@ function monthsElapsed(): number {
   return new Date().getMonth() + 1;
 }
 
+const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100, 200, 365];
+
+function nextStreakMilestone(current: number): { milestone: number; daysLeft: number } | null {
+  const next = STREAK_MILESTONES.find(m => m > current);
+  if (!next) return null;
+  return { milestone: next, daysLeft: next - current };
+}
+
 function monthLabel(iso: string): string {
   const [, m] = iso.split('-');
   return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m) - 1] ?? m;
@@ -55,7 +63,19 @@ function monthLabel(iso: string): string {
 
 // ── Detail Sheet ──────────────────────────────────────────────────────────────
 
-function StatDetailSheet({ statKey, stats, onClose }: { statKey: string; stats: UserStats; onClose: () => void }) {
+function StatDetailSheet({ statKey, stats, onClose, onStreakFreezeUsed }: { statKey: string; stats: UserStats; onClose: () => void; onStreakFreezeUsed?: () => void }) {
+  const [freezing, setFreezing] = useState(false);
+  const [freezeUsed, setFreezeUsed] = useState(false);
+
+  const handleUseFreeze = async () => {
+    setFreezing(true);
+    const res = await fetch('/api/streak/freeze', { method: 'POST' });
+    setFreezing(false);
+    if (res.ok) {
+      setFreezeUsed(true);
+      onStreakFreezeUsed?.();
+    }
+  };
   const months = stats.reading_by_month;
   const maxBooks = Math.max(...months.map(m => m.books), 1);
   const maxPages = Math.max(...months.map(m => m.pages), 1);
@@ -63,34 +83,81 @@ function StatDetailSheet({ statKey, stats, onClose }: { statKey: string; stats: 
   const avgBooksPerMonth = elapsed > 0 ? (stats.books_this_year / elapsed).toFixed(1) : '0';
 
   const content: Record<string, React.ReactNode> = {
-    'Current Streak': (
-      <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-brand-50 rounded-xl p-4">
-            <p className="text-xs text-ink-400 mb-1">Current streak</p>
-            <p className="font-display text-3xl font-bold text-ink-900 flex items-center gap-2">
-              {stats.current_streak}
-              <Flame className="w-6 h-6 text-brand-500" />
-            </p>
-            {stats.current_streak > 0 && <p className="text-xs text-ink-400 mt-1">Since {streakStartDate(stats.current_streak)}</p>}
+    'Current Streak': (() => {
+      const milestone = nextStreakMilestone(stats.current_streak);
+      const canFreeze = (stats.streak_freeze_available && !stats.today_logged && !freezeUsed) && stats.current_streak > 0;
+      return (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-brand-50 rounded-xl p-4">
+              <p className="text-xs text-ink-400 mb-1">Current streak</p>
+              <p className="font-display text-3xl font-bold text-ink-900 flex items-center gap-2">
+                {stats.current_streak}
+                <Flame className="w-6 h-6 text-brand-500" />
+              </p>
+              {stats.current_streak > 0 && <p className="text-xs text-ink-400 mt-1">Since {streakStartDate(stats.current_streak)}</p>}
+            </div>
+            <div className="bg-paper-50 rounded-xl p-4">
+              <p className="text-xs text-ink-400 mb-1">Longest streak</p>
+              <p className="font-display text-3xl font-bold text-ink-900">{stats.longest_streak}</p>
+              <p className="text-xs text-ink-400 mt-1">{stats.longest_streak === 1 ? 'day' : 'days'} all-time</p>
+            </div>
           </div>
-          <div className="bg-paper-50 rounded-xl p-4">
-            <p className="text-xs text-ink-400 mb-1">Longest streak</p>
-            <p className="font-display text-3xl font-bold text-ink-900">{stats.longest_streak}</p>
-            <p className="text-xs text-ink-400 mt-1">{stats.longest_streak === 1 ? 'day' : 'days'} all-time</p>
+
+          {/* Next milestone */}
+          {milestone && (
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-orange-700">Next milestone: {milestone.milestone} days</p>
+                <p className="text-xs text-orange-600 font-bold">{milestone.daysLeft} day{milestone.daysLeft !== 1 ? 's' : ''} away</p>
+              </div>
+              <div className="h-2 bg-orange-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-orange-400 rounded-full transition-all"
+                  style={{ width: `${Math.round((stats.current_streak / milestone.milestone) * 100)}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-orange-500 mt-1.5">{stats.current_streak} / {milestone.milestone} days</p>
+            </div>
+          )}
+
+          {/* Streak freeze */}
+          {(canFreeze || freezeUsed) && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-blue-800">Streak Freeze available</p>
+                  <p className="text-xs text-blue-600 mt-0.5">You haven&apos;t read today. Use a freeze to protect your streak.</p>
+                </div>
+              </div>
+              {!freezeUsed ? (
+                <button
+                  onClick={handleUseFreeze}
+                  disabled={freezing}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                >
+                  {freezing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+                  Use Freeze
+                </button>
+              ) : (
+                <p className="mt-3 text-center text-sm text-blue-700 font-medium">✓ Streak protected for today!</p>
+              )}
+            </div>
+          )}
+
+          {stats.session_insights.best_day_of_week && (
+            <DetailRow icon={<Calendar className="w-4 h-4" />} label="Best reading day" value={stats.session_insights.best_day_of_week} />
+          )}
+          {stats.session_insights.best_time_of_day && (
+            <DetailRow icon={<Clock className="w-4 h-4" />} label="Best time of day" value={stats.session_insights.best_time_of_day} />
+          )}
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-800">
+            Reading at the same time each day is the #1 predictor of a long streak.
           </div>
         </div>
-        {stats.session_insights.best_day_of_week && (
-          <DetailRow icon={<Calendar className="w-4 h-4" />} label="Best reading day" value={stats.session_insights.best_day_of_week} />
-        )}
-        {stats.session_insights.best_time_of_day && (
-          <DetailRow icon={<Clock className="w-4 h-4" />} label="Best time of day" value={stats.session_insights.best_time_of_day} />
-        )}
-        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-800">
-          Reading at the same time each day is the #1 predictor of a long streak.
-        </div>
-      </div>
-    ),
+      );
+    })(),
 
     'Books Read': (
       <div className="space-y-5">
@@ -348,7 +415,7 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: strin
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function StatsOverview() {
-  const { stats, loading } = useStats();
+  const { stats, loading, refetch } = useStats();
   const [activeCard, setActiveCard] = useState<string | null>(null);
 
   if (loading) {
@@ -429,6 +496,7 @@ export default function StatsOverview() {
   ];
 
   const maxBooks = Math.max(...stats.reading_by_month.map((m) => m.books), 1);
+  const streakMilestone = nextStreakMilestone(stats.current_streak);
 
   return (
     <>
@@ -451,6 +519,18 @@ export default function StatsOverview() {
                 {card.suffix && <span className="text-xs text-ink-400">{card.suffix}</span>}
               </div>
               <p className="text-xs text-ink-400 mt-0.5">{card.label}</p>
+              {/* Streak milestone progress */}
+              {card.key === 'Current Streak' && streakMilestone && stats.current_streak > 0 && (
+                <div className="mt-2">
+                  <div className="h-1 bg-ink-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-brand-400 rounded-full"
+                      style={{ width: `${Math.round((stats.current_streak / streakMilestone.milestone) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[9px] text-ink-300 mt-0.5">{streakMilestone.daysLeft}d to {streakMilestone.milestone}-day</p>
+                </div>
+              )}
               {/* Hover chevron */}
               <ChevronRight className="absolute top-3.5 right-3.5 w-3.5 h-3.5 text-ink-200 group-hover:text-ink-400 transition-colors" />
             </button>
@@ -583,6 +663,7 @@ export default function StatsOverview() {
           statKey={activeCard}
           stats={stats}
           onClose={() => setActiveCard(null)}
+          onStreakFreezeUsed={refetch}
         />
       )}
     </>

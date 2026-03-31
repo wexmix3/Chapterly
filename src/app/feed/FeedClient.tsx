@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
-import { UserPlus, Loader2, BookOpen, Search, X, UserCheck, Quote } from 'lucide-react';
+import { UserPlus, Loader2, BookOpen, Search, X, UserCheck, Quote, Heart } from 'lucide-react';
 import { FeedEventSkeleton } from '@/components/ui/Skeleton';
 
 interface SuggestedUser {
@@ -38,8 +38,11 @@ interface UserResult {
   is_following: boolean;
 }
 
+const FEED_PAGE_SIZE = 15;
+
 export default function FeedClient() {
   const [events, setEvents] = useState<FeedEvent[]>([]);
+  const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
@@ -243,9 +246,17 @@ export default function FeedClient() {
 
           {!loading && events.length > 0 && (
             <div className="space-y-3">
-              {events.map(event => (
+              {events.slice(0, visibleCount).map(event => (
                 <FeedCard key={event.id} event={event} actionLabel={actionLabel(event.event_type)} timeAgo={timeAgo(event.created_at)} />
               ))}
+              {visibleCount < events.length && (
+                <button
+                  onClick={() => setVisibleCount(c => c + FEED_PAGE_SIZE)}
+                  className="w-full py-3 text-sm font-medium text-brand-600 hover:text-brand-700 bg-white border border-ink-100 hover:border-brand-200 rounded-2xl transition-colors"
+                >
+                  Load more ({events.length - visibleCount} remaining)
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -268,6 +279,58 @@ function FeedCard({ event, actionLabel, timeAgo }: {
 
   const profileHref = event.handle ? `/u/${event.handle}` : null;
   const bookHref = event.user_book_id ? `/book/${event.user_book_id}` : null;
+
+  // Derive target_type and target_id from event
+  const targetType = event.id.startsWith('review-') ? 'review'
+    : event.id.startsWith('quote-') ? 'quote'
+    : 'user_book';
+  const targetId = event.id.startsWith('review-') ? event.id.replace('review-', '')
+    : event.id.startsWith('quote-') ? event.id.replace('quote-', '')
+    : event.id;
+
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [liking, setLiking] = useState(false);
+
+  useEffect(() => {
+    // Fetch initial like state
+    fetch(`/api/reactions?target_type=${targetType}&target_id=${encodeURIComponent(targetId)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) { setLiked(data.liked); setLikeCount(data.count); }
+      })
+      .catch(() => {});
+  }, [targetId, targetType]);
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (liking) return;
+    setLiking(true);
+    // Optimistic update
+    setLiked(prev => !prev);
+    setLikeCount(prev => liked ? prev - 1 : prev + 1);
+    try {
+      const res = await fetch('/api/reactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: targetType, target_id: targetId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLiked(data.liked);
+        setLikeCount(data.count);
+      } else {
+        // Revert
+        setLiked(prev => !prev);
+        setLikeCount(prev => liked ? prev + 1 : prev - 1);
+      }
+    } catch {
+      setLiked(prev => !prev);
+      setLikeCount(prev => liked ? prev + 1 : prev - 1);
+    } finally {
+      setLiking(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-ink-100 p-4 flex items-start gap-4">
@@ -327,7 +390,17 @@ function FeedCard({ event, actionLabel, timeAgo }: {
           </blockquote>
         )}
 
-        <p className="text-xs text-ink-400 mt-0.5">{timeAgo}</p>
+        <div className="flex items-center gap-3 mt-1.5">
+          <p className="text-xs text-ink-400">{timeAgo}</p>
+          <button
+            onClick={handleLike}
+            disabled={liking}
+            className={`flex items-center gap-1 text-xs transition-colors ${liked ? 'text-red-500' : 'text-ink-300 hover:text-red-400'}`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-red-500' : ''}`} />
+            {likeCount > 0 && <span>{likeCount}</span>}
+          </button>
+        </div>
       </div>
       {event.book_cover && bookHref && (
         <Link href={bookHref} className="flex-shrink-0">

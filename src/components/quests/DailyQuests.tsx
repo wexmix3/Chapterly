@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { CheckCircle2, Loader2, Zap } from 'lucide-react';
+import { track } from '@/lib/analytics';
+import CelebrationModal, { type CelebrationEvent } from '@/components/ui/CelebrationModal';
 
 interface Quest {
   key: string;
@@ -17,6 +19,7 @@ export default function DailyQuests() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<CelebrationEvent | null>(null);
 
   useEffect(() => {
     fetch('/api/quests')
@@ -43,8 +46,18 @@ export default function DailyQuests() {
         body: JSON.stringify({ quest_key: questKey }),
       });
 
-      if (res.ok || res.status === 409) {
-        // Mark as completed in local state regardless of 200 or 409 (already done)
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const xpAwarded: number = data.xp_awarded ?? quests.find(q => q.key === questKey)?.xp ?? 0;
+        track({ event: 'quest_completed', properties: { quest_key: questKey, xp_awarded: xpAwarded } });
+        setQuests((prev) =>
+          prev.map((q) => (q.key === questKey ? { ...q, completed: true } : q))
+        );
+        if (data.prev_level != null && data.new_level != null && data.new_level > data.prev_level) {
+          setCelebration({ type: 'level_up', level: data.new_level });
+        }
+      } else if (res.status === 409) {
+        // Already completed today
         setQuests((prev) =>
           prev.map((q) => (q.key === questKey ? { ...q, completed: true } : q))
         );
@@ -69,6 +82,8 @@ export default function DailyQuests() {
   const allDone = quests.every((q) => q.completed);
 
   return (
+    <>
+    <CelebrationModal event={celebration} onClose={() => setCelebration(null)} />
     <div className="bg-white rounded-2xl border border-ink-100 p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -145,5 +160,6 @@ export default function DailyQuests() {
         </p>
       )}
     </div>
+    </>
   );
 }

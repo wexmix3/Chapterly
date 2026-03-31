@@ -14,19 +14,43 @@ const GENRES = [
   'Horror', 'Thriller', 'Literary Fiction', 'Young Adult', 'Graphic Novel',
 ];
 
-const GOAL_OPTIONS = [
-  { value: 6, label: '6 books', badge: 'Casual', desc: 'One every two months' },
-  { value: 12, label: '12 books', badge: 'Steady', desc: 'One per month' },
-  { value: 24, label: '24 books', badge: 'Avid', desc: 'Two per month' },
-  { value: 36, label: '36 books', badge: 'Dedicated', desc: 'Three per month' },
-  { value: 52, label: '52 books', badge: 'One per week', desc: 'A book every week' },
+type GoalType = 'yearly_books' | 'weekly_pages' | 'monthly_genres';
+
+const GOAL_TYPE_OPTIONS: { value: GoalType; label: string; desc: string }[] = [
+  { value: 'yearly_books', label: 'Books per year', desc: 'How many books will you finish this year?' },
+  { value: 'weekly_pages', label: 'Pages per week', desc: 'How many pages will you read each week?' },
+  { value: 'monthly_genres', label: 'Genres per month', desc: 'How many different genres each month?' },
 ];
+
+const GOAL_PRESETS: Record<GoalType, { value: number; label: string; badge: string; desc: string }[]> = {
+  yearly_books: [
+    { value: 6,  label: '6 books',    badge: 'Casual',      desc: 'One every two months' },
+    { value: 12, label: '12 books',   badge: 'Steady',      desc: 'One per month' },
+    { value: 24, label: '24 books',   badge: 'Avid',        desc: 'Two per month' },
+    { value: 36, label: '36 books',   badge: 'Dedicated',   desc: 'Three per month' },
+    { value: 52, label: '52 books',   badge: 'One per week', desc: 'A book every week' },
+  ],
+  weekly_pages: [
+    { value: 50,  label: '50 pages/week',  badge: 'Light',    desc: 'About 7 pages a day' },
+    { value: 100, label: '100 pages/week', badge: 'Steady',   desc: 'About 15 pages a day' },
+    { value: 200, label: '200 pages/week', badge: 'Avid',     desc: 'About 30 pages a day' },
+    { value: 350, label: '350 pages/week', badge: 'Dedicated', desc: 'About 50 pages a day' },
+    { value: 500, label: '500 pages/week', badge: 'Prolific', desc: 'About 70 pages a day' },
+  ],
+  monthly_genres: [
+    { value: 1, label: '1 genre/month',  badge: 'Focused',   desc: 'Deep dives into one genre' },
+    { value: 2, label: '2 genres/month', badge: 'Balanced',  desc: 'A good mix' },
+    { value: 3, label: '3 genres/month', badge: 'Eclectic',  desc: 'Wide variety' },
+    { value: 4, label: '4 genres/month', badge: 'Explorer',  desc: 'Something new every week' },
+  ],
+};
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [displayName, setDisplayName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('📚');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [goalType, setGoalType] = useState<GoalType>('yearly_books');
   const [goal, setGoal] = useState(12);
   const [saving, setSaving] = useState(false);
   const { user, loading } = useAuth();
@@ -60,10 +84,11 @@ export default function OnboardingPage() {
       fetch('/api/challenges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: new Date().getFullYear(), goal_books: goal }),
+        body: JSON.stringify({ year: new Date().getFullYear(), goal_books: goal, goal_type: goalType, goal_target: goal }),
       }).catch(() => null),
     ]);
     setSaving(false);
+    track({ event: 'onboarding_step_completed', properties: { step: 3 } });
     track({ event: 'goal_set', properties: { goal_books: goal } });
     router.push('/dashboard');
   };
@@ -139,7 +164,7 @@ export default function OnboardingPage() {
             </div>
 
             <button
-              onClick={() => setStep(2)}
+              onClick={() => { track({ event: 'onboarding_step_completed', properties: { step: 1 } }); setStep(2); }}
               className="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl font-semibold transition-colors flex items-center justify-center gap-2"
             >
               Continue <ChevronRight className="w-4 h-4" />
@@ -190,7 +215,7 @@ export default function OnboardingPage() {
                 Back
               </button>
               <button
-                onClick={() => setStep(3)}
+                onClick={() => { track({ event: 'onboarding_step_completed', properties: { step: 2 } }); setStep(3); }}
                 disabled={selectedGenres.length < 3}
                 className="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white rounded-2xl font-medium transition-colors text-sm flex items-center justify-center gap-1"
               >
@@ -205,11 +230,28 @@ export default function OnboardingPage() {
           <div className="space-y-6">
             <div>
               <h2 className="font-display text-2xl font-bold text-ink-950 mb-1">Set your reading goal</h2>
-              <p className="text-ink-500 text-sm">How many books do you want to read in {new Date().getFullYear()}?</p>
+              <p className="text-ink-500 text-sm">Choose a goal type and target for {new Date().getFullYear()}.</p>
+            </div>
+
+            {/* Goal type selector */}
+            <div className="flex gap-2">
+              {GOAL_TYPE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setGoalType(opt.value); setGoal(GOAL_PRESETS[opt.value][1].value); }}
+                  className={`flex-1 py-2.5 px-2 rounded-xl border-2 text-xs font-semibold transition-all text-center ${
+                    goalType === opt.value
+                      ? 'border-brand-400 bg-brand-50 text-brand-700'
+                      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
 
             <div className="space-y-2">
-              {GOAL_OPTIONS.map(opt => (
+              {GOAL_PRESETS[goalType].map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => setGoal(opt.value)}
