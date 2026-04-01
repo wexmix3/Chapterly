@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = createServerSupabaseClient();
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, bio, avatar_url, handle, is_public')
+    .select('id, display_name, bio, avatar_url, handle, is_public')
     .eq('handle', params.handle)
     .maybeSingle();
 
@@ -20,10 +20,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Reader | Chapterly' };
   }
 
+  // Count books read for the OG image stat
+  const { count: booksRead } = await supabase
+    .from('user_books')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .eq('status', 'read');
+
   const name = profile.display_name || `@${params.handle}`;
   const description = profile.bio
     ? profile.bio.slice(0, 155)
     : `See ${name}'s reading shelf, reviews, and stats on Chapterly.`;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://getchapterly.com';
+  const ogParams = new URLSearchParams({
+    type: 'profile',
+    name,
+    handle: params.handle,
+    books: String(booksRead ?? 0),
+    ...(profile.avatar_url ? { avatar: profile.avatar_url } : {}),
+  });
+  const ogImageUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 
   return {
     title: `${name} | Chapterly`,
@@ -31,18 +48,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${name} on Chapterly`,
       description,
-      images: profile.avatar_url ? [{ url: profile.avatar_url, width: 400, height: 400, alt: name }] : [],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `${name}'s Chapterly profile` }],
       type: 'profile',
-      url: `https://chapterly.app/u/${params.handle}`,
+      url: `${appUrl}/u/${params.handle}`,
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${name} on Chapterly`,
       description,
-      images: profile.avatar_url ? [profile.avatar_url] : [],
+      images: [ogImageUrl],
     },
     alternates: {
-      canonical: `https://chapterly.app/u/${params.handle}`,
+      canonical: `${appUrl}/u/${params.handle}`,
     },
   };
 }
