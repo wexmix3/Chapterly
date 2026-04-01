@@ -15,6 +15,7 @@ import AIInsights from '@/components/dashboard/AIInsights';
 import SocialPulse from '@/components/dashboard/SocialPulse';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import DailyQuests from '@/components/quests/DailyQuests';
+import OnboardingBanner from '@/components/dashboard/OnboardingBanner';
 
 type Tab = 'overview' | 'reading' | 'search';
 
@@ -57,6 +58,9 @@ function DashboardContent() {
           {tab === 'overview' && (
             <ErrorBoundary>
               <div className="space-y-8">
+                {/* 0 — Onboarding banner (new users only, self-dismissing) */}
+                <OnboardingBanner />
+
                 {/* 1 — AI Insights */}
                 <section><AIInsights /></section>
 

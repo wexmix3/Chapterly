@@ -150,3 +150,57 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// ─── Push Notifications ───────────────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: 'Chapterly', body: event.data.text() };
+  }
+
+  const { title = 'Chapterly', body = '', icon, url = '/' } = payload;
+
+  const options = {
+    body,
+    icon: icon ?? '/icons/icon-192x192.png',
+    badge: '/icons/badge-72x72.png',
+    data: { url },
+    vibrate: [100, 50, 100],
+    actions: [
+      { action: 'open', title: 'Open' },
+      { action: 'dismiss', title: 'Dismiss' },
+    ],
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
+  const url = event.notification.data?.url ?? '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.focus();
+          if ('navigate' in client) client.navigate(url);
+          return;
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(url);
+      }
+    })
+  );
+});

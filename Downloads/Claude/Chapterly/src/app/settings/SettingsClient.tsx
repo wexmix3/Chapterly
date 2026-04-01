@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
 import LibraryImport from '@/components/books/GoodreadsImport';
+import GoodreadsFriendsImport from '@/components/books/GoodreadsFriendsImport';
+import PushPrompt from '@/components/ui/PushPrompt';
 import ShareCardPreview from '@/components/share/ShareCardPreview';
 import {
   User, BookOpen, Lock, Sun, Moon, Download, Trash2,
@@ -458,6 +460,9 @@ export default function SettingsClient({
                     >
                       Save preferences
                     </button>
+
+                    {/* Push notifications (browser) */}
+                    <PushPrompt />
                   </div>
                 </>
               )}
@@ -642,6 +647,10 @@ export default function SettingsClient({
                   <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Import Library</h2>
                   <p className="text-sm text-ink-500">Bring your reading history from other apps. Upload a CSV export to import all your books, shelves, and ratings at once.</p>
                   <LibraryImport />
+                  <div className="pt-2">
+                    <p className="text-xs font-semibold text-ink-400 uppercase tracking-wide mb-3">Find Friends</p>
+                    <GoodreadsFriendsImport />
+                  </div>
                 </>
               )}
 

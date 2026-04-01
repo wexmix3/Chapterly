@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
 import { Users, Plus, BookOpen, Globe, Lock, Loader2, X, Search } from 'lucide-react';
+import PremiumNudgeModal from '@/components/ui/PremiumNudgeModal';
 
 interface Club {
   id: string;
@@ -23,16 +24,33 @@ export default function ClubsClient() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState('');
+  const [showClubLimitNudge, setShowClubLimitNudge] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+
+  const FREE_CLUB_LIMIT = 3;
 
   useEffect(() => {
     Promise.all([
       fetch('/api/clubs').then(r => r.json()),
       fetch('/api/clubs?mine=true').then(r => r.json()),
-    ]).then(([pub, mine]) => {
+      fetch('/api/profile').then(r => r.ok ? r.json() : null),
+    ]).then(([pub, mine, profile]) => {
       setClubs(pub.data ?? []);
       setMyClubs(mine.data ?? []);
+      setIsPremium(profile?.data?.is_premium ?? false);
     }).finally(() => setLoading(false));
   }, []);
+
+  const handleClubClick = (club: Club) => {
+    // Check if user is already in this club
+    const alreadyJoined = myClubs.some(c => c.id === club.id);
+    // Only gate discovery of new clubs, not clubs they're already in
+    if (!alreadyJoined && isPremium === false && myClubs.length >= FREE_CLUB_LIMIT) {
+      setShowClubLimitNudge(true);
+      return;
+    }
+    router.push(`/clubs/${club.id}`);
+  };
 
   const filtered = (tab === 'discover' ? clubs : myClubs).filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase())
@@ -103,7 +121,7 @@ export default function ClubsClient() {
           ) : (
             <div className="space-y-3">
               {filtered.map(club => (
-                <ClubCard key={club.id} club={club} onClick={() => router.push(`/clubs/${club.id}`)} />
+                <ClubCard key={club.id} club={club} onClick={() => handleClubClick(club)} />
               ))}
             </div>
           )}
@@ -111,6 +129,11 @@ export default function ClubsClient() {
       </main>
 
       {showCreate && <CreateClubModal onClose={() => setShowCreate(false)} onCreate={(id) => router.push(`/clubs/${id}`)} />}
+      <PremiumNudgeModal
+        open={showClubLimitNudge}
+        onClose={() => setShowClubLimitNudge(false)}
+        reason="club_limit"
+      />
     </div>
   );
 }

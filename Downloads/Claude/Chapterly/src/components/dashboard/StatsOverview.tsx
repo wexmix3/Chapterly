@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Flame, BookOpen, TrendingUp, FileText, Clock, Star, Loader2, X, ChevronRight, Calendar, BarChart3, Zap, Target, Gauge, Shield } from 'lucide-react';
 import { useStats } from '@/hooks';
 import type { UserStats } from '@/types';
+import PremiumNudgeModal from '@/components/ui/PremiumNudgeModal';
 
 interface StatCard {
   key: string;
@@ -417,6 +418,15 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: strin
 export default function StatsOverview() {
   const { stats, loading, refetch } = useStats();
   const [activeCard, setActiveCard] = useState<string | null>(null);
+  const [showStatsNudge, setShowStatsNudge] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(j => setIsPremium(j?.data?.is_premium ?? false))
+      .catch(() => setIsPremium(false));
+  }, []);
 
   // If genres are empty, fire the rich-stats endpoint in the background —
   // it backfills subjects onto books and persists them, so a subsequent
@@ -667,7 +677,27 @@ export default function StatsOverview() {
             </div>
           </div>
         )}
+        {/* Advanced stats nudge for free users */}
+        {isPremium === false && stats.total_books_read >= 3 && (
+          <button
+            onClick={() => setShowStatsNudge(true)}
+            className="w-full flex items-center gap-3 bg-gradient-to-r from-amber-50 to-brand-50 border border-amber-200 rounded-2xl p-4 hover:border-amber-300 transition-colors text-left group"
+          >
+            <BarChart3 className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-ink-800">Unlock Advanced Stats</p>
+              <p className="text-xs text-ink-500">Reading DNA, pace analytics, yearly comparisons &amp; more</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-amber-400 group-hover:text-amber-600 flex-shrink-0 transition-colors" />
+          </button>
+        )}
       </div>
+
+      <PremiumNudgeModal
+        open={showStatsNudge}
+        onClose={() => setShowStatsNudge(false)}
+        reason="advanced_stats"
+      />
 
       {/* Detail sheet */}
       {activeCard && (

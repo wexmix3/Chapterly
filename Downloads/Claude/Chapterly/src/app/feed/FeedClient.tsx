@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
-import { UserPlus, Loader2, BookOpen, Search, X, UserCheck, Quote, Heart } from 'lucide-react';
+import { UserPlus, Loader2, BookOpen, Search, X, UserCheck, Quote, Heart, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { FeedEventSkeleton } from '@/components/ui/Skeleton';
 
 interface SuggestedUser {
@@ -265,6 +265,128 @@ export default function FeedClient() {
   );
 }
 
+// ── Feed comment thread ───────────────────────────────────────────────────────
+
+interface FeedComment {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  user: { display_name: string; avatar_url?: string | null; handle?: string | null } | null;
+}
+
+function FeedComments({ targetType, targetId }: { targetType: string; targetId: string }) {
+  const [open, setOpen] = useState(false);
+  const [comments, setComments] = useState<FeedComment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [count, setCount] = useState<number | null>(null);
+
+  // Fetch count on mount (cheap: just length of GET response)
+  useEffect(() => {
+    fetch(`/api/comments?target_type=${encodeURIComponent(targetType)}&target_id=${encodeURIComponent(targetId)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j?.data) { setComments(j.data); setCount(j.data.length); } })
+      .catch(() => {});
+  }, [targetType, targetId]);
+
+  const toggle = () => setOpen(v => !v);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: targetType, target_id: targetId, content: text.trim() }),
+      });
+      if (res.ok) {
+        const j = await res.json();
+        setComments(prev => [...prev, j.data]);
+        setCount(c => (c ?? 0) + 1);
+        setText('');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteComment = async (id: string) => {
+    const res = await fetch(`/api/comments?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (res.ok) {
+      setComments(prev => prev.filter(c => c.id !== id));
+      setCount(c => Math.max(0, (c ?? 1) - 1));
+    }
+  };
+
+  return (
+    <div>
+      <button
+        onClick={toggle}
+        className={`flex items-center gap-1 text-xs transition-colors ${open ? 'text-brand-600' : 'text-ink-300 hover:text-brand-500'}`}
+      >
+        <MessageCircle className="w-3.5 h-3.5" />
+        {count !== null && count > 0 ? count : ''}
+      </button>
+
+      {open && (
+        <div className="mt-2 pl-1 border-l-2 border-ink-100 space-y-2">
+          {loading && (
+            <div className="flex items-center gap-1.5 text-xs text-ink-400">
+              <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+            </div>
+          )}
+
+          {!loading && comments.length === 0 && (
+            <p className="text-[11px] text-ink-400 italic">No comments yet — be the first!</p>
+          )}
+
+          {comments.map(c => (
+            <div key={c.id} className="flex gap-2 group">
+              <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center text-[9px] font-bold text-brand-700 flex-shrink-0 mt-0.5">
+                {c.user?.display_name?.[0]?.toUpperCase() ?? '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-[11px] font-semibold text-ink-700">{c.user?.display_name ?? 'Reader'} </span>
+                <span className="text-[11px] text-ink-500">{c.content}</span>
+              </div>
+              <button
+                onClick={() => deleteComment(c.id)}
+                className="opacity-0 group-hover:opacity-100 p-0.5 text-ink-300 hover:text-red-500 transition-all flex-shrink-0"
+                aria-label="Delete comment"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+
+          <form onSubmit={submit} className="flex gap-1.5 pt-1">
+            <input
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder="Add a comment…"
+              maxLength={1000}
+              className="flex-1 text-xs px-2.5 py-1.5 border border-ink-200 rounded-lg focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-100"
+            />
+            <button
+              type="submit"
+              disabled={!text.trim() || submitting}
+              className="p-1.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white rounded-lg transition-colors"
+            >
+              {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function FeedCard({ event, actionLabel, timeAgo }: {
   event: FeedEvent;
   actionLabel: string;
@@ -400,6 +522,7 @@ function FeedCard({ event, actionLabel, timeAgo }: {
             <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-red-500' : ''}`} />
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
+          <FeedComments targetType={targetType} targetId={targetId} />
         </div>
       </div>
       {event.book_cover && bookHref && (
