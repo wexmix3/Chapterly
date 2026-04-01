@@ -131,8 +131,10 @@ REQUIRED FORMAT:
     );
 
     const raw = response.content[0].type === 'text' ? response.content[0].text : '';
-    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-    const parsed = JSON.parse(text);
+    // Extract JSON object from anywhere in the response (handles markdown wrappers and preamble)
+    const jsonMatch = raw.match(/\{[\s\S]*"recommendations"[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found in response');
+    const parsed = JSON.parse(jsonMatch[0]);
 
     // Enrich each recommendation with a cover and short description from Google Books
     const apiKey = process.env.GOOGLE_BOOKS_API_KEY;

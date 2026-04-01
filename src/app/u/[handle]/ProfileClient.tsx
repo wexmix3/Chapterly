@@ -6,7 +6,7 @@ import Navigation from '@/components/layout/Navigation';
 import {
   BookOpen, Star, Users, UserPlus, UserCheck, BookMarked,
   Lock, ChevronRight, MessageSquare, Loader2, BarChart3,
-  Calendar, Award, BadgeCheck, Share2, Check, Zap,
+  Calendar, Award, BadgeCheck, Share2, Check, Zap, X,
 } from 'lucide-react';
 import { getArchetype, type Archetype } from '@/lib/archetype';
 import { levelFromXP, xpForLevel, xpForNextLevel, progressToNextLevel, levelTitle } from '@/lib/xp';
@@ -107,6 +107,9 @@ export default function ProfileClient({
   const [activeTab, setActiveTab] = useState<'reading' | 'reviews'>('reading');
   const [linkCopied, setLinkCopied] = useState(false);
   const [archetype, setArchetype] = useState<Archetype | null>(null);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [followingList, setFollowingList] = useState<{ id: string; display_name: string; handle: string; avatar_url?: string | null }[]>([]);
+  const [followingLoading, setFollowingLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,6 +135,21 @@ export default function ProfileClient({
   }, [handle]);
 
   useEffect(() => { load(); }, [load]);
+
+  const openFollowing = async () => {
+    setShowFollowingModal(true);
+    if (followingList.length > 0) return;
+    setFollowingLoading(true);
+    try {
+      const res = await fetch('/api/social');
+      if (res.ok) {
+        const json = await res.json();
+        setFollowingList(json.data ?? []);
+      }
+    } finally {
+      setFollowingLoading(false);
+    }
+  };
 
   const handleFollow = async () => {
     if (!viewerId) { router.push('/login'); return; }
@@ -314,14 +332,26 @@ export default function ProfileClient({
             {[
               { label: 'Books Read', value: profile.books_read_count, icon: BookMarked },
               { label: 'Followers', value: profile.followers_count, icon: Users },
-              { label: 'Following', value: profile.following_count, icon: Users },
+              { label: 'Following', value: profile.following_count, icon: Users, clickable: is_own_profile },
               { label: 'Pages', value: profile.total_pages.toLocaleString(), icon: BarChart3 },
-            ].map(({ label, value, icon: Icon }) => (
-              <div key={label} className="bg-white rounded-xl p-3 text-center shadow-sm border border-paper-200">
-                <Icon className="w-4 h-4 text-brand-500 mx-auto mb-1" />
-                <p className="text-lg font-bold text-ink-900">{value}</p>
-                <p className="text-[10px] text-ink-400 leading-tight">{label}</p>
-              </div>
+            ].map(({ label, value, icon: Icon, clickable }) => (
+              clickable ? (
+                <button
+                  key={label}
+                  onClick={openFollowing}
+                  className="bg-white rounded-xl p-3 text-center shadow-sm border border-paper-200 hover:border-brand-300 hover:shadow-md transition-all cursor-pointer"
+                >
+                  <Icon className="w-4 h-4 text-brand-500 mx-auto mb-1" />
+                  <p className="text-lg font-bold text-ink-900">{value}</p>
+                  <p className="text-[10px] text-brand-500 font-medium leading-tight">{label}</p>
+                </button>
+              ) : (
+                <div key={label} className="bg-white rounded-xl p-3 text-center shadow-sm border border-paper-200">
+                  <Icon className="w-4 h-4 text-brand-500 mx-auto mb-1" />
+                  <p className="text-lg font-bold text-ink-900">{value}</p>
+                  <p className="text-[10px] text-ink-400 leading-tight">{label}</p>
+                </div>
+              )
             ))}
           </div>
 
@@ -519,6 +549,56 @@ export default function ProfileClient({
                 )}
               </div>
             </section>
+          )}
+
+          {/* Following list modal */}
+          {showFollowingModal && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowFollowingModal(false)} />
+              <div className="relative z-10 w-full sm:max-w-md bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[70vh] flex flex-col">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-paper-100">
+                  <h3 className="font-display text-base font-bold text-ink-900">Following</h3>
+                  <button
+                    onClick={() => setShowFollowingModal(false)}
+                    className="p-1.5 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-paper-100 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="overflow-y-auto flex-1 p-4">
+                  {followingLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="w-5 h-5 animate-spin text-brand-500" />
+                    </div>
+                  ) : followingList.length === 0 ? (
+                    <p className="text-center text-sm text-ink-400 py-10">Not following anyone yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {followingList.map(person => (
+                        <button
+                          key={person.id}
+                          onClick={() => { setShowFollowingModal(false); router.push(`/u/${person.handle}`); }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-paper-50 transition-colors text-left"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-200 to-brand-400 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {person.avatar_url ? (
+                              <img src={person.avatar_url} alt={person.display_name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-white text-sm font-bold">{person.display_name[0]?.toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-ink-900 truncate">{person.display_name}</p>
+                            <p className="text-xs text-ink-400">@{person.handle}</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-ink-300 ml-auto flex-shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* CTA for non-authenticated visitors */}
