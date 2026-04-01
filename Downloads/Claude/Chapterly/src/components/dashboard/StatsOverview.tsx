@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Flame, BookOpen, TrendingUp, FileText, Clock, Star, Loader2, X, ChevronRight, Calendar, BarChart3, Zap, Target, Gauge, Shield } from 'lucide-react';
 import { useStats } from '@/hooks';
 import type { UserStats } from '@/types';
@@ -417,6 +417,18 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: strin
 export default function StatsOverview() {
   const { stats, loading, refetch } = useStats();
   const [activeCard, setActiveCard] = useState<string | null>(null);
+
+  // If genres are empty, fire the rich-stats endpoint in the background —
+  // it backfills subjects onto books and persists them, so a subsequent
+  // refetch will show genres.
+  useEffect(() => {
+    if (!loading && stats && stats.top_genres.length === 0 && stats.total_books_read > 0) {
+      fetch('/api/stats/rich')
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { if (j?.data?.genre_breakdown?.length) refetch(); })
+        .catch(() => {});
+    }
+  }, [loading, stats, refetch]);
 
   if (loading) {
     return (

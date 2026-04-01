@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { Share2, Loader2, BookOpen, FileText, Layers, Target, ChevronDown, Check } from 'lucide-react';
+import { Share2, Loader2, BookOpen, FileText, Layers, Target, ChevronDown, Check, Calendar, Sun } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type GoalType = 'yearly_books' | 'weekly_pages' | 'monthly_genres';
+type GoalType = 'yearly_books' | 'monthly_books' | 'weekly_pages' | 'daily_pages' | 'monthly_genres';
 
 interface GoalProgress {
   id: string;
@@ -40,6 +40,15 @@ const GOAL_CONFIG: Record<GoalType, {
     presets: [12, 24, 36, 52, 100],
     defaultTarget: 24,
   },
+  monthly_books: {
+    label: 'Books per Month',
+    icon: Calendar,
+    unit: 'book',
+    unitPlural: 'books',
+    description: 'Finish books by the end of each month',
+    presets: [1, 2, 3, 4, 5],
+    defaultTarget: 2,
+  },
   weekly_pages: {
     label: 'Pages per Week',
     icon: FileText,
@@ -48,6 +57,15 @@ const GOAL_CONFIG: Record<GoalType, {
     description: 'Read pages every Monday–Sunday',
     presets: [50, 100, 200, 350, 500],
     defaultTarget: 150,
+  },
+  daily_pages: {
+    label: 'Pages per Day',
+    icon: Sun,
+    unit: 'page',
+    unitPlural: 'pages',
+    description: 'Read a set number of pages every day',
+    presets: [10, 20, 30, 50, 100],
+    defaultTarget: 20,
   },
   monthly_genres: {
     label: 'Genres per Month',
@@ -191,6 +209,30 @@ function PaceBadge({ goalType, current, target }: { goalType: GoalType; current:
         ahead ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
       }`}>
         {ahead ? '✓' : '⚡'} {current} / {target} pages this week
+      </div>
+    );
+  }
+
+  if (goalType === 'monthly_books') {
+    const remaining = Math.max(0, target - current);
+    const achieved = current >= target;
+    return (
+      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium ${
+        achieved ? 'bg-emerald-50 text-emerald-700' : 'bg-brand-50 text-brand-700'
+      }`}>
+        {achieved ? `✓ Monthly book goal reached` : `${remaining} more book${remaining !== 1 ? 's' : ''} to go this month`}
+      </div>
+    );
+  }
+
+  if (goalType === 'daily_pages') {
+    const remaining = Math.max(0, target - current);
+    const achieved = current >= target;
+    return (
+      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium ${
+        achieved ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+      }`}>
+        {achieved ? `✓ Today's page goal done!` : `${remaining} more page${remaining !== 1 ? 's' : ''} to go today`}
       </div>
     );
   }

@@ -441,11 +441,24 @@ export default function ProgressClient() {
                         <YAxis
                           type="category"
                           dataKey="author"
-                          tick={{ fontSize: 11, fill: '#374151' }}
+                          tick={(props: { x?: string | number; y?: string | number; payload?: { value: string } }) => {
+                            const raw = props.payload?.value ?? '';
+                            const label = raw.length > 16 ? raw.slice(0, 15) + '…' : raw;
+                            return (
+                              <text
+                                x={Number(props.x ?? 0)}
+                                y={Number(props.y ?? 0)}
+                                dy={4}
+                                textAnchor="end"
+                                style={{ fontSize: 11, fill: '#111827', fontFamily: 'inherit' }}
+                              >
+                                {label}
+                              </text>
+                            );
+                          }}
                           tickLine={false}
                           axisLine={false}
-                          width={120}
-                          tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 17) + '…' : v}
+                          width={130}
                         />
                         <Tooltip content={<AuthorTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
                         <Bar dataKey="count" radius={[0, 4, 4, 0]}>

@@ -6,10 +6,12 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-f
 /**
  * Supported goal types:
  *   yearly_books   — finish N books in the calendar year
+ *   monthly_books  — finish N books in the current month
  *   weekly_pages   — read N pages in the current week
+ *   daily_pages    — read N pages today
  *   monthly_genres — read books from N distinct genres this month
  */
-type GoalType = 'yearly_books' | 'weekly_pages' | 'monthly_genres';
+type GoalType = 'yearly_books' | 'monthly_books' | 'weekly_pages' | 'daily_pages' | 'monthly_genres';
 
 interface GoalProgress {
   id: string;
@@ -132,9 +134,31 @@ export async function GET() {
     .lt('logged_at', yearEnd);
   const pagesCount = (sessionPages ?? []).reduce((s, r) => s + (r.pages_read ?? 0), 0);
 
+  // Monthly books: books finished this month
+  const { count: monthlyBooksCount } = await supabase
+    .from('user_books')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('status', 'read')
+    .gte('finished_at', monthStart)
+    .lte('finished_at', monthEnd);
+
+  // Daily pages: pages logged today
+  const todayStart = format(new Date(), "yyyy-MM-dd'T'00:00:00'Z'");
+  const todayEnd   = format(new Date(), "yyyy-MM-dd'T'23:59:59'Z'");
+  const { data: todaySessions } = await supabase
+    .from('sessions')
+    .select('pages_delta')
+    .eq('user_id', user.id)
+    .gte('created_at', todayStart)
+    .lte('created_at', todayEnd);
+  const dailyPages = (todaySessions ?? []).reduce((s, r) => s + (r.pages_delta ?? 0), 0);
+
   const currentByType: Record<GoalType, number> = {
-    yearly_books:   booksCount  ?? 0,
+    yearly_books:   booksCount    ?? 0,
+    monthly_books:  monthlyBooksCount ?? 0,
     weekly_pages:   weeklyPages,
+    daily_pages:    dailyPages,
     monthly_genres: monthlyGenres,
   };
 
