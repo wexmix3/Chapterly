@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, Loader2, BookOpen, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import PremiumNudgeModal from '@/components/ui/PremiumNudgeModal';
 
 interface Insight {
   emoji: string;
@@ -35,6 +36,27 @@ const REC_GRADIENTS = [
   'from-indigo-400 to-violet-500',
 ];
 
+const AI_RECS_LIMIT = 3;
+const AI_RECS_STORAGE_KEY = 'chapterly_ai_recs_usage'; // { date: 'YYYY-MM-DD', count: N }
+
+function getTodayAiRecsCount(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = localStorage.getItem(AI_RECS_STORAGE_KEY);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw) as { date: string; count: number };
+    const today = new Date().toISOString().slice(0, 10);
+    return parsed.date === today ? parsed.count : 0;
+  } catch { return 0; }
+}
+
+function incrementTodayAiRecsCount(): void {
+  if (typeof window === 'undefined') return;
+  const today = new Date().toISOString().slice(0, 10);
+  const current = getTodayAiRecsCount();
+  localStorage.setItem(AI_RECS_STORAGE_KEY, JSON.stringify({ date: today, count: current + 1 }));
+}
+
 export default function AIInsights() {
   const [activeTab, setActiveTab] = useState<'insights' | 'recommendations'>('insights');
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -43,8 +65,23 @@ export default function AIInsights() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [message, setMessage] = useState('');
+  const [showAiRecsNudge, setShowAiRecsNudge] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(j => setIsPremium(j?.data?.is_premium ?? false))
+      .catch(() => setIsPremium(false));
+  }, []);
 
   const load = async () => {
+    // Check AI recs daily limit for free users
+    if (isPremium === false && getTodayAiRecsCount() >= AI_RECS_LIMIT) {
+      setShowAiRecsNudge(true);
+      return;
+    }
+
     setLoading(true);
     setError(false);
     try {
@@ -61,6 +98,8 @@ export default function AIInsights() {
       setRecs(recsData.data ?? recsData.recommendations ?? []);
       if (recsData.message) setMessage(recsData.message);
       setLoaded(true);
+      // Track usage for free users
+      if (isPremium === false) incrementTodayAiRecsCount();
     } catch {
       setError(true);
     } finally {
@@ -72,6 +111,11 @@ export default function AIInsights() {
 
   return (
     <div className="rounded-2xl overflow-hidden border border-ink-100 shadow-sm">
+      <PremiumNudgeModal
+        open={showAiRecsNudge}
+        onClose={() => setShowAiRecsNudge(false)}
+        reason="ai_recs_limit"
+      />
       {/* Premium gradient header */}
       <div className="bg-gradient-to-r from-violet-600 via-brand-500 to-brand-400 px-5 py-4">
         <div className="flex items-center justify-between">

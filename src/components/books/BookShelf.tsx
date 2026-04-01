@@ -7,6 +7,7 @@ import BookCover from '@/components/ui/BookCover';
 import { BookCardSkeleton } from '@/components/ui/Skeleton';
 import { useShelf } from '@/hooks';
 import type { ShelfStatus, UserBook, BookSearchResult } from '@/types';
+import PremiumNudgeModal from '@/components/ui/PremiumNudgeModal';
 
 const TABS: { value: ShelfStatus | 'all'; label: string; icon: React.ReactNode }[] = [
   { value: 'all', label: 'All', icon: <Library className="w-3.5 h-3.5" /> },
@@ -23,11 +24,23 @@ const SHELF_OPTIONS: { value: ShelfStatus; label: string }[] = [
   { value: 'dnf', label: 'Did Not Finish' },
 ];
 
+const FREE_SHELF_LIMIT = 50;
+
 export default function BookShelf() {
   const [activeTab, setActiveTab] = useState<ShelfStatus | 'all'>('all');
   const { books, loading, fetchBooks } = useShelf(activeTab === 'all' ? undefined : activeTab);
   const [selectedBook, setSelectedBook] = useState<UserBook | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showShelfLimitNudge, setShowShelfLimitNudge] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+
+  // Fetch premium status once
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(j => setIsPremium(j?.data?.is_premium ?? false))
+      .catch(() => setIsPremium(false));
+  }, []);
 
   // Inline search state (Reading tab)
   const [inlineQuery, setInlineQuery] = useState('');
@@ -62,6 +75,12 @@ export default function BookShelf() {
   }, [inlineQuery]);
 
   const handleInlineAdd = async (result: BookSearchResult) => {
+    // Check shelf limit for free users
+    if (isPremium === false && books.length >= FREE_SHELF_LIMIT) {
+      setShowShelfLimitNudge(true);
+      return;
+    }
+
     const key = result.source_id;
     setAddingId(key);
     try {
@@ -106,6 +125,11 @@ export default function BookShelf() {
 
   return (
     <div className="space-y-4">
+      <PremiumNudgeModal
+        open={showShelfLimitNudge}
+        onClose={() => setShowShelfLimitNudge(false)}
+        reason="shelf_limit"
+      />
       {/* Tab bar */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {TABS.map(({ value, label, icon }) => (

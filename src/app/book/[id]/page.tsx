@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
 import QuickLog from '@/components/sessions/QuickLog';
 import ReadingTimer from '@/components/sessions/ReadingTimer';
@@ -272,6 +273,12 @@ function BookDetailContent({ id }: { id: string }) {
   const [finishedAt, setFinishedAt] = useState('');
   const [datesSaving, setDatesSaving] = useState(false);
   const [datesSaved, setDatesSaved] = useState(false);
+  const [seriesInfo, setSeriesInfo] = useState<{
+    series_name: string;
+    current_position: number | null;
+    total_books: number | null;
+    source: string;
+  } | null>(null);
 
   const fetchUserBook = async () => {
     const res = await fetch(`/api/user-books/${id}`);
@@ -315,6 +322,16 @@ function BookDetailContent({ id }: { id: string }) {
     fetch(`/api/sessions?book_id=${userBook.book_id}`)
       .then(r => r.ok ? r.json() : { data: [] })
       .then(json => setSessions(json.data ?? []));
+    // Fetch series info
+    if (userBook.book?.title) {
+      const params = new URLSearchParams({ title: userBook.book.title });
+      if (userBook.book_id) params.set('book_id', userBook.book_id);
+      if (userBook.book?.authors?.[0]) params.set('author', userBook.book.authors[0]);
+      fetch(`/api/series?${params.toString()}`)
+        .then(r => r.ok ? r.json() : { data: null })
+        .then(j => { if (j.data) setSeriesInfo(j.data); })
+        .catch(() => {});
+    }
     // Fetch community reviews (graceful — table may not exist)
     fetch(`/api/reviews?book_id=${userBook.book_id}`)
       .then(r => r.ok ? r.json() : { data: [], my_review: null })
@@ -424,7 +441,17 @@ function BookDetailContent({ id }: { id: string }) {
                 {book?.title}
               </h1>
               <p className="text-sm text-ink-600 dark:text-ink-400 mb-3">
-                {book?.authors?.join(', ')}
+                {book?.authors?.map((author: string, i: number) => (
+                  <span key={author}>
+                    <Link
+                      href={`/author/${author.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
+                      className="hover:text-brand-600 transition-colors"
+                    >
+                      {author}
+                    </Link>
+                    {i < (book.authors?.length ?? 1) - 1 ? ', ' : ''}
+                  </span>
+                ))}
               </p>
 
               {/* Metadata chips */}
@@ -490,6 +517,26 @@ function BookDetailContent({ id }: { id: string }) {
                   {s}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* ── Series ───────────────────────────────── */}
+          {seriesInfo && (
+            <div className="flex items-center gap-3 bg-brand-50 border border-brand-100 rounded-xl px-4 py-3 mb-5">
+              <div className="text-lg">📚</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-brand-700">
+                  {seriesInfo.series_name}
+                </p>
+                {seriesInfo.current_position != null ? (
+                  <p className="text-xs text-ink-500">
+                    Book {seriesInfo.current_position}
+                    {seriesInfo.total_books ? ` of ${seriesInfo.total_books}` : ''} in this series
+                  </p>
+                ) : (
+                  <p className="text-xs text-ink-500">Part of a series</p>
+                )}
+              </div>
             </div>
           )}
 
