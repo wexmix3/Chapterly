@@ -444,6 +444,17 @@ function BookDetailContent({ id }: { id: string }) {
                     ISBN {book.isbn13}
                   </span>
                 )}
+                {communityReviews.length > 0 && (() => {
+                  const rated = communityReviews.filter(r => r.rating > 0);
+                  if (rated.length === 0) return null;
+                  const avg = rated.reduce((s, r) => s + r.rating, 0) / rated.length;
+                  return (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      {avg.toFixed(1)} <span className="text-amber-500/70">({rated.length})</span>
+                    </span>
+                  );
+                })()}
               </div>
 
               {/* Shelf status selector */}

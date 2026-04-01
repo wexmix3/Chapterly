@@ -126,3 +126,53 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement:** For donut center labels in recharts, use the `<Customized>` component from recharts — it receives the chart's layout props (including `cx`, `cy`) via its `component` render prop. Pattern: `<Customized component={(props) => <MyLabel viewBox={{ cx: props.cx, cy: props.cy }} />} />` placed as a sibling of `<Pie>` inside `<PieChart>`.
 
 **Principle:** Recharts charts do not pass layout geometry to arbitrary child components. Any overlay element that needs chart coordinates (cx, cy, width, height) must use the `Customized` layer — not direct JSX children of chart primitives like `Pie`, `Bar`, or `Line`.
+
+---
+
+## 2026-03-31
+
+### Observation 8: Recharts YAxis tick fill is overridden by CSS — use custom render function
+
+**Date:** 2026-03-31
+**Session context:** Author distribution chart in ProgressClient — author names not visible on YAxis labels.
+**Skill:** internal — Chapterly frontend patterns
+**Type:** internal
+**Phase/Area:** Recharts horizontal bar chart YAxis
+
+**Issue:** `tick={{ fontSize: 11, fill: '#374151' }}` passes `fill` as an SVG attribute on the default Recharts Text component. In Next.js + Tailwind environments, CSS `color` inheritance or Preflight resets can override SVG attribute-level fill, making axis labels invisible against the white background.
+
+**Suggested improvement:** Replace the `tick` object prop with a custom render function that returns an explicit `<text>` SVG element using `style={{ fill: '#111827' }}` (CSS property, not SVG attribute). Also remove `tickFormatter` from the `YAxis` and handle truncation inside the custom render function to avoid prop conflicts.
+
+**Principle:** SVG attribute `fill` has lower cascade priority than CSS `fill` or `color` applied by stylesheets. When Recharts tick labels are invisible, switch from `tick={{ fill: '...' }}` to a custom tick component using inline `style={{ fill: '...' }}` — CSS inline styles always win over SVG presentation attributes.
+
+---
+
+### Observation 9: AI Claude JSON responses need greedy extraction, not just markdown strip
+
+**Date:** 2026-03-31
+**Session context:** AI recommendations returning "temporarily unavailable" despite Claude responding.
+**Skill:** internal — Chapterly AI route patterns
+**Type:** internal
+**Phase/Area:** `/api/ai/recommend` JSON parsing
+
+**Issue:** The recommendation API stripped backtick fences with a regex (`/^```(?:json)?\s*/i`) but Claude sometimes prepends a sentence before the JSON block (e.g., "Here are your recommendations:"), causing `JSON.parse` to throw on the leading text. This landed in the catch block and returned the "temporarily unavailable" message.
+
+**Suggested improvement:** Extract the JSON object by searching for the outermost `{...}` containing the expected key using a greedy regex: `raw.match(/\{[\s\S]*"recommendations"[\s\S]*\}/)`. This finds the JSON block regardless of leading/trailing prose. Apply this pattern to all AI routes that parse structured JSON from Claude.
+
+**Principle:** Claude model responses to structured-output prompts frequently include preamble or postamble text even when instructed not to. Never assume the raw response IS the JSON — always extract the JSON object or array by content-matching regex rather than by trimming edge whitespace.
+
+---
+
+### Observation 10: Genre distribution requires subject backfill — stats route must trigger it
+
+**Date:** 2026-03-31
+**Session context:** Genre distribution section showing blank on dashboard stats cards.
+**Skill:** internal — Chapterly data pipeline patterns
+**Type:** internal
+**Phase/Area:** Stats computation / subject enrichment
+
+**Issue:** `computeUserStats` computes `top_genres` from `books.subjects`, but many books are stored without subjects (Google Books `categories` is frequently empty). The backfill that fetches subjects from Open Library / Google Books only runs inside `/api/stats/rich` (the progress page). Users who never visit the progress page never get their genres populated.
+
+**Suggested improvement:** In `StatsOverview`, after stats load, check if `top_genres.length === 0` and `total_books_read > 0`. If so, fire a background call to `/api/stats/rich` which triggers the backfill and persists subjects to the DB. After it returns with populated genres, call `refetch()`. This is a one-time self-healing pattern — subsequent loads serve genres from the DB.
+
+**Principle:** Data enrichment that only runs on one page creates invisible gaps for users who never visit that page. When a derived stat can be empty due to missing source data, the component rendering that stat should self-heal by triggering the enrichment endpoint in the background rather than silently showing nothing.
