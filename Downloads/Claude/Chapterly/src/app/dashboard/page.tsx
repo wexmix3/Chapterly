@@ -16,6 +16,7 @@ import SocialPulse from '@/components/dashboard/SocialPulse';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import DailyQuests from '@/components/quests/DailyQuests';
 import OnboardingBanner from '@/components/dashboard/OnboardingBanner';
+import StreakAtRiskBanner from '@/components/dashboard/StreakAtRiskBanner';
 
 type Tab = 'overview' | 'reading' | 'search';
 
@@ -63,6 +64,9 @@ function DashboardContent() {
 
                 {/* 1 — AI Insights */}
                 <section><AIInsights /></section>
+
+                {/* 1b — Streak at-risk banner (shown when streak is active but no reading logged today) */}
+                <StreakAtRiskBanner />
 
                 {/* 2 — Currently reading */}
                 {currentlyReading.length > 0 && (

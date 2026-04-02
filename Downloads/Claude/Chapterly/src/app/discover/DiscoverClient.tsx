@@ -55,14 +55,24 @@ export default function DiscoverClient() {
   const [adding, setAdding] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [recs, setRecs] = useState<Array<BookSearchResult & { genre: string }>>([]);
+  const [userGenres, setUserGenres] = useState<string[]>([]);
   const [trendingBooks, setTrendingBooks] = useState<TrendingBook[] | null>(null);
   const [userBookTitles, setUserBookTitles] = useState<Set<string>>(new Set());
 
-  // Fetch personalized recommendations
+  // Fetch personalized recommendations (and stored genre preferences)
   useEffect(() => {
     fetch('/api/recommendations')
-      .then(r => r.ok ? r.json() : { data: [] })
-      .then(j => setRecs(j.data ?? []))
+      .then(r => r.ok ? r.json() : { data: [], userGenres: [] })
+      .then(j => {
+        setRecs(j.data ?? []);
+        const genres: string[] = j.userGenres ?? [];
+        setUserGenres(genres);
+        // Auto-highlight first preferred genre in browser picker if user has prefs
+        // but only when no genre is already selected
+        if (genres.length > 0) {
+          setSelectedGenre(prev => prev ?? genres[0]);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -227,21 +237,32 @@ export default function DiscoverClient() {
 
           {/* Browse by Genre */}
           <section>
-            <h2 className="font-display text-lg font-semibold text-ink-800 mb-4">Browse by Genre</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-lg font-semibold text-ink-800">Browse by Genre</h2>
+              {userGenres.length > 0 && (
+                <span className="text-xs text-ink-400 italic">Starred genres match your preferences</span>
+              )}
+            </div>
             <div className="flex gap-2 flex-wrap">
-              {GENRES.map(name => (
-                <button
-                  key={name}
-                  onClick={() => setSelectedGenre(selectedGenre === name ? null : name)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                    selectedGenre === name
-                      ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
-                      : 'bg-white border-ink-200 text-ink-700 hover:border-brand-300 hover:bg-brand-50'
-                  }`}
-                >
-                  {name}
-                </button>
-              ))}
+              {GENRES.map(name => {
+                const isPreferred = userGenres.includes(name);
+                return (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedGenre(selectedGenre === name ? null : name)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
+                      selectedGenre === name
+                        ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                        : isPreferred
+                          ? 'bg-brand-50 border-brand-300 text-brand-700 hover:bg-brand-100 hover:border-brand-400'
+                          : 'bg-white border-ink-200 text-ink-700 hover:border-brand-300 hover:bg-brand-50'
+                    }`}
+                  >
+                    {isPreferred && selectedGenre !== name && <span className="mr-1">★</span>}
+                    {name}
+                  </button>
+                );
+              })}
             </div>
 
             {selectedGenre && (
