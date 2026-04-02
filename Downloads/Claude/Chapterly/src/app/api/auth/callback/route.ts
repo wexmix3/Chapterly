@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type');
   const next = searchParams.get('next') ?? '/dashboard';
+  const refCode = searchParams.get('ref') ?? request.cookies.get('ref_code')?.value ?? null;
   const oauthError = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
@@ -105,6 +106,15 @@ export async function GET(request: NextRequest) {
       onboarding_complete: false,
       is_public: true,
     });
+
+    // Link referral if a ref code was present in the URL or cookie
+    if (refCode) {
+      await fetch(`${origin}/api/referral`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref_code: refCode, new_user_id: session.user.id }),
+      }).catch(() => null); // non-fatal
+    }
 
     return redirect(`${origin}/onboarding`);
   }

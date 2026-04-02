@@ -154,6 +154,24 @@ export default function SettingsClient({
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Referral
+  const [referralLink, setReferralLink] = useState('');
+  const [referralCount, setReferralCount] = useState(0);
+  const [refCopied, setRefCopied] = useState(false);
+  useEffect(() => {
+    if (active === 'account' && !referralLink) {
+      fetch('/api/referral').then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.link) { setReferralLink(d.link); setReferralCount(d.referral_count ?? 0); }
+      }).catch(() => null);
+    }
+  }, [active, referralLink]);
+
+  const copyReferralLink = async () => {
+    try { await navigator.clipboard.writeText(referralLink); } catch { return; }
+    setRefCopied(true);
+    setTimeout(() => setRefCopied(false), 2000);
+  };
+
   // Billing
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -374,6 +392,33 @@ export default function SettingsClient({
                     >
                       Save changes
                     </button>
+
+                    {/* Invite Friends */}
+                    <div className="pt-2 border-t border-ink-100 dark:border-ink-800">
+                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Invite Friends</p>
+                      <div className="p-4 bg-brand-50 dark:bg-brand-950/20 rounded-xl border border-brand-100 dark:border-brand-900/40 space-y-3">
+                        <p className="text-sm text-ink-700 dark:text-ink-300">
+                          Share your invite link — every reader you bring to Chapterly helps the community grow. 📚
+                          {referralCount > 0 && (
+                            <span className="ml-2 text-brand-600 font-medium">{referralCount} reader{referralCount !== 1 ? 's' : ''} joined so far!</span>
+                          )}
+                        </p>
+                        <div className="flex gap-2">
+                          <input
+                            readOnly
+                            value={referralLink || 'Loading…'}
+                            className="flex-1 px-3 py-2 bg-white dark:bg-ink-800 border border-brand-200 dark:border-brand-800 rounded-xl text-xs text-ink-600 dark:text-ink-300 truncate"
+                          />
+                          <button
+                            onClick={copyReferralLink}
+                            disabled={!referralLink}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white rounded-xl text-xs font-medium transition-colors flex-shrink-0"
+                          >
+                            {refCopied ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Share2 className="w-3.5 h-3.5" /> Copy</>}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Danger zone */}
                     <div className="pt-2 border-t border-ink-100 dark:border-ink-800">

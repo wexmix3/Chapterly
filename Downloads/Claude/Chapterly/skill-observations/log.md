@@ -176,3 +176,19 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement:** In `StatsOverview`, after stats load, check if `top_genres.length === 0` and `total_books_read > 0`. If so, fire a background call to `/api/stats/rich` which triggers the backfill and persists subjects to the DB. After it returns with populated genres, call `refetch()`. This is a one-time self-healing pattern — subsequent loads serve genres from the DB.
 
 **Principle:** Data enrichment that only runs on one page creates invisible gaps for users who never visit that page. When a derived stat can be empty due to missing source data, the component rendering that stat should self-heal by triggering the enrichment endpoint in the background rather than silently showing nothing.
+
+---
+
+### Observation 11: Boolean flag defaults silently exclude users from global queries
+
+**Date:** 2026-04-01
+**Session context:** Leaderboard bug — global tab showed only the current user, not all readers.
+**Skill:** internal — Chapterly API patterns
+**Type:** internal
+**Phase/Area:** Leaderboard API / scope filtering
+
+**Issue:** `/api/leaderboard` filtered global results to users with `is_public = true`. Since the DB default for `is_public` was never explicitly set to `true`, all users (including the current user's followed users) were excluded from the global leaderboard. The result: only the current user appeared, because they had the flag set or were always included via self-reference. The bug was invisible in dev since no other test accounts existed.
+
+**Suggested improvement:** For leaderboard-style queries (ranked public feeds), do not filter by opt-in privacy flags unless there's a deliberate privacy model requiring explicit opt-in. If privacy filtering is desired, default the column to `true` in the migration. Remove the `is_public` filter from all three leaderboard query branches.
+
+**Principle:** Boolean flag filters (`WHERE is_public = true`, `WHERE is_active = true`) silently empty result sets when the flag was never explicitly set. Always audit whether a column default matches the intended query behavior before using it as a filter — a missing default on a boolean privacy flag will make all users invisible to queries that depend on it.
