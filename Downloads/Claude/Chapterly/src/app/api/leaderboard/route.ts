@@ -31,18 +31,6 @@ export async function GET(req: NextRequest) {
     friendIds = [...(following ?? []).map(f => f.followee_id), user.id];
   }
 
-  // Fetch public user IDs to exclude private profiles from global leaderboard
-  // For friends scope, privacy is not enforced (you chose to follow them)
-  let publicUserIds: string[] | null = null;
-  if (scope === 'global') {
-    const { data: publicUsers } = await supabase
-      .from('users')
-      .select('id')
-      .eq('is_public', true);
-    publicUserIds = (publicUsers ?? []).map(u => u.id);
-    if (publicUserIds.length === 0) return NextResponse.json({ data: [] });
-  }
-
   const yearStart = `${new Date().getFullYear()}-01-01`;
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 
@@ -55,11 +43,9 @@ export async function GET(req: NextRequest) {
       .eq('is_streak_day', true)
       .gte('date', thirtyDaysAgo);
 
-    // Apply scope filter — must reassign to preserve the builder chain
+    // For friends scope, restrict to followed users + self
     if (scope === 'friends' && friendIds.length > 0) {
       q = q.in('user_id', friendIds);
-    } else if (scope === 'global' && publicUserIds && publicUserIds.length > 0) {
-      q = q.in('user_id', publicUserIds);
     }
 
     const { data: streakRows } = await q;
@@ -79,8 +65,6 @@ export async function GET(req: NextRequest) {
 
     if (scope === 'friends' && friendIds.length > 0) {
       q = q.in('user_id', friendIds);
-    } else if (scope === 'global' && publicUserIds && publicUserIds.length > 0) {
-      q = q.in('user_id', publicUserIds);
     }
 
     const { data: rows } = await q;
@@ -98,8 +82,6 @@ export async function GET(req: NextRequest) {
 
     if (scope === 'friends' && friendIds.length > 0) {
       q = q.in('user_id', friendIds);
-    } else if (scope === 'global' && publicUserIds && publicUserIds.length > 0) {
-      q = q.in('user_id', publicUserIds);
     }
 
     const { data: rows } = await q;
