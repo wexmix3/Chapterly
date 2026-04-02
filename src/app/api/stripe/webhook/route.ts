@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getStripe, STRIPE_WEBHOOK_SECRET } from '@/lib/stripe';
+import { getStripe, STRIPE_WEBHOOK_SECRET, ANNUAL_PRICE_ID } from '@/lib/stripe';
 import { createAdminSupabaseClient } from '@/lib/supabase-server';
 import type Stripe from 'stripe';
 
@@ -55,12 +55,15 @@ export async function POST(req: NextRequest) {
         stripe_customer_id: String(sub.customer),
       }).eq('id', userId);
 
+      const priceId = sub.items.data[0]?.price?.id ?? '';
+      const plan = priceId === ANNUAL_PRICE_ID ? 'premium_annual' : 'premium_monthly';
+
       await supabase.from('subscriptions').upsert({
         user_id: userId,
         stripe_subscription_id: sub.id,
         stripe_customer_id: String(sub.customer),
         status: sub.status,
-        plan: 'premium_monthly',
+        plan,
         current_period_start: periodStart,
         current_period_end: periodEnd,
         updated_at: new Date().toISOString(),

@@ -4,6 +4,14 @@ import { useState, useRef } from 'react';
 import { CARD_THEMES, type CardThemeName } from '@/lib/shareCards';
 import { Share2, Download, Palette, BookOpen, Flame, BarChart3, Check, Loader2 } from 'lucide-react';
 
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
+    </svg>
+  );
+}
+
 type CardType = 'now_reading' | 'streak' | 'recap';
 
 interface Props {
@@ -26,23 +34,49 @@ export default function ShareCardPreview({
   const t = CARD_THEMES[theme];
   const progress = totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0;
 
+  const buildShareText = () =>
+    cardType === 'now_reading'
+      ? `I'm reading "${bookTitle}" by ${bookAuthor} — ${progress}% done! 📚`
+      : cardType === 'streak'
+      ? `${streak}-day reading streak and counting! 🔥`
+      : `I've read ${booksRead} books and ${pagesRead.toLocaleString()} pages recently 📚`;
+
+  const captureCanvas = async () => {
+    if (!cardRef.current) return null;
+    const html2canvas = (await import('html2canvas')).default;
+    return html2canvas(cardRef.current, { scale: 2, useCORS: true, backgroundColor: null });
+  };
+
   const handleShare = async () => {
     setSharing(true);
-    const text = cardType === 'now_reading'
-      ? `I'm reading "${bookTitle}" by ${bookAuthor} — ${progress}% done! 📚 Track your reading on Chapterly`
-      : cardType === 'streak'
-      ? `${streak}-day reading streak and counting! 🔥 Track your reading on Chapterly`
-      : `I've read ${booksRead} books and ${pagesRead.toLocaleString()} pages recently 📚 Track yours on Chapterly`;
+    const text = buildShareText();
+    const url = 'https://chapterly.app';
     try {
-      if (typeof navigator.share === 'function') {
-        await navigator.share({ title: 'My Reading Update', text });
+      const canvas = await captureCanvas();
+      if (canvas && typeof navigator.share === 'function') {
+        const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png'));
+        if (blob && navigator.canShare?.({ files: [new File([blob], 'chapterly.png', { type: 'image/png' })] })) {
+          await navigator.share({
+            title: 'My Reading Update',
+            text: `${text} Track your reading on Chapterly`,
+            files: [new File([blob], 'chapterly.png', { type: 'image/png' })],
+          });
+        } else {
+          await navigator.share({ title: 'My Reading Update', text: `${text} ${url}` });
+        }
       } else {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(`${text} ${url}`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
     } catch { /* user cancelled */ }
     setSharing(false);
+  };
+
+  const handleXShare = () => {
+    const text = buildShareText();
+    const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(`${text} Track yours on Chapterly`)}&url=${encodeURIComponent('https://chapterly.app')}`;
+    window.open(tweetUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleDownload = async () => {
@@ -147,6 +181,10 @@ export default function ShareCardPreview({
         <button onClick={handleShare} disabled={sharing}
           className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white rounded-xl font-medium transition-colors">
           {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Share2 className="w-4 h-4" /> Share</>}
+        </button>
+        <button onClick={handleXShare} title="Share on X"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-black hover:bg-ink-800 text-white rounded-xl font-medium transition-colors">
+          <XIcon className="w-4 h-4" />
         </button>
         <button onClick={handleDownload} disabled={downloading}
           className="flex items-center justify-center gap-2 px-4 py-3 bg-ink-50 hover:bg-ink-100 disabled:opacity-60 text-ink-600 rounded-xl font-medium transition-colors">

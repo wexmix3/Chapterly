@@ -3,8 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2, Bell, BellOff } from 'lucide-react';
 import { track } from '@/lib/analytics';
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
 
 const AVATAR_OPTIONS = ['📚', '🦉', '🐉', '🌙', '☕', '🌿', '🦋', '⚡'];
 
@@ -53,6 +60,7 @@ export default function OnboardingPage() {
   const [goalType, setGoalType] = useState<GoalType>('yearly_books');
   const [goal, setGoal] = useState(12);
   const [saving, setSaving] = useState(false);
+  const [pushState, setPushState] = useState<'idle' | 'loading' | 'granted' | 'denied'>('idle');
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -90,7 +98,43 @@ export default function OnboardingPage() {
     setSaving(false);
     track({ event: 'onboarding_step_completed', properties: { step: 3 } });
     track({ event: 'goal_set', properties: { goal_books: goal } });
-    router.push('/dashboard');
+    // Show push notification opt-in before going to dashboard
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      setStep(4);
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  const handleEnablePush = async () => {
+    setPushState('loading');
+    try {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        const reg = await navigator.serviceWorker.ready;
+        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (publicKey) {
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as ArrayBuffer,
+          });
+          const subJson = sub.toJSON() as { endpoint: string; keys?: { p256dh?: string; auth?: string } };
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint: subJson.endpoint, keys: { p256dh: subJson.keys?.p256dh ?? '', auth: subJson.keys?.auth ?? '' } }),
+          });
+        }
+        setPushState('granted');
+        setTimeout(() => router.push('/dashboard'), 1200);
+      } else {
+        setPushState('denied');
+        setTimeout(() => router.push('/dashboard'), 800);
+      }
+    } catch {
+      setPushState('denied');
+      setTimeout(() => router.push('/dashboard'), 800);
+    }
   };
 
   if (loading) {
@@ -105,23 +149,25 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-paper-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
 
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-3 mb-10">
-          {[1, 2, 3].map(s => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold border-2 transition-all ${
-                s === step
-                  ? 'border-brand-500 bg-brand-500 text-white'
-                  : s < step
-                    ? 'border-brand-300 bg-brand-100 text-brand-600'
-                    : 'border-ink-200 bg-white text-ink-400'
-              }`}>
-                {s < step ? '✓' : s}
+        {/* Step indicator — hidden on push step */}
+        {step < 4 && (
+          <div className="flex items-center justify-center gap-3 mb-10">
+            {[1, 2, 3].map(s => (
+              <div key={s} className="flex items-center gap-2">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold border-2 transition-all ${
+                  s === step
+                    ? 'border-brand-500 bg-brand-500 text-white'
+                    : s < step
+                      ? 'border-brand-300 bg-brand-100 text-brand-600'
+                      : 'border-ink-200 bg-white text-ink-400'
+                }`}>
+                  {s < step ? '✓' : s}
+                </div>
+                {s < 3 && <div className={`w-8 h-0.5 rounded-full transition-colors ${s < step ? 'bg-brand-300' : 'bg-ink-200'}`} />}
               </div>
-              {s < 3 && <div className={`w-8 h-0.5 rounded-full transition-colors ${s < step ? 'bg-brand-300' : 'bg-ink-200'}`} />}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Step 1 — Name & Avatar */}
         {step === 1 && (
@@ -294,6 +340,49 @@ export default function OnboardingPage() {
                 {saving ? 'Setting up…' : 'Start Reading'}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Step 4 — Push notification opt-in */}
+        {step === 4 && (
+          <div className="space-y-6 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto">
+              {pushState === 'granted' ? (
+                <Bell className="w-8 h-8 text-brand-500" />
+              ) : pushState === 'denied' ? (
+                <BellOff className="w-8 h-8 text-ink-400" />
+              ) : (
+                <Bell className="w-8 h-8 text-brand-500" />
+              )}
+            </div>
+            <div>
+              <h2 className="font-display text-2xl font-bold text-ink-950 mb-2">Stay on your streak</h2>
+              <p className="text-ink-500 text-sm">
+                Get a gentle nudge when your reading streak is at risk — and celebrate milestones as they happen.
+              </p>
+            </div>
+            {pushState === 'granted' ? (
+              <p className="text-emerald-600 font-medium text-sm">Notifications enabled! Taking you to your dashboard…</p>
+            ) : pushState === 'denied' ? (
+              <p className="text-ink-400 text-sm">No worries — you can enable them later in Settings.</p>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  onClick={handleEnablePush}
+                  disabled={pushState === 'loading'}
+                  className="w-full py-3.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white rounded-2xl font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {pushState === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+                  Enable Notifications
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="w-full py-3 text-ink-400 text-sm hover:text-ink-600 transition-colors"
+                >
+                  Maybe later
+                </button>
+              </div>
+            )}
           </div>
         )}
 
