@@ -10,7 +10,7 @@ import ShareCardPreview from '@/components/share/ShareCardPreview';
 import {
   User, BookOpen, Lock, Sun, Moon, Download, Trash2,
   Check, Loader2, ChevronRight, AlertTriangle, Bell, Upload, Share2,
-  CreditCard, Globe,
+  CreditCard, Globe, Code2,
 } from 'lucide-react';
 
 const AVATAR_OPTIONS = ['📚', '🦉', '🐉', '🌙', '☕', '🌿', '🦋', '⚡'];
@@ -52,7 +52,29 @@ type Profile = {
 
 type Challenge = { goal_books: number; goal_pages?: number | null } | null;
 
-type Section = 'account' | 'notifications' | 'privacy' | 'billing' | 'reading' | 'appearance' | 'data' | 'import' | 'share';
+type Section = 'account' | 'notifications' | 'privacy' | 'billing' | 'reading' | 'appearance' | 'data' | 'import' | 'share' | 'widget';
+
+function WidgetCodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(code); } catch { return; }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="relative group">
+      <pre className="bg-ink-900 dark:bg-ink-950 text-green-400 text-[11px] rounded-xl p-3 overflow-x-auto whitespace-pre-wrap break-all font-mono leading-relaxed pr-16">
+        {code}
+      </pre>
+      <button
+        onClick={copy}
+        className="absolute top-2 right-2 px-2 py-1 bg-ink-700 hover:bg-ink-600 text-ink-200 rounded-lg text-[10px] font-medium transition-colors flex items-center gap-1"
+      >
+        {copied ? <><Check className="w-3 h-3" /> Copied!</> : 'Copy'}
+      </button>
+    </div>
+  );
+}
 
 function SectionButton({ active, icon: Icon, label, onClick }: {
   id: Section; active: boolean; icon: React.ElementType; label: string; onClick: () => void;
@@ -282,6 +304,7 @@ export default function SettingsClient({
     { id: 'appearance', icon: Sun, label: 'Appearance' },
     { id: 'import', icon: Upload, label: 'Import Library' },
     { id: 'share', icon: Share2, label: 'Share Cards' },
+    { id: 'widget', icon: Code2, label: 'Reading Widget' },
     { id: 'data', icon: Download, label: 'Data' },
   ];
 
@@ -705,6 +728,61 @@ export default function SettingsClient({
                   <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Share Cards</h2>
                   <p className="text-sm text-ink-500">Create beautiful share cards for your reading milestones and social media.</p>
                   <ShareCardPreview />
+                </>
+              )}
+
+              {/* ── Reading Widget ────────────────────────── */}
+              {active === 'widget' && (
+                <>
+                  <h2 className="font-display font-semibold text-ink-900 dark:text-ink-50">Reading Widget</h2>
+                  <p className="text-sm text-ink-500">
+                    Embed a live reading badge on your blog, GitHub README, or personal site.
+                    It automatically updates as you read — no maintenance required.
+                  </p>
+
+                  {/* Preview */}
+                  <div className="bg-paper-50 dark:bg-ink-800 rounded-xl border border-ink-100 dark:border-ink-700 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide">Preview</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/widget/${handle}`}
+                      alt="Your reading widget"
+                      className="rounded-xl border border-ink-200 dark:border-ink-700"
+                      style={{ maxWidth: '300px', height: 'auto' }}
+                    />
+                    <p className="text-[11px] text-ink-400">
+                      Updates every 30 minutes. Supports <code className="bg-ink-100 dark:bg-ink-700 px-1 py-0.5 rounded text-[10px]">?theme=dark</code> for dark mode.
+                    </p>
+                  </div>
+
+                  {/* Embed code */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide">Embed code</p>
+
+                    <div>
+                      <p className="text-xs text-ink-500 mb-1.5">HTML / Blog</p>
+                      <WidgetCodeBlock code={`<a href="https://chapterly.app/u/${handle}">\n  <img src="https://chapterly.app/widget/${handle}" alt="Currently reading" />\n</a>`} />
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-ink-500 mb-1.5">Markdown (GitHub README)</p>
+                      <WidgetCodeBlock code={`[![Currently reading](https://chapterly.app/widget/${handle})](https://chapterly.app/u/${handle})`} />
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-ink-500 mb-1.5">Dark mode variant</p>
+                      <WidgetCodeBlock code={`<img src="https://chapterly.app/widget/${handle}?theme=dark" alt="Currently reading" />`} />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-brand-50 dark:bg-brand-950/20 rounded-xl border border-brand-100 dark:border-brand-900/40">
+                    <p className="text-xs font-medium text-brand-700 dark:text-brand-300 mb-1">Tips</p>
+                    <ul className="text-xs text-brand-600 dark:text-brand-400 space-y-1 list-disc list-inside">
+                      <li>Your profile must be set to <strong>Public</strong> for the widget to display your book.</li>
+                      <li>The book shown is your most recently updated &ldquo;currently reading&rdquo; entry.</li>
+                      <li>Progress bar appears when you log your current page.</li>
+                    </ul>
+                  </div>
                 </>
               )}
 

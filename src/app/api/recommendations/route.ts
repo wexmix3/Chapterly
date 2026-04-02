@@ -14,15 +14,16 @@ export async function GET() {
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: userBooks } = await supabase
-    .from('user_books')
-    .select('book:books(subjects, source_id)')
-    .eq('user_id', user.id);
+  // Fetch user profile (for onboarding genre prefs) and shelf books in parallel
+  const [userBooksResult, profileResult] = await Promise.all([
+    supabase.from('user_books').select('book:books(subjects, source_id)').eq('user_id', user.id),
+    supabase.from('users').select('genres').eq('id', user.id).maybeSingle(),
+  ]);
 
   const shelvedSourceIds = new Set<string>();
   const genreCounts: Record<string, number> = {};
 
-  for (const ub of userBooks ?? []) {
+  for (const ub of userBooksResult.data ?? []) {
     const book = ub.book as { subjects?: string[]; source_id?: string } | null;
     if (book?.source_id) shelvedSourceIds.add(book.source_id);
     for (const s of book?.subjects ?? []) {
@@ -30,13 +31,25 @@ export async function GET() {
     }
   }
 
-  const topGenres = Object.entries(genreCounts)
+  // Derive top genres from shelf subjects
+  const shelfTopGenres = Object.entries(genreCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([name]) => name);
 
+  // Fall back to onboarding genre preferences when shelf is sparse
+  const onboardingGenres: string[] = (profileResult.data as { genres?: string[] } | null)?.genres ?? [];
+
+  // Merge: shelf-derived genres take priority; fill remainder with onboarding prefs
+  const topGenresSet = new Set<string>(shelfTopGenres);
+  for (const g of onboardingGenres) {
+    if (topGenresSet.size >= 3) break;
+    topGenresSet.add(g);
+  }
+  const topGenres = [...topGenresSet];
+
   if (topGenres.length === 0) {
-    return NextResponse.json({ data: [] });
+    return NextResponse.json({ data: [], userGenres: onboardingGenres });
   }
 
   const genreResults = await Promise.allSettled(
@@ -62,5 +75,5 @@ export async function GET() {
     if (recommendations.length >= 12) break;
   }
 
-  return NextResponse.json({ data: recommendations });
+  return NextResponse.json({ data: recommendations, userGenres: onboardingGenres });
 }
