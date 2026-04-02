@@ -192,3 +192,37 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement:** For leaderboard-style queries (ranked public feeds), do not filter by opt-in privacy flags unless there's a deliberate privacy model requiring explicit opt-in. If privacy filtering is desired, default the column to `true` in the migration. Remove the `is_public` filter from all three leaderboard query branches.
 
 **Principle:** Boolean flag filters (`WHERE is_public = true`, `WHERE is_active = true`) silently empty result sets when the flag was never explicitly set. Always audit whether a column default matches the intended query behavior before using it as a filter — a missing default on a boolean privacy flag will make all users invisible to queries that depend on it.
+
+---
+
+## 2026-04-01
+
+### Observation 12: "Already implemented" features can still have data pipeline gaps
+
+**Date:** 2026-04-01
+**Session context:** Implementing 4 pending weakness analyzer fixes (M15–M20)
+**Skill:** internal — Chapterly feature implementation patterns
+**Type:** internal
+**Phase/Area:** Feature audit / implementation validation
+
+**Issue:** M15 (feed book cover thumbnails) appeared pending but was already implemented in both the API (feed/route.ts returns `book_cover: ub.books?.cover_url`) and the UI (FeedCard renders thumbnails at lines 528–541). However, the underlying data gap — books stored without `cover_url` because subjects/metadata weren't fully fetched at import time — means the feature may appear to not work for some users even though the code is correct.
+
+**Suggested improvement:** When confirming a feature as "already implemented", also verify the data pipeline is complete — i.e., that the underlying DB columns are actually populated for a representative set of records. A code audit alone can miss silent data gaps.
+
+**Principle:** Code correctness and data availability are separate concerns. A feature can be correctly implemented in code but silently non-functional because the data it depends on is sparse in the DB. "Feature is implemented" should mean both the code path and the data pipeline are complete.
+
+---
+
+### Observation 13: Genre personalization needs graceful degradation for new users
+
+**Date:** 2026-04-01
+**Session context:** Implementing M16 — personalize discover page by user genre preferences
+**Skill:** internal — Chapterly recommendations patterns
+**Type:** internal
+**Phase/Area:** /api/recommendations — genre derivation
+
+**Issue:** The recommendations API only derived genres from shelf books' subjects. New users who just completed onboarding have genre preferences stored in `users.genres` but zero shelf books, so they got an empty recommendations response and saw no "Because you read X" section on discover.
+
+**Suggested improvement:** Applied — API now fetches `users.genres` in parallel with shelf query and merges onboarding genres as fallback when shelf-derived genres are sparse (fewer than 3). Returns `userGenres` in response so the UI can highlight preferred genres.
+
+**Principle:** User preference data collected at onboarding (genres, goals, interests) should be used as a fallback signal in all personalization features, not just onboarding flows. When shelf history is sparse (new users), stored preferences are the only personalization signal available and should be surfaced proactively.
