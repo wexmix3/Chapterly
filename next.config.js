@@ -16,8 +16,12 @@ const nextConfig = {
 module.exports = withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
-  silent: true,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
   widenClientFileUpload: true,
+  // Proxy Sentry requests through /monitoring to bypass ad-blockers
+  tunnelRoute: '/monitoring',
   hideSourceMaps: true,
   disableLogger: true,
+  // Suppress output outside of CI
+  silent: !process.env.CI,
 });
