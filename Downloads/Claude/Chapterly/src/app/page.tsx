@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { Sparkles, Flame, Users, CheckCircle, X, Star } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
+import WaitlistForm from '@/components/landing/WaitlistForm';
 
 // Real book covers — verified OpenLibrary ISBNs used throughout the app
 const HERO_BOOKS = [
@@ -127,6 +128,16 @@ export default async function LandingPage() {
               <p className="text-ink-400 text-sm">{s.label}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Email capture ── */}
+      <section className="bg-white border-b border-ink-100 py-16 px-6">
+        <div className="max-w-xl mx-auto text-center">
+          <p className="text-xs font-semibold text-brand-500 uppercase tracking-widest mb-3">Stay in the loop</p>
+          <h2 className="font-display text-2xl font-bold text-ink-950 mb-2">New features dropping soon</h2>
+          <p className="text-sm text-ink-500 mb-6">Enter your email to get notified when we launch new features and updates.</p>
+          <WaitlistForm />
         </div>
       </section>
 

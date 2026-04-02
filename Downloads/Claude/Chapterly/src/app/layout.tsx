@@ -6,6 +6,7 @@ import PWARegister from '@/components/PWARegister';
 import { Analytics } from '@vercel/analytics/react';
 import PostHogProvider from '@/components/providers/PostHogProvider';
 import PageTracker from '@/components/providers/PageTracker';
+import CrispChat from '@/components/providers/CrispChat';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PostHogProvider>
           <PageTracker />
           <PWARegister />
+          <CrispChat />
           <Analytics />
           {children}
         </PostHogProvider>
