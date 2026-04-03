@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server';
 
 export interface RichStats {
   format_breakdown: { format: string; count: number; pct: number }[];
@@ -19,6 +19,7 @@ export interface RichStats {
 
 export async function GET() {
   const supabase = createServerSupabaseClient();
+  const adminSupabase = createAdminSupabaseClient();
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -69,7 +70,7 @@ export async function GET() {
         }
       } catch { /* skip on error */ }
       if (subjects.length > 0) {
-        await supabase.from('books').update({ subjects }).eq('id', book.id);
+        await adminSupabase.from('books').update({ subjects }).eq('id', book.id);
         for (const row of rows) {
           if (row.books?.id === book.id) row.books.subjects = subjects;
         }
