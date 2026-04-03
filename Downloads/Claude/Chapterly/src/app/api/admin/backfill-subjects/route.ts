@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server';
 import { createMessageWithRetry } from '@/lib/ai-retry';
 
 // One-time endpoint to populate subjects for all books on the user's shelf.
@@ -78,6 +78,8 @@ export async function GET() {
   }
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  // Use admin client for books updates — books table RLS has no user UPDATE policy
+  const adminSupabase = createAdminSupabaseClient();
   let filled = 0;
 
   // Batch 10 books per Claude call
@@ -91,8 +93,8 @@ export async function GET() {
       await Promise.allSettled(
         Object.entries(genreMap).map(async ([bookId, genres]) => {
           if (genres.length > 0) {
-            await supabase.from('books').update({ subjects: genres }).eq('id', bookId);
-            filled++;
+            const { error } = await adminSupabase.from('books').update({ subjects: genres }).eq('id', bookId);
+            if (!error) filled++;
           }
         })
       );
