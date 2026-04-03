@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, AreaChart, Area,
   BarChart, Bar,
-  PieChart, Pie, Cell, Legend, LabelList, Customized,
+  PieChart, Pie, Cell, LabelList,
 } from 'recharts';
 import { Flame, BookOpen, FileText, Star, Loader2 } from 'lucide-react';
 import Navigation from '@/components/layout/Navigation';
@@ -98,24 +98,6 @@ function StatCard({ icon, value, suffix, label, glow }: {
   );
 }
 
-// ─── Genre donut center label ─────────────────────────────────────────────────
-// Rendered as a recharts customized layer so cx/cy come from the chart layout.
-
-function GenreDonutCenterLabel({ viewBox, total }: { viewBox?: { cx?: number; cy?: number }; total: number }) {
-  const cx = viewBox?.cx ?? 0;
-  const cy = viewBox?.cy ?? 0;
-  return (
-    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-      <tspan x={cx} dy="-6" style={{ fontSize: '20px', fontWeight: 700, fill: '#1a1a2e' }}>
-        {total}
-      </tspan>
-      <tspan x={cx} dy="20" style={{ fontSize: '11px', fill: '#6b7280' }}>
-        books
-      </tspan>
-    </text>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ProgressClient() {
@@ -125,6 +107,15 @@ export default function ProgressClient() {
   const [richStats, setRichStats] = useState<RichStats | null>(null);
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [booksPeriod, setBooksPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.classList.contains('dark'));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -450,7 +441,7 @@ export default function ProgressClient() {
                                 y={Number(props.y ?? 0)}
                                 dy={4}
                                 textAnchor="end"
-                                style={{ fontSize: 11, fill: '#111827', fontFamily: 'inherit' }}
+                                style={{ fontSize: 11, fill: isDark ? '#d1d5db' : '#111827', fontFamily: 'inherit' }}
                               >
                                 {label}
                               </text>
@@ -580,36 +571,48 @@ export default function ProgressClient() {
             <div className="bg-white rounded-2xl border border-ink-100 p-5">
               <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-4">Genre Distribution</p>
               {genreData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie
-                      data={genreData}
-                      dataKey="count"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      paddingAngle={2}
-                    >
-                      {genreData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GENRE_COLORS[index % GENRE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    {/* Center label: rendered via recharts Customized layer so cx/cy resolve correctly */}
-                    <Customized component={(props: Record<string, unknown>) => {
-                      const cx = typeof props.cx === 'number' ? props.cx : 80;
-                      const cy = typeof props.cy === 'number' ? props.cy : 80;
-                      return <GenreDonutCenterLabel viewBox={{ cx, cy }} total={genreTotal} />;
-                    }} />
-                    <Tooltip formatter={(value) => [`${value} books`]} />
-                    <Legend
-                      iconType="circle"
-                      iconSize={8}
-                      formatter={(value: string) => <span style={{ fontSize: 10, color: '#6b7280' }}>{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <>
+                  {/* Pie only — no Legend inside, which was stealing vertical space and hiding the donut */}
+                  <div className="relative">
+                    <ResponsiveContainer width="100%" height={160}>
+                      <PieChart>
+                        <Pie
+                          data={genreData}
+                          dataKey="count"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={70}
+                          paddingAngle={2}
+                        >
+                          {genreData.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={GENRE_COLORS[index % GENRE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value} books`]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    {/* Center label as HTML overlay — reliable positioning regardless of chart size */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="text-center">
+                        <div className="font-display text-xl font-bold text-ink-900">{genreTotal}</div>
+                        <div className="text-[10px] text-ink-400">books</div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Custom legend grid — genre names truncated to prevent overflow */}
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    {genreData.map((g, i) => (
+                      <div key={g.name} className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: GENRE_COLORS[i % GENRE_COLORS.length] }} />
+                        <span className="text-[10px] text-ink-500 truncate">
+                          {g.name.length > 20 ? g.name.slice(0, 19) + '…' : g.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="flex items-center justify-center h-40 text-sm text-ink-400">
                   No genre data yet
