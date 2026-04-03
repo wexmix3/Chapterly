@@ -47,13 +47,13 @@ export async function GET() {
 
   const rows = shelf as unknown as ShelfRow[];
 
-  // ── Backfill subjects for books that don't have them (up to 4 at a time) ──
+  // ── Backfill subjects for books that don't have them (up to 20 at a time) ──
   const seenIds = new Set<string>();
   const needsSubjects = rows
     .map(r => r.books)
     .filter((b): b is BookRow => !!b && !b.subjects?.length && !!b.source && !!b.source_id)
     .filter(b => { if (seenIds.has(b.id)) return false; seenIds.add(b.id); return true; })
-    .slice(0, 4);
+    .slice(0, 20);
 
   if (needsSubjects.length > 0) {
     await Promise.allSettled(needsSubjects.map(async (book) => {
@@ -156,9 +156,9 @@ export async function GET() {
   const started = rows.filter(r => ['read', 'dnf', 'reading'].includes(r.status)).length;
   const dnf_rate = started > 0 ? Math.round((dnf / started) * 100) : null;
 
-  // Genre breakdown — use all shelf books so users with few finished books still see data
+  // Genre breakdown — read books only
   const genreCount: Record<string, number> = {};
-  for (const row of rows) {
+  for (const row of readRows) {
     const subjects = (row.books?.subjects ?? []) as string[];
     for (const s of subjects.slice(0, 3)) {
       const genre = s.trim();
@@ -171,7 +171,7 @@ export async function GET() {
     .map(([genre, count]) => ({
       genre,
       count,
-      pct: rows.length > 0 ? Math.round((count / rows.length) * 100) : 0,
+      pct: readRows.length > 0 ? Math.round((count / readRows.length) * 100) : 0,
     }));
 
   // Author breakdown
