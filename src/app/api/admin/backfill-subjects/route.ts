@@ -1,55 +1,53 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createMessageWithRetry } from '@/lib/ai-retry';
 
 // One-time endpoint to populate subjects for all books on the user's shelf.
 // Hit GET /api/admin/backfill-subjects while logged in.
-// Safe to call multiple times — only fetches books that still lack subjects.
-// Strategy: try direct ID lookup first, then fall back to title+author search.
+// Safe to call multiple times — only processes books that still lack subjects.
+// Uses Claude Haiku to classify genres when external API lookups fail.
 
 type BookRow = { id: string; source: string; source_id: string; title: string; authors: string[]; subjects: string[] | null };
 
-async function fetchSubjectsBySearch(title: string, authors: string[], apiKey: string | undefined): Promise<string[]> {
-  const q = encodeURIComponent(`intitle:${title}${authors[0] ? ` inauthor:${authors[0]}` : ''}`);
-  const kp = apiKey ? `&key=${apiKey}` : '';
-  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${kp}`);
-  if (!res.ok) return [];
-  const d = await res.json();
-  return (d.items?.[0]?.volumeInfo?.categories ?? []).slice(0, 10);
-}
+// Classify a batch of books into genres using Claude Haiku
+async function classifyGenres(
+  books: { id: string; title: string; authors: string[] }[],
+  anthropic: Anthropic
+): Promise<Record<string, string[]>> {
+  const list = books.map((b, i) =>
+    `${i + 1}. "${b.title}" by ${b.authors?.join(', ') || 'Unknown'}`
+  ).join('\n');
 
-async function fetchSubjects(book: BookRow, apiKey: string | undefined): Promise<string[]> {
-  let subjects: string[] = [];
+  const msg = await createMessageWithRetry(anthropic, {
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: 'You are a book genre classifier. Return only valid JSON, no markdown.',
+    messages: [{
+      role: 'user',
+      content: `Classify each book into 1-3 genres from this list: Fiction, Literary Fiction, Historical Fiction, Fantasy, Science Fiction, Mystery, Thriller, Romance, Horror, Nonfiction, Biography, Memoir, History, Science, Self-Help, Business, Philosophy, Psychology, Essays, Poetry, Graphic Novel, Young Adult, Children's.
 
-  // 1. Try direct lookup
-  if (book.source === 'openlibrary') {
-    try {
-      const res = await fetch(`https://openlibrary.org/works/${book.source_id}.json`);
-      if (res.ok) {
-        const d = await res.json();
-        subjects = (d.subjects ?? []).slice(0, 10);
-      }
-    } catch { /* skip */ }
-  } else if (book.source === 'googlebooks') {
-    try {
-      const kp = apiKey ? `?key=${apiKey}` : '';
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${book.source_id}${kp}`);
-      if (res.ok) {
-        const d = await res.json();
-        subjects = (d.volumeInfo?.categories ?? []).slice(0, 10);
-      }
-    } catch { /* skip */ }
+Books:
+${list}
+
+Return JSON: {"results": [{"id": "book_id", "genres": ["Genre1", "Genre2"]}, ...]}
+Use the exact book position number as id.`,
+    }],
+  });
+
+  const raw = (msg.content[0] as { text: string }).text;
+  const match = raw.match(/\{[\s\S]*"results"[\s\S]*\}/);
+  if (!match) return {};
+
+  const parsed = JSON.parse(match[0]) as { results: { id: string; genres: string[] }[] };
+  const out: Record<string, string[]> = {};
+  for (const r of parsed.results) {
+    const idx = parseInt(r.id) - 1;
+    if (books[idx]) out[books[idx].id] = r.genres;
   }
-
-  // 2. Fall back to Google Books title+author search if direct lookup returned nothing
-  if (subjects.length === 0 && book.title) {
-    try {
-      subjects = await fetchSubjectsBySearch(book.title, book.authors ?? [], apiKey);
-    } catch { /* skip */ }
-  }
-
-  return subjects;
+  return out;
 }
 
 export async function GET() {
@@ -67,32 +65,44 @@ export async function GET() {
     return NextResponse.json({ message: 'No books on shelf', filled: 0, skipped: 0 });
   }
 
-  const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
-
   const seenIds = new Set<string>();
   const needsSubjects = shelf
     .map(r => r.books as unknown as BookRow | null)
-    .filter((b): b is BookRow => !!b && !b.subjects?.length)
+    .filter((b): b is BookRow => !!b && !b.subjects?.length && !!b.title)
     .filter(b => { if (seenIds.has(b.id)) return false; seenIds.add(b.id); return true; });
 
-  // Process in batches of 5 to avoid hammering APIs
+  const alreadyHad = shelf.length - seenIds.size;
+
+  if (needsSubjects.length === 0) {
+    return NextResponse.json({ message: 'All books already have subjects.', filled: 0, skipped: 0, already_had: alreadyHad });
+  }
+
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   let filled = 0;
-  for (let i = 0; i < needsSubjects.length; i += 5) {
-    const batch = needsSubjects.slice(i, i + 5);
-    await Promise.allSettled(batch.map(async (book) => {
-      const subjects = await fetchSubjects(book, apiKey);
-      if (subjects.length > 0) {
-        await supabase.from('books').update({ subjects }).eq('id', book.id);
-        filled++;
-      }
-    }));
+
+  // Batch 10 books per Claude call
+  for (let i = 0; i < needsSubjects.length; i += 10) {
+    const batch = needsSubjects.slice(i, i + 10);
+    try {
+      const genreMap = await classifyGenres(
+        batch.map(b => ({ id: b.id, title: b.title, authors: b.authors ?? [] })),
+        anthropic
+      );
+      await Promise.allSettled(
+        Object.entries(genreMap).map(async ([bookId, genres]) => {
+          if (genres.length > 0) {
+            await supabase.from('books').update({ subjects: genres }).eq('id', bookId);
+            filled++;
+          }
+        })
+      );
+    } catch { /* skip batch on error */ }
   }
 
   const skipped = needsSubjects.length - filled;
-  const alreadyHad = shelf.length - seenIds.size;
 
   return NextResponse.json({
-    message: `Done. ${filled} books backfilled, ${skipped} had no subjects available, ${alreadyHad} already had subjects.`,
+    message: `Done. ${filled} books classified, ${skipped} failed, ${alreadyHad} already had subjects.`,
     filled,
     skipped,
     already_had: alreadyHad,
