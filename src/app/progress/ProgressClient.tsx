@@ -12,6 +12,7 @@ import Navigation from '@/components/layout/Navigation';
 import ReadingCalendar from '@/components/sessions/ReadingCalendar';
 import type { UserStats } from '@/types';
 import type { RichStats } from '@/app/api/stats/rich/route';
+import type { GenreBreakdown } from '@/app/api/stats/genres/route';
 
 interface DailyCalendarStat {
   date: string;
@@ -105,6 +106,7 @@ export default function ProgressClient() {
   const [dailyData, setDailyData] = useState<DailyCalendarStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [richStats, setRichStats] = useState<RichStats | null>(null);
+  const [genreBreakdown, setGenreBreakdown] = useState<GenreBreakdown[]>([]);
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [booksPeriod, setBooksPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isDark, setIsDark] = useState(false);
@@ -143,7 +145,13 @@ export default function ProgressClient() {
         ];
         setDailyData(combined);
 
-        // Rich stats (non-blocking)
+        // Genre breakdown (dedicated endpoint — fast, no external API calls)
+        fetch('/api/stats/genres')
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (Array.isArray(j?.data)) setGenreBreakdown(j.data); })
+          .catch(() => {});
+
+        // Rich stats (non-blocking, used for other charts)
         fetch('/api/stats/rich')
           .then(r => r.ok ? r.json() : null)
           .then(j => { if (j?.data) setRichStats(j.data); })
@@ -251,13 +259,8 @@ export default function ProgressClient() {
 
   const activeBooksData = booksPeriod === 'monthly' ? barChartData : yearlyBooksChartData;
 
-  // Genre data: prefer richStats.genre_breakdown (backed by subject backfill),
-  // fall back to stats.top_genres (may be empty if subjects not yet populated).
-  const genreData = (
-    richStats?.genre_breakdown?.length
-      ? richStats.genre_breakdown.slice(0, 6).map(g => ({ name: g.genre, count: g.count }))
-      : stats?.top_genres?.slice(0, 6) ?? []
-  );
+  // Genre data: use dedicated /api/stats/genres endpoint (read books, fast, no external calls)
+  const genreData = genreBreakdown.slice(0, 6).map(g => ({ name: g.genre, count: g.count }));
   const genreTotal = genreData.reduce((s, g) => s + g.count, 0);
   const GENRE_COLORS = ['#ee7a1e', '#f5a05a', '#f7c18e', '#c45a0e', '#9c4508', '#7a3406'];
 
