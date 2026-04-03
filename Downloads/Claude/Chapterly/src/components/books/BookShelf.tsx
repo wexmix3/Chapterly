@@ -385,7 +385,7 @@ function BookEditModal({
 
   const [status, setStatus] = useState<ShelfStatus>(userBook.status);
   const [currentPage, setCurrentPage] = useState<string>(() => {
-    if (userBook.current_page != null) return String(userBook.current_page);
+    if (userBook.current_page) return String(userBook.current_page); // 0 treated as unset
     if (userBook.status === 'read' && book?.page_count) return String(book.page_count);
     return '';
   });
@@ -408,9 +408,10 @@ function BookEditModal({
     setSaving(true);
     setError('');
     try {
+      const resolvedPage = currentPage !== '' ? Number(currentPage) : (status === 'read' && book?.page_count ? book.page_count : null);
       const updates: Record<string, unknown> = {
         status,
-        current_page: currentPage !== '' ? Number(currentPage) : null,
+        current_page: resolvedPage,
         rating: rating > 0 ? rating : null,
         review_text: reviewText.trim() || null,
         started_at: startedAt ? new Date(startedAt).toISOString() : null,
