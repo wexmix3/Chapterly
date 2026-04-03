@@ -226,3 +226,87 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement:** Applied — API now fetches `users.genres` in parallel with shelf query and merges onboarding genres as fallback when shelf-derived genres are sparse (fewer than 3). Returns `userGenres` in response so the UI can highlight preferred genres.
 
 **Principle:** User preference data collected at onboarding (genres, goals, interests) should be used as a fallback signal in all personalization features, not just onboarding flows. When shelf history is sparse (new users), stored preferences are the only personalization signal available and should be surfaced proactively.
+
+---
+
+## 2026-04-02
+
+### Observation 14: Recharts Legend inside PieChart steals vertical space and can make the chart invisible
+
+**Date:** 2026-04-02
+**Session context:** Fixing Genre Distribution pie chart on the Progress page — user reported "nothing shows up"
+**Skill:** internal — Chapterly charting patterns
+**Type:** internal
+**Phase/Area:** Recharts PieChart layout
+
+**Issue:** The Genre Distribution `<PieChart>` had `height={160}` and included both `<Pie>` (innerRadius=45, outerRadius=65 — needs ~130px) and `<Legend>`. Recharts PieChart reserves legend height first, then gives the remainder to the pie. With up to 6 long OpenLibrary subject strings as genre names, the legend consumed 60-80px, leaving the pie with 80-100px — less than its minimum 130px — making it invisible. Additionally, `<Customized>` does not receive `cx`/`cy` props in PieChart context (only CartesianChart does), so the center label fell back to hardcoded position (80, 80) regardless of actual pie center.
+
+**Suggested improvement (applied):** Remove `<Legend>` and `<Customized>` from the PieChart entirely. Use a `position: relative` wrapper with an absolute-positioned HTML div overlay for the center label (reliable, respects dark mode, no SVG quirks). Add a custom 2-column HTML grid legend below the chart with names truncated to 20 chars. The pie now owns its full container height.
+
+**Principle:** Never put `<Legend>` inside a Recharts `<PieChart>` with a constrained height — it silently shrinks the pie's rendering area. For donut center labels, HTML absolute overlays are more reliable than `<Customized>` (which receives different props per chart type). Always render legends as HTML elements alongside the chart rather than inside it when height is limited.
+
+---
+
+### Observation 15: Hardcoded SVG fill colors in recharts custom tick renderers are invisible in dark mode
+
+**Date:** 2026-04-02
+**Session context:** Fixing dark mode UX — some components hard to see when toggling light/dark
+**Skill:** internal — Chapterly dark mode patterns
+**Type:** internal
+**Phase/Area:** Recharts chart axis labels / globals.css dark mode overrides
+
+**Issue:** The author breakdown bar chart's YAxis used a custom tick renderer with `style={{ fill: '#111827' }}` — near-black. In dark mode, the card background becomes `ink.900` (~#3d3d3d), making the near-black text invisible. Recharts SVG fills are inline styles and are not affected by the global CSS dark mode overrides in globals.css (which only target Tailwind class-based colors). Also, globals.css was missing dark overrides for `border-paper-*` (used in stat detail sheet dividers) and all colored accent backgrounds (`bg-amber-50`, `bg-blue-50`, `bg-emerald-50`, etc.) — these stayed as light pastels on dark modal backgrounds, creating harsh contrast.
+
+**Suggested improvement (applied):** Add `isDark` state to ProgressClient with a MutationObserver watching `document.documentElement` class attribute changes, so it reactively updates when the user toggles the theme. Pass `isDark` into recharts inline styles: `fill: isDark ? '#d1d5db' : '#111827'`. Add CSS overrides in globals.css for `border-paper-*`, and all colored accent classes (amber, emerald, blue, purple, orange, rose, cyan backgrounds, borders, and text).
+
+**Principle:** Tailwind's dark mode class approach (via globals.css overrides) only covers Tailwind utility classes — it cannot reach inline SVG fill/stroke attributes in recharts custom renderers. For any recharts component using custom tick/label renderers with inline fill colors, add a reactive `isDark` state via MutationObserver and conditionally set the fill. This is the only reliable way to keep chart labels legible across theme switches.
+
+---
+
+## 2026-04-03
+
+### Observation 16: Supabase RLS silently drops writes — success counters before error checks are misleading
+
+**Date:** 2026-04-03
+**Session context:** Debugging genre distribution chart not populating despite backfill endpoint reporting 48 books classified
+**Skill:** internal — Chapterly Supabase patterns
+**Type:** internal
+**Phase/Area:** books table RLS / admin client usage
+
+**Issue:** The backfill endpoint reported `filled: 48` but no subjects were actually written to the `books` table. The bug: `filled++` was placed after `await supabase.from('books').update(...)` but before checking the returned `error` object. Since the `books` table has RLS enabled with no UPDATE policy for authenticated users (only `user_books` has `ub_update`), every write silently returned an error that was never checked. The `createServerSupabaseClient` (user session) cannot update shared tables without explicit RLS policies.
+
+**Suggested improvement (applied):** Use `createAdminSupabaseClient()` (service role key, bypasses RLS) for any writes to shared tables like `books`. Always destructure `{ error }` from Supabase writes and only increment counters/return success after confirming `!error`.
+
+**Principle:** Supabase RLS silently rejects unauthorized writes — no exception is thrown, just `{ data: null, error: { message: '...' } }`. Never assume a Supabase write succeeded without checking the error object. For writes to shared/non-user-owned tables (like a global `books` catalog), always use the admin client (service role). The user session client can only write to rows it owns per RLS policy.
+
+---
+
+### Observation 17: External book metadata APIs have very sparse category/subject data
+
+**Date:** 2026-04-03
+**Session context:** Attempting to backfill book subjects from OpenLibrary and Google Books for genre distribution chart
+**Skill:** internal — Chapterly book metadata patterns
+**Type:** internal
+**Phase/Area:** Subject backfill strategy
+
+**Issue:** 54 books were attempted via direct OpenLibrary works endpoint and Google Books volume endpoint. 0 returned subjects via direct lookup. A title+author Google Books search fallback got 1/54. External book metadata APIs return categories/subjects for only a small fraction of books. OpenLibrary subjects are inconsistent and often missing; Google Books categories are sparse outside bestsellers.
+
+**Suggested improvement (applied):** Use Claude Haiku to classify genre from title + author when external APIs fail. Batch 10 books per Claude call (stays under Vercel 10s function timeout). The genres endpoint now self-heals: on each page load it classifies up to 10 untagged books and persists them via admin client. No manual backfill URL needed going forward.
+
+**Principle:** For book metadata (genre, subjects, categories), external APIs are unreliable fallbacks — treat them as a nice-to-have, not a dependency. LLM classification from title+author is more reliable, cost-effective (Haiku is cheap), and produces standardized genre labels. Build self-healing data pipelines that enrich missing data incrementally on each request rather than requiring manual one-shot backfills.
+
+---
+
+### Observation 18: `current_page = 0` in DB passes `!= null` check and shows wrong page count in modal
+
+**Date:** 2026-04-03
+**Session context:** User reported that read books show 0/71 pages instead of 71/71 in shelf modal
+**Skill:** internal — Chapterly user_books UI patterns
+**Type:** internal
+**Phase/Area:** BookShelf modal initialization
+
+**Issue:** The modal initializes `currentPage` with `if (userBook.current_page != null) return String(userBook.current_page)`. When `current_page` is `0` in the DB (default for books added before the auto-set logic), `0 != null` is `true`, so it returns `"0"` rather than falling through to the `status === 'read' && book?.page_count` default. Result: read books with no logged pages show `0/71` instead of `71/71`.
+
+**Suggested improvement (applied):** Changed `!= null` to truthiness check (`if (userBook.current_page)`), so `0` is treated as unset and falls through to the page_count default for read books. Also added a `resolvedPage` fallback in `handleSave` so saving a read book with empty/0 page input automatically persists `page_count`.
+
+**Principle:** When a numeric DB column defaults to `0` rather than `null`, `!= null` checks pass for the zero case and treat it as a real value. Use truthiness checks (`if (value)`) when `0` should be treated as "not set". This is especially important for progress/page count fields where `0` means "never logged" not "literally zero pages".
