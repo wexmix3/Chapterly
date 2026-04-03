@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   BookOpen, TrendingUp, Trophy, Target, Sparkles, Users, Search,
   BookMarked, BarChart2, Compass, Bell, Settings,
-  ChevronDown, Quote, MoreHorizontal,
+  ChevronDown, Quote, MoreHorizontal, Timer,
 } from 'lucide-react';
 import { useAuth, useNotifications } from '@/hooks';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -17,6 +17,7 @@ import Logo from '@/components/ui/Logo';
 
 const PERSONAL_ITEMS = [
   { href: '/dashboard?tab=reading', label: 'My Books',      icon: BookOpen },
+  { href: '/timer',                 label: 'Reading Timer', icon: Timer },
   { href: '/progress',              label: 'Progress',       icon: TrendingUp },
   { href: '/achievements',          label: 'Achievements',   icon: Trophy },
   { href: '/challenge',             label: 'Reading Goals',  icon: Target },
@@ -36,12 +37,12 @@ const BOTTOM_TABS = [
   { href: '/discover',              label: 'Discover', icon: Compass,        match: ['/discover'] },
   { href: '/ai',                    label: 'AI',       icon: Sparkles,       match: ['/ai'] },
   { href: '/feed',                  label: 'Social',   icon: Users,          match: ['/feed', '/people', '/clubs', '/leaderboard'] },
-  { href: '/more',                  label: 'More',     icon: MoreHorizontal, match: ['/more', '/progress', '/achievements', '/challenge', '/quotes', '/settings'] },
+  { href: '/more',                  label: 'More',     icon: MoreHorizontal, match: ['/more', '/progress', '/achievements', '/challenge', '/quotes', '/settings', '/timer'] },
 ];
 
 // Which paths make each top-level item "active"
 function isPersonalActive(pathname: string): boolean {
-  return ['/dashboard', '/progress', '/achievements', '/challenge', '/quotes'].some(p =>
+  return ['/dashboard', '/progress', '/achievements', '/challenge', '/quotes', '/timer'].some(p =>
     pathname === p || pathname.startsWith(p + '/')
   );
 }

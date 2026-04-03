@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle, ShoppingBag, ExternalLink, MessageSquare, Trash2 } from 'lucide-react';
+import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle, ShoppingBag, ExternalLink, MessageSquare, Trash2, Share2, Headphones, Tablet, Book, X } from 'lucide-react';
 import BookCover from '@/components/ui/BookCover';
 import Link from 'next/link';
 
@@ -26,6 +26,27 @@ const MOOD_TAGS = [
   'slow-burn', 'mind-bending', 'spicy', 'wholesome', 'unputdownable',
 ];
 
+// Mood/vibe tags saved directly to user_books (for AI recommendations)
+const BOOK_VIBE_TAGS = [
+  'adventurous', 'dark', 'emotional', 'hopeful', 'funny',
+  'tense', 'slow-paced', 'fast-paced', 'thought-provoking', 'heartwarming',
+];
+
+const FORMAT_OPTIONS = [
+  { value: 'physical', label: 'Physical', icon: Book },
+  { value: 'ebook', label: 'E-book', icon: Tablet },
+  { value: 'audiobook', label: 'Audiobook', icon: Headphones },
+] as const;
+
+type FormatType = 'physical' | 'ebook' | 'audiobook';
+
+const DIMENSION_LABELS: Record<string, string> = {
+  plot: 'Plot',
+  characters: 'Characters',
+  writing: 'Writing',
+  pacing: 'Pacing',
+};
+
 interface Book {
   id: string;
   title: string;
@@ -43,6 +64,11 @@ interface UserBook {
   rating?: number;
   review_text?: string;
   mood?: string[];
+  mood_tags?: string[];
+  format?: FormatType;
+  dimension_ratings?: Record<string, number>;
+  started_at?: string | null;
+  finished_at?: string | null;
 }
 
 interface Review {
@@ -81,6 +107,17 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
   const [showSpoilers, setShowSpoilers] = useState(false);
   const [error, setError] = useState('');
 
+  // Format, vibe tags, dimension ratings
+  const [selectedFormat, setSelectedFormat] = useState<FormatType | ''>(userBook?.format ?? '');
+  const [bookVibes, setBookVibes] = useState<string[]>(userBook?.mood_tags ?? []);
+  const [dimensionRatings, setDimensionRatings] = useState<Record<string, number>>(userBook?.dimension_ratings ?? {});
+  const [detailSaving, setDetailSaving] = useState(false);
+  const [detailSaved, setDetailSaved] = useState(false);
+
+  // Share modal
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sessionStats, setSessionStats] = useState<{ count: number; minutes: number } | null>(null);
+
   // Quotes state
   const [quotes, setQuotes] = useState<QuoteEntry[]>([]);
   const [quoteText, setQuoteText] = useState('');
@@ -96,6 +133,63 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load session stats for share modal
+  const openShareModal = async () => {
+    setShowShareModal(true);
+    if (!userBook || sessionStats !== null) return;
+    try {
+      const r = await fetch(`/api/sessions?book_id=${book.id}`);
+      if (r.ok) {
+        const j = await r.json();
+        const sessions = j.data ?? [];
+        const count = sessions.length;
+        const minutes = sessions.reduce((s: number, sess: { minutes_delta?: number }) => s + (sess.minutes_delta ?? 0), 0);
+        setSessionStats({ count, minutes });
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleShare = async () => {
+    const days = userBook?.started_at && userBook?.finished_at
+      ? Math.max(1, Math.round((new Date(userBook.finished_at).getTime() - new Date(userBook.started_at).getTime()) / 86400000))
+      : null;
+    const parts = [
+      `Just finished "${book.title}" by ${book.authors?.[0] ?? 'Unknown'}`,
+      days ? `Completed in ${days} day${days !== 1 ? 's' : ''}` : '',
+      sessionStats?.count ? `across ${sessionStats.count} reading session${sessionStats.count !== 1 ? 's' : ''}` : '',
+      userRating ? `⭐ ${userRating}/5` : '',
+    ].filter(Boolean);
+    const text = parts.join(' · ') + '\n\nTracked with Chapterly 📚 https://chapterly.app';
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ text }); return; } catch { /* fallthrough */ }
+    }
+    await navigator.clipboard.writeText(text).catch(() => {});
+    alert('Copied to clipboard!');
+  };
+
+  // Save format / vibes / dimension ratings to user_books
+  const saveBookDetails = async () => {
+    if (!userBook) return;
+    setDetailSaving(true);
+    try {
+      await fetch('/api/user-books', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userBook.id,
+          ...(selectedFormat ? { format: selectedFormat } : {}),
+          mood_tags: bookVibes,
+          ...(Object.keys(dimensionRatings).length > 0 ? { dimension_ratings: dimensionRatings } : {}),
+        }),
+      });
+      setDetailSaved(true);
+      setTimeout(() => setDetailSaved(false), 2000);
+    } finally {
+      setDetailSaving(false);
+    }
+  };
 
   const addToShelf = async (status: string) => {
     setSaving(true);
@@ -281,6 +375,40 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
                 </p>
               )}
 
+              {/* Format selector — shown when book is on shelf */}
+              {shelfStatus && (
+                <div className="mt-4 pt-4 border-t border-paper-100">
+                  <p className="text-[10px] text-ink-400 mb-2 uppercase tracking-wide font-medium">Reading format</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {FORMAT_OPTIONS.map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => setSelectedFormat(v => v === value ? '' : value)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                          selectedFormat === value
+                            ? 'bg-brand-100 text-brand-700 border-brand-300'
+                            : 'bg-white border-ink-200 text-ink-600 hover:border-brand-200'
+                        }`}
+                      >
+                        <Icon className="w-3 h-3" /> {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Share button — shown when book is finished */}
+              {shelfStatus === 'read' && (
+                <div className="mt-3">
+                  <button
+                    onClick={openShareModal}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-ink-50 border border-ink-200 text-ink-600 hover:border-brand-300 hover:text-brand-700 transition-all"
+                  >
+                    <Share2 className="w-3 h-3" /> Share this book
+                  </button>
+                </div>
+              )}
+
               {/* Affiliate buy links */}
               {(() => {
                 const { amazon, bookshop } = buildAffiliateLinks(book.title, book.authors ?? []);
@@ -372,7 +500,7 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
               </div>
             </div>
 
-            {/* Mood tags */}
+            {/* Mood tags (for review) */}
             <div className="mb-4">
               <p className="text-xs text-ink-500 mb-2">Mood / Vibe tags</p>
               <div className="flex flex-wrap gap-2">
@@ -388,6 +516,33 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
                   >
                     {mood}
                   </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dimension ratings */}
+            <div className="mb-4">
+              <p className="text-xs text-ink-500 mb-2">Dimension ratings <span className="text-ink-300">(optional)</span></p>
+              <div className="space-y-2">
+                {Object.keys(DIMENSION_LABELS).map(dim => (
+                  <div key={dim} className="flex items-center gap-3">
+                    <span className="text-xs text-ink-600 w-20 flex-shrink-0">{DIMENSION_LABELS[dim]}</span>
+                    <div className="flex gap-0.5">
+                      {[1,2,3,4,5].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => setDimensionRatings(prev => ({ ...prev, [dim]: prev[dim] === n ? 0 : n }))}
+                          className="focus:outline-none"
+                          title={`${n}★`}
+                        >
+                          <Star className={`w-4 h-4 ${(dimensionRatings[dim] ?? 0) >= n ? 'fill-brand-300 text-brand-300' : 'text-ink-200'} transition-colors`} />
+                        </button>
+                      ))}
+                    </div>
+                    {dimensionRatings[dim] > 0 && (
+                      <span className="text-xs text-brand-500">{dimensionRatings[dim]}★</span>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -409,6 +564,38 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
               {saved ? '✓ Saved' : 'Save review'}
             </button>
           </section>
+
+          {/* Book Vibes (saved to user_books for AI recs) — shown when on shelf */}
+          {userBook && (
+            <section className="bg-white rounded-2xl border border-ink-100 p-6 mb-8">
+              <h2 className="font-display text-lg font-semibold text-ink-800 mb-1">Book Vibes</h2>
+              <p className="text-xs text-ink-400 mb-4">Tag this book to improve your AI recommendations</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {BOOK_VIBE_TAGS.map(vibe => (
+                  <button
+                    key={vibe}
+                    onClick={() => setBookVibes(prev =>
+                      prev.includes(vibe) ? prev.filter(v => v !== vibe) : [...prev, vibe]
+                    )}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      bookVibes.includes(vibe)
+                        ? 'bg-purple-100 text-purple-700 border-purple-300'
+                        : 'bg-white border-ink-200 text-ink-600 hover:border-purple-200'
+                    }`}
+                  >
+                    {vibe}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={saveBookDetails}
+                disabled={detailSaving}
+                className="px-4 py-2 bg-ink-800 hover:bg-ink-900 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-colors"
+              >
+                {detailSaved ? '✓ Saved' : detailSaving ? 'Saving…' : 'Save vibes & format'}
+              </button>
+            </section>
+          )}
 
           {/* Quotes — only shown when book is on shelf */}
           {userBook && (
@@ -538,6 +725,58 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
           </section>
         </div>
       </main>
+
+      {/* Share modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-ink-950/50 flex items-end sm:items-center justify-center z-50 px-4 pb-4 sm:pb-0">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display font-semibold text-ink-900">Share this book</h3>
+              <button onClick={() => setShowShareModal(false)} className="text-ink-400 hover:text-ink-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Book info */}
+            <div className="flex items-center gap-3 bg-paper-50 rounded-xl px-4 py-3 mb-4">
+              <BookOpen className="w-5 h-5 text-brand-400 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink-900 truncate">{book.title}</p>
+                <p className="text-xs text-ink-400">{book.authors?.[0]}</p>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {userRating > 0 && (
+                <div className="bg-paper-50 rounded-xl px-3 py-2 text-center">
+                  <p className="text-base font-bold text-brand-600">{userRating}★</p>
+                  <p className="text-[10px] text-ink-400">Rating</p>
+                </div>
+              )}
+              {sessionStats && sessionStats.count > 0 && (
+                <div className="bg-paper-50 rounded-xl px-3 py-2 text-center">
+                  <p className="text-base font-bold text-ink-800">{sessionStats.count}</p>
+                  <p className="text-[10px] text-ink-400">Sessions</p>
+                </div>
+              )}
+              {sessionStats && sessionStats.minutes > 0 && (
+                <div className="bg-paper-50 rounded-xl px-3 py-2 text-center">
+                  <p className="text-base font-bold text-ink-800">{Math.round(sessionStats.minutes / 60)}h</p>
+                  <p className="text-[10px] text-ink-400">Reading time</p>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleShare}
+              className="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-4 h-4" /> Share
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
