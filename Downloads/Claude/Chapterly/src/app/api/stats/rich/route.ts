@@ -156,9 +156,9 @@ export async function GET() {
   const started = rows.filter(r => ['read', 'dnf', 'reading'].includes(r.status)).length;
   const dnf_rate = started > 0 ? Math.round((dnf / started) * 100) : null;
 
-  // Genre breakdown
+  // Genre breakdown — use all shelf books so users with few finished books still see data
   const genreCount: Record<string, number> = {};
-  for (const row of readRows) {
+  for (const row of rows) {
     const subjects = (row.books?.subjects ?? []) as string[];
     for (const s of subjects.slice(0, 3)) {
       const genre = s.trim();
@@ -171,7 +171,7 @@ export async function GET() {
     .map(([genre, count]) => ({
       genre,
       count,
-      pct: readRows.length > 0 ? Math.round((count / readRows.length) * 100) : 0,
+      pct: rows.length > 0 ? Math.round((count / rows.length) * 100) : 0,
     }));
 
   // Author breakdown
