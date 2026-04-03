@@ -1,10 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks';
-import { ChevronRight, Loader2, Bell, BellOff } from 'lucide-react';
+import { ChevronRight, Loader2, Bell, BellOff, Upload, Check, BookOpen } from 'lucide-react';
 import { track } from '@/lib/analytics';
+
+interface ParsedGoodreadsBook {
+  title: string;
+  author: string;
+  isbn13?: string;
+  rating?: number;
+  status: 'read' | 'to_read' | 'reading';
+  date_read?: string;
+  page_count?: number;
+}
+
+function parseGoodreadsCSV(text: string): ParsedGoodreadsBook[] {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+  const getCol = (row: string[], name: string) => {
+    const idx = headers.indexOf(name);
+    if (idx < 0) return '';
+    return (row[idx] ?? '').replace(/^"|"$/g, '').trim();
+  };
+
+  const books: ParsedGoodreadsBook[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].split(',');
+    const title = getCol(row, 'title');
+    const author = getCol(row, 'author');
+    const shelf = getCol(row, 'exclusive shelf');
+    if (!title || !shelf) continue;
+
+    let status: ParsedGoodreadsBook['status'] = 'to_read';
+    if (shelf === 'read') status = 'read';
+    else if (shelf === 'currently-reading') status = 'reading';
+    else if (shelf === 'to-read') status = 'to_read';
+    else continue; // unknown shelf, skip
+
+    const ratingStr = getCol(row, 'my rating');
+    const rating = ratingStr ? parseInt(ratingStr, 10) : 0;
+    const isbn13 = getCol(row, 'isbn13').replace(/[^0-9]/g, '') || undefined;
+    const dateRead = getCol(row, 'date read') || undefined;
+    const pages = getCol(row, 'number of pages');
+    const pageCount = pages ? parseInt(pages, 10) : undefined;
+
+    books.push({ title, author, isbn13, rating, status, date_read: dateRead, page_count: pageCount });
+  }
+  return books;
+}
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -53,7 +100,7 @@ const GOAL_PRESETS: Record<GoalType, { value: number; label: string; badge: stri
 };
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('📚');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -61,6 +108,11 @@ export default function OnboardingPage() {
   const [goal, setGoal] = useState(12);
   const [saving, setSaving] = useState(false);
   const [pushState, setPushState] = useState<'idle' | 'loading' | 'granted' | 'denied'>('idle');
+  // Goodreads import state
+  const [grBooks, setGrBooks] = useState<ParsedGoodreadsBook[] | null>(null);
+  const [grImporting, setGrImporting] = useState(false);
+  const [grResult, setGrResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -106,6 +158,37 @@ export default function OnboardingPage() {
     }
   };
 
+  const handleGrFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target?.result as string;
+      const parsed = parseGoodreadsCSV(text);
+      setGrBooks(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleGrImport = async () => {
+    if (!grBooks || grBooks.length === 0) return;
+    setGrImporting(true);
+    try {
+      const res = await fetch('/api/import/goodreads-library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ books: grBooks }),
+      });
+      if (res.ok) {
+        const j = await res.json();
+        setGrResult(j);
+        track({ event: 'goodreads_imported', properties: { imported: j.imported } });
+      }
+    } finally {
+      setGrImporting(false);
+    }
+  };
+
   const handleEnablePush = async () => {
     setPushState('loading');
     try {
@@ -126,14 +209,14 @@ export default function OnboardingPage() {
           });
         }
         setPushState('granted');
-        setTimeout(() => router.push('/dashboard'), 1200);
+        setTimeout(() => router.push('/timer?welcome=1'), 1200);
       } else {
         setPushState('denied');
-        setTimeout(() => router.push('/dashboard'), 800);
+        setTimeout(() => router.push('/timer?welcome=1'), 800);
       }
     } catch {
       setPushState('denied');
-      setTimeout(() => router.push('/dashboard'), 800);
+      setTimeout(() => router.push('/timer?welcome=1'), 800);
     }
   };
 
@@ -149,8 +232,8 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-paper-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
 
-        {/* Step indicator — hidden on push step */}
-        {step < 4 && (
+        {/* Step indicator — shown on steps 1-3 */}
+        {step >= 1 && step < 4 && (
           <div className="flex items-center justify-center gap-3 mb-10">
             {[1, 2, 3].map(s => (
               <div key={s} className="flex items-center gap-2">
@@ -166,6 +249,98 @@ export default function OnboardingPage() {
                 {s < 3 && <div className={`w-8 h-0.5 rounded-full transition-colors ${s < step ? 'bg-brand-300' : 'bg-ink-200'}`} />}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Step 0 — Goodreads Library Import */}
+        {step === 0 && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="font-display text-3xl font-bold text-ink-950 mb-1">
+                Welcome, {firstName}!
+              </h1>
+              <p className="text-ink-500">
+                Already on Goodreads? Import your library in seconds — ratings, shelves, and all.
+              </p>
+            </div>
+
+            {!grResult ? (
+              <>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-ink-200 hover:border-brand-400 rounded-2xl p-8 text-center cursor-pointer transition-colors"
+                >
+                  <Upload className="w-8 h-8 text-ink-300 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-ink-700">Upload your Goodreads CSV</p>
+                  <p className="text-xs text-ink-400 mt-1">
+                    Export from Goodreads → My Books → Tools → Export Library
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleGrFile}
+                    className="hidden"
+                  />
+                </div>
+
+                {grBooks && grBooks.length > 0 && (
+                  <div className="bg-brand-50 border border-brand-200 rounded-2xl px-5 py-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="w-4 h-4 text-brand-500" />
+                      <p className="text-sm font-semibold text-brand-800">
+                        Found {grBooks.length} books
+                      </p>
+                    </div>
+                    <div className="flex gap-4 text-xs text-brand-700">
+                      <span>✓ {grBooks.filter(b => b.status === 'read').length} read</span>
+                      <span>📖 {grBooks.filter(b => b.status === 'reading').length} reading</span>
+                      <span>🔖 {grBooks.filter(b => b.status === 'to_read').length} want to read</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setStep(1)}
+                    className="px-5 py-3 bg-ink-50 hover:bg-ink-100 text-ink-600 rounded-2xl font-medium transition-colors text-sm"
+                  >
+                    Skip
+                  </button>
+                  <button
+                    onClick={grBooks && grBooks.length > 0 ? handleGrImport : () => setStep(1)}
+                    disabled={grImporting}
+                    className="flex-1 py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white rounded-2xl font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    {grImporting ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Importing…</>
+                    ) : grBooks && grBooks.length > 0 ? (
+                      <>Import {grBooks.length} Books <ChevronRight className="w-4 h-4" /></>
+                    ) : (
+                      <>Continue <ChevronRight className="w-4 h-4" /></>
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-5">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-5 text-center">
+                  <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                  <p className="font-semibold text-emerald-800 text-sm">
+                    {grResult.imported} books imported!
+                  </p>
+                  {grResult.skipped > 0 && (
+                    <p className="text-xs text-emerald-600 mt-1">{grResult.skipped} skipped (already on shelf or not found)</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => { track({ event: 'onboarding_step_completed', properties: { step: 0 } }); setStep(1); }}
+                  className="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  Continue <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -214,6 +389,9 @@ export default function OnboardingPage() {
               className="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl font-semibold transition-colors flex items-center justify-center gap-2"
             >
               Continue <ChevronRight className="w-4 h-4" />
+            </button>
+            <button onClick={() => setStep(0)} className="w-full text-center text-xs text-ink-400 hover:text-ink-600 mt-1 transition-colors">
+              ← Back
             </button>
           </div>
         )}
@@ -376,7 +554,7 @@ export default function OnboardingPage() {
                   Enable Notifications
                 </button>
                 <button
-                  onClick={() => router.push('/dashboard')}
+                  onClick={() => router.push('/timer?welcome=1')}
                   className="w-full py-3 text-ink-400 text-sm hover:text-ink-600 transition-colors"
                 >
                   Maybe later

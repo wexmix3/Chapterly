@@ -264,6 +264,7 @@ export default function ProgressClient() {
   const genreTotal = genreData.reduce((s, g) => s + g.count, 0);
   const GENRE_COLORS = ['#ee7a1e', '#f5a05a', '#f7c18e', '#c45a0e', '#9c4508', '#7a3406'];
 
+
   const formatTime = (mins: number) => {
     const h = Math.floor(mins / 60);
     return h > 0 ? `${h}` : `${mins}`;
@@ -593,7 +594,24 @@ export default function ProgressClient() {
                             <Cell key={`cell-${index}`} fill={GENRE_COLORS[index % GENRE_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => [`${value} books`]} />
+                        <Tooltip content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const { name, value, fill } = payload[0] as { name: string; value: number; fill: string };
+                          const pct = genreTotal > 0 ? Math.round((value / genreTotal) * 100) : 0;
+                          return (
+                            <div className="bg-white border border-ink-100 rounded-xl shadow-lg px-3.5 py-2.5 pointer-events-none">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: fill }} />
+                                <span className="text-sm font-semibold text-ink-900">{name}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-ink-500">
+                                <span>{value} book{value !== 1 ? 's' : ''}</span>
+                                <span className="text-ink-300">·</span>
+                                <span className="font-medium" style={{ color: fill }}>{pct}%</span>
+                              </div>
+                            </div>
+                          );
+                        }} />
                       </PieChart>
                     </ResponsiveContainer>
                     {/* Center label as HTML overlay — reliable positioning regardless of chart size */}

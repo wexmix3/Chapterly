@@ -310,3 +310,19 @@ potential skill improvement or new skill opportunity.
 **Suggested improvement (applied):** Changed `!= null` to truthiness check (`if (userBook.current_page)`), so `0` is treated as unset and falls through to the page_count default for read books. Also added a `resolvedPage` fallback in `handleSave` so saving a read book with empty/0 page input automatically persists `page_count`.
 
 **Principle:** When a numeric DB column defaults to `0` rather than `null`, `!= null` checks pass for the zero case and treat it as a real value. Use truthiness checks (`if (value)`) when `0` should be treated as "not set". This is especially important for progress/page count fields where `0` means "never logged" not "literally zero pages".
+
+---
+
+### Observation 19: Weakness analysis against book-tracking peers surfaces 4 critical + 11 high/medium gaps
+
+**Date:** 2026-04-03
+**Session context:** Ran full weakness-analyzer against Goodreads, The StoryGraph, and Bookly as benchmarks. Explored full codebase + researched all three peers.
+**Skill:** internal — Chapterly product roadmap
+**Type:** internal
+**Phase/Area:** Competitive feature gap analysis
+
+**Issue:** Full analysis revealed 4 critical gaps and 11 high/medium priority gaps. Critical gaps: (1) no real-time reading timer — Bookly's entire retention flywheel, currently Chapterly requires manual post-session entry; (2) Goodreads import (`/api/import/goodreads` exists) is not surfaced in onboarding — biggest churn risk for switchers; (3) analytics depth insufficient vs. StoryGraph — missing author breakdown, format tracking, mood distribution, pace charts; (4) no mood/pace tags on books — blocks contextual AI recommendations ("I want something dark and slow-paced tonight").
+
+**Suggested improvement:** Full report saved to `skill-observations/weakness-analysis-2026-04-03.md`. Top 5 quick wins (each < 1 day): surface Goodreads import in onboarding, add reading timer page, add mood tags to book shelving, add author breakdown chart to Progress, add per-book share card on finish.
+
+**Principle:** When analyzing a consumer app against direct competitors, the highest-leverage gaps are usually (a) missing the core habit-formation mechanic of the best-in-class competitor, and (b) missing the migration path from the dominant incumbent. Both are pre-acquisition problems — they prevent users from ever deeply engaging, making all other improvements irrelevant.

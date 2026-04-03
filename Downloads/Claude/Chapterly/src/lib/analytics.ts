@@ -10,7 +10,8 @@ type AnalyticsEvent =
   | { event: 'friend_followed'; properties: Record<string, never> }
   | { event: 'review_written'; properties: { rating: number } }
   | { event: 'share_card_created'; properties: { template: string } }
-  | { event: 'onboarding_step_completed'; properties: { step: 1 | 2 | 3 } }
+  | { event: 'onboarding_step_completed'; properties: { step: 0 | 1 | 2 | 3 } }
+  | { event: 'goodreads_imported'; properties: { imported: number } }
   | { event: 'quest_completed'; properties: { quest_key: string; xp_awarded: number } }
   | { event: 'streak_milestone_reached'; properties: { days: number } }
   | { event: 'book_searched'; properties: { query: string; result_count: number } }
