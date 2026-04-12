@@ -131,13 +131,31 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Email capture ── */}
+      {/* ── Signup nudge — app is live ── */}
       <section className="bg-white border-b border-ink-100 py-16 px-6">
         <div className="max-w-xl mx-auto text-center">
-          <p className="text-xs font-semibold text-brand-500 uppercase tracking-widest mb-3">Stay in the loop</p>
-          <h2 className="font-display text-2xl font-bold text-ink-950 mb-2">New features dropping soon</h2>
-          <p className="text-sm text-ink-500 mb-6">Enter your email to get notified when we launch new features and updates.</p>
-          <WaitlistForm />
+          <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-3 py-1 text-xs font-semibold mb-4">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+            Live now — free forever
+          </div>
+          <h2 className="font-display text-2xl font-bold text-ink-950 mb-2">Your reading tracker is ready</h2>
+          <p className="text-sm text-ink-500 mb-7">
+            Create an account in 30 seconds — no credit card, no waitlist.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/login?mode=signup"
+              className="bg-ink-950 text-white px-7 py-3 rounded-full font-semibold hover:bg-ink-800 transition-colors text-sm w-full sm:w-auto text-center"
+            >
+              Create free account
+            </Link>
+            <Link
+              href="/login"
+              className="text-ink-500 hover:text-ink-800 transition-colors text-sm font-medium"
+            >
+              Already have an account? Sign in →
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -447,8 +465,13 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-ink-100 px-6 py-10">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-ink-400">
+      <footer className="border-t border-ink-100 px-6 pt-10 pb-8">
+        {/* Mailing list — clearly secondary, below the fold */}
+        <div className="max-w-md mx-auto text-center mb-10">
+          <p className="text-xs text-ink-400 mb-3">Get notified about new features</p>
+          <WaitlistForm compact />
+        </div>
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-ink-400 border-t border-ink-50 pt-6">
           <Logo href="/" size="sm" />
           <p>© 2026 Chapterly · Built for readers, by readers.</p>
           <div className="flex items-center gap-4">
@@ -460,7 +483,7 @@ export default async function LandingPage() {
             <span>·</span>
             <Link href="/privacy" className="hover:text-ink-700 transition-colors">Privacy</Link>
             <span>·</span>
-            <Link href="/login" className="hover:text-ink-700 transition-colors">Sign up</Link>
+            <Link href="/login?mode=signup" className="hover:text-ink-700 transition-colors">Sign up</Link>
           </div>
         </div>
       </footer>
