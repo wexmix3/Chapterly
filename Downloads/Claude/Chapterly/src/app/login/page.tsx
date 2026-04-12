@@ -80,6 +80,7 @@ export default function LoginPage() {
     // Check if returning from password reset
     const modeParam = searchParams.get('mode');
     if (modeParam === 'reset') setMode('forgot');
+    if (modeParam === 'signup') setMode('signup');
   }, [searchParams]);
 
   // Redirect if already logged in
