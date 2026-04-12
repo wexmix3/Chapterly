@@ -47,7 +47,7 @@ export default async function LandingPage() {
           <Link href="#features" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Features</Link>
           <Link href="/demo" className="text-sm font-medium text-ink-500 hover:text-ink-900 transition-colors hidden sm:block">Demo</Link>
           <Link href="/login" className="text-sm font-medium text-ink-600 hover:text-ink-900 transition-colors hidden sm:block">Sign in</Link>
-          <Link href="/login" className="px-4 py-2 bg-ink-950 hover:bg-ink-800 text-white rounded-full text-sm font-medium transition-colors">
+          <Link href="/login?mode=signup" className="px-4 py-2 bg-ink-950 hover:bg-ink-800 text-white rounded-full text-sm font-medium transition-colors">
             Start free
           </Link>
         </div>
@@ -70,7 +70,7 @@ export default async function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
-              href="/login"
+              href="/login?mode=signup"
               className="bg-ink-950 text-white px-7 py-3.5 rounded-full font-semibold hover:bg-ink-800 transition-colors text-sm text-center"
             >
               Start reading free
@@ -436,7 +436,7 @@ export default async function LandingPage() {
               Join {userCountDisplay} readers who track smarter, read more, and actually enjoy it.
             </p>
             <Link
-              href="/login"
+              href="/login?mode=signup"
               className="inline-block bg-white text-ink-950 px-8 py-4 rounded-full font-semibold hover:bg-paper-50 transition-colors"
             >
               Create your free account
