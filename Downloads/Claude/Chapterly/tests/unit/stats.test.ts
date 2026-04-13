@@ -82,9 +82,8 @@ describe('computeStreak()', () => {
   it('does NOT count a day 2+ days ago as an active streak (current=0)', () => {
     const result = computeStreak([day(daysAgo(2))]);
     expect(result.current).toBe(0);
-    // The loop inside computeStreak only updates `longest` when i > 0,
-    // so a single-element array results in longest=0 (current is then also 0).
-    expect(result.longest).toBe(0);
+    // Even though no active streak, the user DID read that day — longest must be 1.
+    expect(result.longest).toBe(1);
     expect(result.today_logged).toBe(false);
   });
 
