@@ -51,13 +51,13 @@ const PROTECTED: [string, string][] = [
   // ── AI features
   ['GET',    '/api/ai/insights'],
   ['POST',   '/api/ai/recommend'],
-  ['POST',   '/api/ai/pace'],
+  ['GET',    '/api/ai/pace'],        // GET-only route
   ['POST',   '/api/ai/mood'],
   ['GET',    '/api/ai/dna'],
   ['GET',    '/api/ai/personality'],
   ['GET',    '/api/ai/archetype'],
   ['POST',   '/api/ai/reading-coach'],
-  ['POST',   '/api/ai/habit-nudge'],
+  ['GET',    '/api/ai/habit-nudge'],  // GET-only route
 
   // ── Gamification
   ['GET',    '/api/achievements'],
@@ -69,8 +69,7 @@ const PROTECTED: [string, string][] = [
   ['GET',    '/api/profile'],
   ['PATCH',  '/api/profile'],
 
-  // ── Account
-  ['GET',    '/api/account'],
+  // ── Account (DELETE-only route)
   ['DELETE', '/api/account'],
 
   // ── Lists
@@ -89,9 +88,8 @@ const PROTECTED: [string, string][] = [
   ['GET',    '/api/notifications'],
   ['POST',   '/api/push/subscribe'],
 
-  // ── Referral
+  // ── Referral (GET requires auth; POST is server-to-server from auth callback, no auth check)
   ['GET',    '/api/referral'],
-  ['POST',   '/api/referral'],
 
   // ── Export
   ['GET',    '/api/export'],

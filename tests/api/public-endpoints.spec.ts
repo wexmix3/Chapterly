@@ -115,12 +115,28 @@ test.describe('GET /api/books/search — input validation', () => {
 });
 
 // ── /api/discover/trending — public discovery ─────────────────────────────────
+// This route is intentionally public: it aggregates Reddit + internal data
+// using the admin client (no user session needed).
 
 test.describe('GET /api/discover/trending', () => {
-  test('returns 401 without auth (trending is personalised)', async ({ request }) => {
+  test('returns 200 with a data array (public endpoint)', async ({ request }) => {
     const response = await request.get('/api/discover/trending');
-    // Trending is a protected route — confirm it doesn't leak data
-    expect(response.status()).toBe(401);
+    expect(response.status()).toBe(200);
+
+    const body = await response.json() as { data: unknown[] };
+    expect(body).toHaveProperty('data');
+    expect(Array.isArray(body.data)).toBe(true);
+  });
+
+  test('each trending item has book, count, and source fields', async ({ request }) => {
+    const response = await request.get('/api/discover/trending');
+    const body = await response.json() as { data: Array<Record<string, unknown>> };
+    if (body.data.length === 0) return; // empty is valid (all external APIs down)
+
+    const first = body.data[0];
+    expect(first).toHaveProperty('book_id');
+    expect(first).toHaveProperty('count');
+    expect(first).toHaveProperty('source');
   });
 });
 
@@ -134,11 +150,19 @@ test.describe('POST /api/auth/signout', () => {
   });
 });
 
-// ── /api/stats/public — public profile stats ─────────────────────────────────
+// ── /api/stats/public — landing page signup counter ──────────────────────────
+// Returns total registered user count for the landing page social-proof badge.
+// Publicly accessible — no auth required.
 
 test.describe('GET /api/stats/public', () => {
-  test('returns 400 or 404 when no handle param is given', async ({ request }) => {
+  test('returns 200 with count and formatted fields', async ({ request }) => {
     const response = await request.get('/api/stats/public');
-    expect([400, 404, 422]).toContain(response.status());
+    expect(response.status()).toBe(200);
+
+    const body = await response.json() as { count: number; formatted: string };
+    expect(typeof body.count).toBe('number');
+    expect(body.count).toBeGreaterThanOrEqual(0);
+    expect(typeof body.formatted).toBe('string');
+    expect(body.formatted.length).toBeGreaterThan(0);
   });
 });

@@ -35,7 +35,10 @@ export function computeStreak(dailyStats: DailyStats[]): StreakInfo {
     if (dates[i] === prev) { run++; } else { run = 1; }
     longest = Math.max(longest, run);
   }
-  longest = Math.max(longest, current);
+  // `run` holds the length of the last run in the loop. For a single-element
+  // array the loop body only executes for i=0 (which does `continue`), so
+  // `longest` stays 0. Including `run` here fixes that edge case.
+  longest = Math.max(longest, run, current);
 
   return {
     current,
