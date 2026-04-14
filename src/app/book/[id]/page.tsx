@@ -8,7 +8,8 @@ import QuickLog from '@/components/sessions/QuickLog';
 import ReadingTimer from '@/components/sessions/ReadingTimer';
 import {
   ArrowLeft, BookOpen, Star, Calendar, Hash, Loader2,
-  CheckCircle, Clock, ExternalLink, Timer, MessageCircle, Send, Share2, X, Check
+  CheckCircle, Clock, ExternalLink, Timer, MessageCircle, Send, Share2, X, Check,
+  Package, AlertTriangle, ChevronDown, ChevronUp, Plus
 } from 'lucide-react';
 import type { UserBook, ReadingSession } from '@/types';
 import { format, parseISO, addDays } from 'date-fns';
@@ -273,6 +274,8 @@ function BookDetailContent({ id }: { id: string }) {
   const [finishedAt, setFinishedAt] = useState('');
   const [datesSaving, setDatesSaving] = useState(false);
   const [datesSaved, setDatesSaved] = useState(false);
+  const [owned, setOwned] = useState(false);
+  const [ownedSaving, setOwnedSaving] = useState(false);
   const [seriesInfo, setSeriesInfo] = useState<{
     series_name: string;
     current_position: number | null;
@@ -289,6 +292,20 @@ function BookDetailContent({ id }: { id: string }) {
     setReviewText(json.data.review_text ?? '');
     setStartedAt(json.data.started_at ? json.data.started_at.slice(0, 10) : '');
     setFinishedAt(json.data.finished_at ? json.data.finished_at.slice(0, 10) : '');
+    setOwned(json.data.owned ?? false);
+  };
+
+  const toggleOwned = async () => {
+    if (!userBook) return;
+    setOwnedSaving(true);
+    const next = !owned;
+    setOwned(next);
+    await fetch(`/api/user-books/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owned: next }),
+    });
+    setOwnedSaving(false);
   };
 
   const saveDates = async () => {
@@ -505,6 +522,20 @@ function BookDetailContent({ id }: { id: string }) {
                 className="mt-2 inline-flex items-center gap-1.5 text-xs text-ink-500 hover:text-brand-600 bg-ink-50 hover:bg-brand-50 px-3 py-1.5 rounded-xl border border-ink-100 hover:border-brand-200 transition-all"
               >
                 <Share2 className="w-3.5 h-3.5" /> Recommend to a friend
+              </button>
+
+              {/* Owned toggle */}
+              <button
+                onClick={toggleOwned}
+                disabled={ownedSaving}
+                className={`mt-1 inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border transition-all disabled:opacity-60 ${
+                  owned
+                    ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                    : 'text-ink-500 bg-ink-50 hover:bg-amber-50 border-ink-100 hover:border-amber-200 hover:text-amber-700'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                {owned ? 'Owned ✓' : 'Mark as owned'}
               </button>
             </div>
           </div>
@@ -792,6 +823,9 @@ function BookDetailContent({ id }: { id: string }) {
             </section>
           )}
 
+          {/* ── Content Warnings ─────────────────────── */}
+          {userBook?.book_id && <ContentWarnings bookId={userBook.book_id} />}
+
           {/* ── Discussions ──────────────────────────── */}
           <section className="bg-white rounded-2xl border border-ink-100 p-5 mb-5">
             <h2 className="font-display font-semibold text-ink-800 text-sm mb-3">Find Discussions</h2>
@@ -817,6 +851,120 @@ function BookDetailContent({ id }: { id: string }) {
         <RecommendModal bookId={userBook.book_id} onClose={() => setShowRecommend(false)} />
       )}
     </div>
+  );
+}
+
+function ContentWarnings({ bookId }: { bookId: string }) {
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/content-warnings?book_id=${bookId}`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => { if ((j.data ?? []).length > 0) setWarnings(j.data); })
+      .catch(() => {});
+  }, [bookId]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/content-warnings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book_id: bookId, warning: draft.trim() }),
+      });
+      if (res.ok) {
+        const j = await res.json();
+        setWarnings(j.data);
+        setDraft('');
+        setShowInput(false);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Only render the section if there are warnings OR we want to let users add them
+  return (
+    <section className="bg-white rounded-2xl border border-ink-100 p-5 mb-5">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between text-left"
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <span className="font-display font-semibold text-ink-800 text-sm">Content Warnings</span>
+          {warnings.length > 0 && (
+            <span className="text-[10px] text-ink-400 bg-ink-50 px-1.5 py-0.5 rounded-full">
+              {warnings.length}
+            </span>
+          )}
+        </div>
+        {expanded ? (
+          <ChevronUp className="w-4 h-4 text-ink-400" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-ink-400" />
+        )}
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-3">
+          {warnings.length === 0 ? (
+            <p className="text-xs text-ink-400 italic">No community warnings yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {warnings.map(w => (
+                <span
+                  key={w}
+                  className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full"
+                >
+                  {w}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {!showInput ? (
+            <button
+              onClick={() => setShowInput(true)}
+              className="flex items-center gap-1 text-xs text-ink-400 hover:text-amber-600 transition-colors"
+            >
+              <Plus className="w-3 h-3" /> Suggest a warning
+            </button>
+          ) : (
+            <form onSubmit={submit} className="flex gap-2">
+              <input
+                autoFocus
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                placeholder="e.g. violence, grief, abuse…"
+                maxLength={60}
+                className="flex-1 text-xs px-3 py-1.5 border border-ink-200 rounded-xl focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-100"
+              />
+              <button
+                type="submit"
+                disabled={!draft.trim() || submitting}
+                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-xs font-medium rounded-xl transition-colors"
+              >
+                {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowInput(false); setDraft(''); }}
+                className="px-2 py-1.5 text-ink-400 hover:text-ink-600 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
