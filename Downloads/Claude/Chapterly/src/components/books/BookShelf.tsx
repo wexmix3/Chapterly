@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { BookOpen, Star, Loader2, X, Check, AlertCircle, Search, Library, Bookmark, CheckCircle, Plus, XCircle, ExternalLink, Upload } from 'lucide-react';
+import { BookOpen, Star, Loader2, X, Check, AlertCircle, Search, Library, Bookmark, CheckCircle, Plus, XCircle, ExternalLink, Upload, Package } from 'lucide-react';
 import BookCover from '@/components/ui/BookCover';
 import { BookCardSkeleton } from '@/components/ui/Skeleton';
 import { useShelf } from '@/hooks';
@@ -31,6 +31,7 @@ export default function BookShelf() {
   const { books, loading, fetchBooks } = useShelf(activeTab === 'all' ? undefined : activeTab);
   const [selectedBook, setSelectedBook] = useState<UserBook | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [ownedOnly, setOwnedOnly] = useState(false);
   const [showShelfLimitNudge, setShowShelfLimitNudge] = useState(false);
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
 
@@ -112,16 +113,18 @@ export default function BookShelf() {
     setInlineResults([]);
   };
 
-  // Client-side filtering by title or author
+  // Client-side filtering by title/author and owned flag
   const filteredBooks = useMemo(() => {
+    let result = books;
+    if (ownedOnly) result = result.filter((ub) => (ub as unknown as { owned?: boolean }).owned === true);
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return books;
-    return books.filter((ub) => {
+    if (!q) return result;
+    return result.filter((ub) => {
       const title = ub.book?.title?.toLowerCase() ?? '';
       const authors = (ub.book?.authors ?? []).join(' ').toLowerCase();
       return title.includes(q) || authors.includes(q);
     });
-  }, [books, searchQuery]);
+  }, [books, searchQuery, ownedOnly]);
 
   return (
     <div className="space-y-4">
@@ -142,6 +145,15 @@ export default function BookShelf() {
             {icon} {label}
           </button>
         ))}
+        <button
+          onClick={() => setOwnedOnly(v => !v)}
+          className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+            ownedOnly
+              ? 'bg-amber-500 text-white'
+              : 'bg-white border border-ink-100 text-ink-600 hover:border-amber-200 hover:bg-amber-50/50'
+          }`}>
+          <Package className="w-3.5 h-3.5" /> Owned
+        </button>
       </div>
 
       {/* Per-shelf search bar — only show when books are loaded */}
@@ -328,6 +340,13 @@ function BookCard({ userBook, onEdit }: { userBook: UserBook; onEdit: () => void
               <span className="text-[9px] text-white font-medium">{userBook.rating}</span>
             </div>
           )}
+
+          {/* Owned badge */}
+          {(userBook as unknown as { owned?: boolean }).owned && (
+            <div className="absolute top-1.5 left-1.5 bg-amber-500 rounded-md p-0.5" title="Owned">
+              <Package className="w-2.5 h-2.5 text-white" />
+            </div>
+          )}
         </div>
       </button>
 
@@ -401,6 +420,9 @@ function BookEditModal({
   const [format, setFormat] = useState<'physical' | 'ebook' | 'audiobook'>(
     ((userBook as unknown as Record<string, unknown>).format as 'physical' | 'ebook' | 'audiobook') ?? 'ebook'
   );
+  const [owned, setOwned] = useState<boolean>(
+    ((userBook as unknown as Record<string, unknown>).owned as boolean) ?? false
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -417,6 +439,7 @@ function BookEditModal({
         started_at: startedAt ? new Date(startedAt).toISOString() : null,
         finished_at: finishedAt ? new Date(finishedAt).toISOString() : null,
         format,
+        owned,
       };
       const res = await fetch(`/api/user-books/${userBook.id}`, {
         method: 'PATCH',
@@ -626,6 +649,25 @@ function BookEditModal({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Owned toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-ink-500 uppercase tracking-wide">Owned</p>
+              <p className="text-[11px] text-ink-400 mt-0.5">You physically own this book</p>
+            </div>
+            <button
+              onClick={() => setOwned(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                owned
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-white border-ink-200 text-ink-600 hover:border-amber-300'
+              }`}
+            >
+              <Package className="w-3 h-3" />
+              {owned ? 'Owned' : 'Not owned'}
+            </button>
           </div>
 
           {/* Dates */}

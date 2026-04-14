@@ -45,6 +45,7 @@ export interface UserBook {
   current_page?: number | null;
   tags: string[];
   mood?: string | null;
+  owned?: boolean;
   visibility: 'public' | 'followers' | 'private';
   created_at: string;
   updated_at: string;
