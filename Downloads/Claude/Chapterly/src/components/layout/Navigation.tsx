@@ -25,10 +25,11 @@ const PERSONAL_ITEMS = [
 ];
 
 const SOCIAL_ITEMS = [
-  { href: '/feed',        label: 'Feed',         icon: Users },
-  { href: '/people',      label: 'Find Readers', icon: Search },
-  { href: '/clubs',       label: 'Book Clubs',   icon: BookMarked },
-  { href: '/leaderboard', label: 'Leaderboard',  icon: BarChart2 },
+  { href: '/feed',         label: 'Feed',         icon: Users },
+  { href: '/buddy-reads',  label: 'Buddy Reads',  icon: BookOpen },
+  { href: '/people',       label: 'Find Readers', icon: Search },
+  { href: '/clubs',        label: 'Book Clubs',   icon: BookMarked },
+  { href: '/leaderboard',  label: 'Leaderboard',  icon: BarChart2 },
 ];
 
 // Bottom tab bar items (mobile only) — the 4 primary + More

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle, ShoppingBag, ExternalLink, MessageSquare, Trash2, Share2, Headphones, Tablet, Book, X } from 'lucide-react';
+import { BookOpen, Star, ChevronLeft, Plus, Check, AlertCircle, ShoppingBag, ExternalLink, MessageSquare, Trash2, Share2, Headphones, Tablet, Book, X, Users } from 'lucide-react';
 import BookCover from '@/components/ui/BookCover';
 import Link from 'next/link';
 
@@ -118,6 +118,14 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
   const [showShareModal, setShowShareModal] = useState(false);
   const [sessionStats, setSessionStats] = useState<{ count: number; minutes: number } | null>(null);
 
+  // Buddy read invite modal
+  const [showBuddyModal, setShowBuddyModal] = useState(false);
+  const [buddyFriends, setBuddyFriends] = useState<{ id: string; display_name: string; avatar_url?: string | null; handle: string }[]>([]);
+  const [buddyInviteeId, setBuddyInviteeId] = useState('');
+  const [buddyTargetDate, setBuddyTargetDate] = useState('');
+  const [buddySending, setBuddySending] = useState(false);
+  const [buddySent, setBuddySent] = useState(false);
+
   // Quotes state
   const [quotes, setQuotes] = useState<QuoteEntry[]>([]);
   const [quoteText, setQuoteText] = useState('');
@@ -148,6 +156,37 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
         setSessionStats({ count, minutes });
       }
     } catch { /* ignore */ }
+  };
+
+  const openBuddyModal = async () => {
+    setShowBuddyModal(true);
+    if (buddyFriends.length === 0) {
+      try {
+        const r = await fetch('/api/social');
+        if (r.ok) {
+          const j = await r.json();
+          setBuddyFriends(j.data ?? []);
+        }
+      } catch { /* ignore */ }
+    }
+  };
+
+  const sendBuddyInvite = async () => {
+    if (!buddyInviteeId) return;
+    setBuddySending(true);
+    try {
+      const res = await fetch('/api/buddy-reads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book_id: book.id, invitee_id: buddyInviteeId, target_date: buddyTargetDate || undefined }),
+      });
+      if (res.ok || res.status === 409) {
+        setBuddySent(true);
+        setTimeout(() => { setShowBuddyModal(false); setBuddySent(false); setBuddyInviteeId(''); setBuddyTargetDate(''); }, 1500);
+      }
+    } finally {
+      setBuddySending(false);
+    }
   };
 
   const handleShare = async () => {
@@ -405,6 +444,18 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-ink-50 border border-ink-200 text-ink-600 hover:border-brand-300 hover:text-brand-700 transition-all"
                   >
                     <Share2 className="w-3 h-3" /> Share this book
+                  </button>
+                </div>
+              )}
+
+              {/* Buddy Read button — shown when book is on shelf */}
+              {shelfStatus && (
+                <div className="mt-3">
+                  <button
+                    onClick={openBuddyModal}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 transition-all"
+                  >
+                    <Users className="w-3 h-3" /> Buddy Read
                   </button>
                 </div>
               )}
@@ -773,6 +824,67 @@ export default function BookDetailClient({ book, userBook, reviews, userId }: Pr
               className="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
             >
               <Share2 className="w-4 h-4" /> Share
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Buddy Read invite modal */}
+      {showBuddyModal && (
+        <div className="fixed inset-0 bg-ink-950/50 flex items-end sm:items-center justify-center z-50 px-4 pb-4 sm:pb-0">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-lg font-semibold text-ink-900">Invite to Buddy Read</h3>
+              <button onClick={() => setShowBuddyModal(false)} className="text-ink-400 hover:text-ink-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-ink-500 mb-4">Read <span className="font-medium text-ink-800">{book.title}</span> together with a friend.</p>
+
+            {buddyFriends.length === 0 ? (
+              <p className="text-sm text-ink-400 text-center py-4">No friends to invite yet — follow people to get started.</p>
+            ) : (
+              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                {buddyFriends.map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setBuddyInviteeId(id => id === f.id ? '' : f.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                      buddyInviteeId === f.id
+                        ? 'border-purple-400 bg-purple-50'
+                        : 'border-ink-200 hover:border-purple-200'
+                    }`}
+                  >
+                    {f.avatar_url
+                      ? <img src={f.avatar_url} alt={f.display_name} className="w-8 h-8 rounded-full object-cover" />
+                      : <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 text-sm font-bold flex items-center justify-center">{f.display_name[0]}</span>
+                    }
+                    <div>
+                      <p className="text-sm font-medium text-ink-800">{f.display_name}</p>
+                      <p className="text-xs text-ink-400">@{f.handle}</p>
+                    </div>
+                    {buddyInviteeId === f.id && <Check className="w-4 h-4 text-purple-600 ml-auto" />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="text-xs text-ink-500 mb-1 block">Target finish date (optional)</label>
+              <input
+                type="date"
+                value={buddyTargetDate}
+                onChange={e => setBuddyTargetDate(e.target.value)}
+                className="w-full border border-ink-200 rounded-xl px-3 py-2 text-sm text-ink-800 focus:outline-none focus:border-purple-400"
+              />
+            </div>
+
+            <button
+              onClick={sendBuddyInvite}
+              disabled={!buddyInviteeId || buddySending || buddySent}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-2xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              {buddySent ? <><Check className="w-4 h-4" /> Invite sent!</> : buddySending ? 'Sending…' : <><Users className="w-4 h-4" /> Send invite</>}
             </button>
           </div>
         </div>
