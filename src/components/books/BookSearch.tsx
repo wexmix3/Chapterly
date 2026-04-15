@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, BookOpen, Plus, Check, Loader2, Camera, AlertCircle } from 'lucide-react';
 import BookCover from '@/components/ui/BookCover';
 import { useBookSearch, useShelf } from '@/hooks';
@@ -36,10 +36,17 @@ export default function BookSearch() {
   const { query, setQuery, results, loading, error: searchError } = useBookSearch();
   const { addBook } = useShelf();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [expanding, setExpanding] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   useEffect(() => { setRecentSearches(getRecentSearches()); }, []);
+
+  // Pre-populate from ?q= URL param (e.g., from barcode scan on Books tab)
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) setQuery(q);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track book searches when results load; save to recent history
   useEffect(() => {

@@ -9,7 +9,10 @@ import BookSearch from '@/components/books/BookSearch';
 import BookShelf from '@/components/books/BookShelf';
 import QuickLog from '@/components/sessions/QuickLog';
 import DailyGoal from '@/components/dashboard/DailyGoal';
-import { BookOpen, Loader2, X, Search as SearchIcon, Crown } from 'lucide-react';
+import { BookOpen, Loader2, X, Search as SearchIcon, Crown, Camera } from 'lucide-react';
+import nextDynamic from 'next/dynamic';
+
+const ISBNScanner = nextDynamic(() => import('@/components/books/ISBNScanner'), { ssr: false });
 import Link from 'next/link';
 import AIInsights from '@/components/dashboard/AIInsights';
 import SocialPulse from '@/components/dashboard/SocialPulse';
@@ -27,6 +30,7 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const tab = (searchParams.get('tab') as Tab) || 'overview';
   const [logModal, setLogModal] = useState<any>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const { books: currentlyReading, fetchBooks: refetchShelf } = useShelf('reading');
 
   useEffect(() => {
@@ -148,6 +152,28 @@ function DashboardContent() {
           {tab === 'search' && <ErrorBoundary><BookSearch /></ErrorBoundary>}
         </div>
       </main>
+
+      {/* Scan ISBN FAB — visible on Books tab (mobile-first) */}
+      {tab === 'reading' && (
+        <button
+          onClick={() => setScannerOpen(true)}
+          className="fixed bottom-24 right-4 z-40 w-14 h-14 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white rounded-full shadow-lg flex items-center justify-center transition-all md:hidden"
+          title="Scan ISBN barcode"
+          aria-label="Scan ISBN barcode"
+        >
+          <Camera className="w-6 h-6" />
+        </button>
+      )}
+
+      {scannerOpen && (
+        <ISBNScanner
+          onDetected={(isbn) => {
+            setScannerOpen(false);
+            router.push(`/dashboard?tab=search&q=${encodeURIComponent(isbn)}`);
+          }}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
 
       {logModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end md:items-center justify-center p-4">
