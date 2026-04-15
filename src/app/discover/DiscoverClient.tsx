@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/layout/Navigation';
-import { TrendingUp, Plus, Loader2, Star, Sparkles } from 'lucide-react';
+import { TrendingUp, Plus, Loader2, Star, Sparkles, Users } from 'lucide-react';
 import type { BookSearchResult } from '@/types';
 import BookCover from '@/components/ui/BookCover';
 
@@ -33,6 +33,17 @@ const MUST_READS_2026 = [
   { title: 'The Familiar', author: 'Leigh Bardugo', cover: 'https://covers.openlibrary.org/b/isbn/9781250885739-M.jpg' },
 ];
 
+interface FriendBook {
+  book_id: string;
+  book: {
+    id: string;
+    title: string;
+    authors: string[];
+    cover_url?: string | null;
+  };
+  readers: { id: string; display_name: string; avatar_url?: string | null; handle: string }[];
+}
+
 interface TrendingBook {
   book_id: string;
   count: number;
@@ -58,6 +69,7 @@ export default function DiscoverClient() {
   const [userGenres, setUserGenres] = useState<string[]>([]);
   const [trendingBooks, setTrendingBooks] = useState<TrendingBook[] | null>(null);
   const [userBookTitles, setUserBookTitles] = useState<Set<string>>(new Set());
+  const [friendsReading, setFriendsReading] = useState<FriendBook[] | null>(null);
 
   // Fetch personalized recommendations (and stored genre preferences)
   useEffect(() => {
@@ -85,6 +97,14 @@ export default function DiscoverClient() {
         if (items.length > 0) setTrendingBooks(items);
       })
       .catch(() => {});
+  }, []);
+
+  // Fetch friends currently reading
+  useEffect(() => {
+    fetch('/api/discover/friends-reading')
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => setFriendsReading(j.data ?? []))
+      .catch(() => setFriendsReading([]));
   }, []);
 
   // Fetch user's shelf book titles to exclude from trending
@@ -156,10 +176,63 @@ export default function DiscoverClient() {
 
           <div>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-ink-900 mb-2">Discover</h1>
-            <p className="text-ink-500 text-sm">Trending books from Reddit, social media, and curated picks.</p>
+            <p className="text-ink-500 text-sm">Personalized picks, friends&apos; reads, and what&apos;s trending now.</p>
           </div>
 
-          {/* 2026 Must-Reads — pinned at top */}
+          {/* Personalized AI recs — first */}
+          {recs.length > 0 && topGenre && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-4 h-4 text-brand-500" />
+                <h2 className="font-display text-lg font-semibold text-ink-800">
+                  Because you read {topGenre}
+                </h2>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {recs.slice(0, 10).map(book => (
+                  <ShelfableBook key={book.source_id} book={book} onAdd={handleAdd}
+                    isAdded={added.has(book.source_id)} isAdding={adding === book.source_id}
+                    onNavigate={() => toPreviewBook(book)} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Friends are reading */}
+          {friendsReading !== null && friendsReading.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-4 h-4 text-brand-500" />
+                <h2 className="font-display text-lg font-semibold text-ink-800">Friends are reading</h2>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {friendsReading.map(item => (
+                  <div key={item.book_id} className="flex-shrink-0 w-28">
+                    <button
+                      onClick={() => toPreview(item.book.title, item.book.authors[0] ?? '', item.book.cover_url ?? '')}
+                      className="w-full aspect-[2/3] bg-paper-200 rounded-xl overflow-hidden shadow-sm mb-2 hover:shadow-md transition-shadow block relative"
+                    >
+                      <BookCover src={item.book.cover_url} title={item.book.title} authors={item.book.authors} fill className="object-cover hover:scale-105 transition-transform duration-200" />
+                    </button>
+                    <p className="text-[11px] font-medium text-ink-800 line-clamp-2 leading-tight mb-1">{item.book.title}</p>
+                    <div className="flex items-center gap-0.5 flex-wrap">
+                      {item.readers.slice(0, 3).map(r => (
+                        r.avatar_url
+                          ? <img key={r.id} src={r.avatar_url} alt={r.display_name} className="w-4 h-4 rounded-full border border-white object-cover" title={r.display_name} />
+                          : <span key={r.id} className="w-4 h-4 rounded-full bg-brand-100 text-brand-700 text-[7px] font-bold flex items-center justify-center border border-white" title={r.display_name}>{r.display_name[0]}</span>
+                      ))}
+                      {item.readers.length > 3 && <span className="text-[9px] text-ink-400 ml-0.5">+{item.readers.length - 3}</span>}
+                    </div>
+                    <p className="text-[9px] text-ink-400 mt-0.5">
+                      {item.readers[0]?.display_name}{item.readers.length > 1 ? ` +${item.readers.length - 1} more` : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* 2026 Must-Reads */}
           <section>
             <div className="flex items-center gap-2 mb-4">
               <Star className="w-4 h-4 text-brand-500" />
@@ -285,25 +358,6 @@ export default function DiscoverClient() {
               </div>
             )}
           </section>
-
-          {/* Personalized — Because you read X */}
-          {recs.length > 0 && topGenre && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-4 h-4 text-brand-500" />
-                <h2 className="font-display text-lg font-semibold text-ink-800">
-                  Because you read {topGenre}
-                </h2>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {recs.slice(0, 10).map(book => (
-                  <ShelfableBook key={book.source_id} book={book} onAdd={handleAdd}
-                    isAdded={added.has(book.source_id)} isAdding={adding === book.source_id}
-                    onNavigate={() => toPreviewBook(book)} />
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </main>
     </div>
