@@ -20,13 +20,14 @@ const lora = Lora({
   display: 'swap',
 });
 
-const APP_URL = 'https://chapterly.app';
+const APP_URL = 'https://www.getchapterly.com';
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  title: { default: 'Chapterly — Track, Share, Read More', template: '%s | Chapterly' },
+  title: { default: 'Chapterly — Reading Tracker & Book Log', template: '%s | Chapterly' },
   description:
-    'The most shareable, habit-forming reading log. Track your books, build streaks, and share beautiful reading cards.',
+    'The Goodreads alternative built for modern readers. Track books, build reading streaks, get AI-powered insights, and connect with your reading community.',
+  keywords: ['reading tracker', 'book tracker', 'reading log', 'book log', 'Goodreads alternative', 'book tracking app', 'reading habit', 'reading streak'],
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -35,17 +36,17 @@ export const metadata: Metadata = {
   },
   openGraph: {
     siteName: 'Chapterly',
-    title: 'Chapterly — Track, Share, Read More',
-    description: 'The most shareable, habit-forming reading log. Track your books, build streaks, and share beautiful reading cards.',
+    title: 'Chapterly — Reading Tracker & Book Log',
+    description: 'The Goodreads alternative built for modern readers. Track books, build reading streaks, and get AI-powered insights.',
     type: 'website',
     url: APP_URL,
-    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Chapterly' }],
+    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'Chapterly — Reading Tracker' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Chapterly — Track, Share, Read More',
-    description: 'The most shareable, habit-forming reading log.',
-    images: ['/og-default.png'],
+    title: 'Chapterly — Reading Tracker & Book Log',
+    description: 'The Goodreads alternative built for modern readers. Track books, build reading streaks, and get AI-powered insights.',
+    images: ['/api/og'],
   },
   robots: { index: true, follow: true },
 };

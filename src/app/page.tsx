@@ -1,11 +1,23 @@
 export const dynamic = 'force-dynamic';
 
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { Sparkles, Flame, Users, CheckCircle, X, Star } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import WaitlistForm from '@/components/landing/WaitlistForm';
+
+export const metadata: Metadata = {
+  title: 'Chapterly — Reading Tracker & Goodreads Alternative',
+  description:
+    'The Goodreads alternative built for modern readers. Track books, build reading streaks, get AI-powered insights, and connect with readers who share your taste. Free forever.',
+  openGraph: {
+    title: 'Chapterly — Reading Tracker & Goodreads Alternative',
+    description: 'Track books, build reading streaks, and get AI-powered insights. Free forever.',
+    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'Chapterly — Reading Tracker' }],
+  },
+};
 
 // Real book covers — verified OpenLibrary ISBNs used throughout the app
 const HERO_BOOKS = [
@@ -27,6 +39,31 @@ async function getPublicStats(): Promise<{ count: number; formatted: string }> {
   return { count: 0, formatted: '0+' };
 }
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Chapterly',
+  url: 'https://www.getchapterly.com',
+  description: 'The Goodreads alternative built for modern readers. Track books, build reading streaks, get AI-powered insights, and connect with your reading community.',
+  applicationCategory: 'LifestyleApplication',
+  operatingSystem: 'Web, iOS, Android',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+    description: 'Free forever with optional premium plan',
+  },
+  featureList: [
+    'Book tracking and reading log',
+    'AI-powered reading insights',
+    'Reading streaks and goals',
+    'Goodreads import',
+    'Book clubs',
+    'Buddy reads',
+    'Reading timer',
+  ],
+};
+
 export default async function LandingPage() {
   const supabase = createServerSupabaseClient();
   const [{ data: { user } }, stats] = await Promise.all([
@@ -39,6 +76,10 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-ink-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-10 flex items-center justify-between px-6 h-14 bg-white/95 backdrop-blur-sm border-b border-ink-100/60">
