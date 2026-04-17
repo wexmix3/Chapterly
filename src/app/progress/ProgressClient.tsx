@@ -65,6 +65,16 @@ function BooksTooltip({ active, payload, label }: { active?: boolean; payload?: 
   );
 }
 
+function PaceTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-ink-100 rounded-xl shadow-lg px-3 py-2 text-xs">
+      <p className="font-semibold text-ink-800 mb-0.5">{label}</p>
+      <p className="text-ink-600">{payload[0]?.value} pages/hr</p>
+    </div>
+  );
+}
+
 function AuthorTooltip({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: { author: string; avg_rating?: number | null } }> }) {
   if (!active || !payload?.length) return null;
   const books = payload[0]?.value ?? 0;
@@ -109,6 +119,8 @@ export default function ProgressClient() {
   const [genreBreakdown, setGenreBreakdown] = useState<GenreBreakdown[]>([]);
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [booksPeriod, setBooksPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [moodData, setMoodData] = useState<{ mood: string; count: number }[]>([]);
+  const [paceData, setPaceData] = useState<{ month: string; pages_per_hour: number; pages: number; minutes: number }[]>([]);
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -155,6 +167,18 @@ export default function ProgressClient() {
         fetch('/api/stats/rich')
           .then(r => r.ok ? r.json() : null)
           .then(j => { if (j?.data) setRichStats(j.data); })
+          .catch(() => {});
+
+        // Mood distribution
+        fetch('/api/stats/moods')
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (Array.isArray(j?.data)) setMoodData(j.data); })
+          .catch(() => {});
+
+        // Reading pace
+        fetch('/api/stats/pace')
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (Array.isArray(j?.data)) setPaceData(j.data); })
           .catch(() => {});
       } finally {
         setLoading(false);
@@ -469,6 +493,68 @@ export default function ProgressClient() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                )}
+
+                {/* Mood Distribution — horizontal bar chart */}
+                {moodData.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Book Vibes</p>
+                    <div className="space-y-2">
+                      {moodData.slice(0, 8).map((m, i) => {
+                        const max = moodData[0]?.count ?? 1;
+                        const pct = Math.round((m.count / max) * 100);
+                        const MOOD_COLORS = ['#ee7a1e','#f5a05a','#f7c18e','#c45a0e','#9c4508','#7a3406','#e8864a','#d4722a'];
+                        return (
+                          <div key={m.mood}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-ink-700 font-medium capitalize">{m.mood}</span>
+                              <span className="text-ink-400">{m.count} book{m.count !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${pct}%`, backgroundColor: MOOD_COLORS[i % MOOD_COLORS.length] }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reading Pace — pages/hour by month */}
+                {paceData.length >= 2 && (
+                  <div>
+                    <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Reading Pace</p>
+                    <ResponsiveContainer width="100%" height={120}>
+                      <AreaChart data={paceData.map(p => ({
+                        label: monthLabel(p.month),
+                        pph: p.pages_per_hour,
+                      }))} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="paceGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#c45a0e" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#c45a0e" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0ede8" vertical={false} />
+                        <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: '#9d9d9d' }} tickLine={false} axisLine={false} />
+                        <Tooltip content={<PaceTooltip />} />
+                        <Area
+                          type="monotone"
+                          dataKey="pph"
+                          stroke="#c45a0e"
+                          strokeWidth={2}
+                          fill="url(#paceGrad)"
+                          dot={false}
+                          activeDot={{ r: 4, fill: '#c45a0e', stroke: '#fff', strokeWidth: 2 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                    <p className="text-[10px] text-ink-400 mt-1 text-center">Pages per hour, based on timed sessions</p>
+  </div>
                 )}
 
               </div>
