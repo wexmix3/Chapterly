@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { createAdminSupabaseClient } from '@/lib/supabase-server';
 
-const APP_URL = 'https://chapterly.app';
+const APP_URL = 'https://www.getchapterly.com';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createAdminSupabaseClient();
