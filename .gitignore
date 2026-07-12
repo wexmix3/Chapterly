@@ -36,3 +36,13 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+.vercel
+
+# secrets -- never track
+stripe_backup_code.txt
+
+# local tooling / editor config, not project code
+mcp.json
+trigger-ref.md
+supabase/.temp/
